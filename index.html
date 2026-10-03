@@ -631,15 +631,6 @@ table.hist th{color:var(--ink-soft);font-weight:700;}
 
 <!-- SERVANTS TAB -->
 <section class="panel" id="panel-servants">
-  <div class="card" id="importCard">
-    <h2>استيراد القوائم الجاهزة</h2>
-    <p style="font-size:.85rem;color:var(--ink-soft);line-height:1.8;margin-top:0;">
-      دلوقتي القائمة فيها <b>453 شخص</b> بالتليفونات بعد مراجعة الأسماء ودمج أي حد ظهر أكتر من مرة (زي خادم في الانبا بولا وبيحضر الجمعة أو الأحد كمان بنفس رقمه): <b>36 خادم</b> في الانبا بولا، <b>417</b> في مجموعة الجمعة، <b>68</b> في مجموعة الأحد.
-    </p>
-    <button class="primary" id="importSeedBtn">استيراد الأسماء (453)</button>
-    <span class="saved-msg" id="importSavedMsg">تم الاستيراد ✓</span>
-  </div>
-
   <div class="card" id="addServantCard">
     <h2>إضافة خادم جديد</h2>
     <label>اسم الخادم</label>
@@ -908,7 +899,7 @@ table.hist th{color:var(--ink-soft);font-weight:700;}
     <label style="display:block;margin:16px 0 6px;font-weight:700;color:var(--ink);">الإجراءات</label>
     <label class="group-chk"><input type="checkbox" id="permAddServant" checked> يقدر يضيف خدام/مخدومين جدد</label>
     <label class="group-chk" style="margin-top:6px;"><input type="checkbox" id="permEditServant" checked> يقدر يعدّل بيانات خدام/مخدومين موجودين</label>
-    <p style="font-size:.78rem;color:var(--ink-soft);margin-top:8px;">🔒 الحذف (خدام، مخدومين، اجتماعات، أي بيانات) بقى للمدير بس دايمًا — مفيش صلاحية تفتح الحذف لأي حد تاني.</p>
+    <p style="font-size:.78rem;color:var(--ink-soft);margin-top:8px;">🔒 حذف الأسماء (خدام ومخدومين) للمدير والمشرف بس. حذف الاجتماعات وتصفير البيانات للمدير بس. المستخدم العادي مش بيقدر يحذف أي حاجة.</p>
 
     <button class="primary" style="margin-top:16px;" id="savePermissionsBtn">حفظ الصلاحيات</button>
     <span class="saved-msg" id="permissionsSavedMsg">تم الحفظ ✓</span>
@@ -1055,17 +1046,52 @@ window.addEventListener('error', function(e){
   const mainRef = key => db.collection('kv').doc(key);
   const partRef = (key, wid, i) => db.collection('kv').doc(key + PART_SEP + wid + '_' + i);
 
-  async function fbGetOnce(key){
+  async function fbGetOnce(key, knownRev){
     const snap = await mainRef(key).get();
-    if(!snap.exists) return { exists:false };
+    if(!snap.exists) return { exists:false, rev:0 };
     const d = snap.data() || {};
-    if(typeof d.value === 'string') return { exists:true, value:d.value };
+    const rev = d.rev || 0;
+    if(knownRev !== undefined && rev === knownRev) return { exists:true, rev, same:true };
+    if(typeof d.value === 'string') return { exists:true, value:d.value, rev };
     if(d.wid && d.n){
       const parts = await Promise.all(Array.from({length:d.n}, (_,i)=>partRef(key, d.wid, i).get()));
       if(parts.some(ps=>!ps.exists)) throw new Error('parts changed during read');
-      return { exists:true, value: parts.map(ps=>ps.data().s).join('') };
+      return { exists:true, value: parts.map(ps=>ps.data().s).join(''), rev };
     }
-    return { exists:false };
+    return { exists:false, rev };
+  }
+  const lastRevs = {};
+
+  // Write only if nobody else wrote since revision `expectedRev`.
+  async function setIfRev(key, value, expectedRev){
+    let wid = null, n = 0, body;
+    if(value.length <= CHUNK){
+      body = { value };
+    } else {
+      wid = Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+      n = Math.ceil(value.length / CHUNK);
+      for(let i=0;i<n;i++) await partRef(key, wid, i).set({ s: value.slice(i*CHUNK, (i+1)*CHUNK) });
+      body = { wid, n };
+    }
+    let old = null, newRev = 0;
+    const ok = await db.runTransaction(async t=>{
+      const snap = await t.get(mainRef(key));
+      const cur = snap.exists ? (snap.data().rev || 0) : 0;
+      if(cur !== expectedRev) return false;
+      old = snap.exists ? snap.data() : null;
+      newRev = cur + 1;
+      t.set(mainRef(key), Object.assign({}, body, { rev: newRev, at: Date.now() }));
+      return true;
+    });
+    if(!ok){
+      if(wid) for(let i=0;i<n;i++) partRef(key, wid, i).delete().catch(()=>{});
+      return { ok:false };
+    }
+    lastRevs[key] = newRev;
+    if(old && old.wid && old.n){
+      setTimeout(()=>{ for(let i=0;i<old.n;i++) partRef(key, old.wid, i).delete().catch(()=>{}); }, 15000);
+    }
+    return { ok:true, rev:newRev };
   }
 
   const fbStore = {
@@ -1074,6 +1100,7 @@ window.addEventListener('error', function(e){
       let r;
       try{ r = await fbGetOnce(key); }
       catch(e){ r = await fbGetOnce(key); }
+      lastRevs[key] = r.rev || 0;
       if(!r.exists) throw new Error('key not found');
       return { key, value: r.value, shared };
     },
@@ -1083,14 +1110,16 @@ window.addEventListener('error', function(e){
       const run = prev.catch(()=>{}).then(async ()=>{
         let old = null;
         try{ const s = await mainRef(key).get(); if(s.exists) old = s.data(); }catch(e){}
+        const rev = ((old && old.rev) || 0) + 1;
         if(value.length <= CHUNK){
-          await mainRef(key).set({ value, at: Date.now() });
+          await mainRef(key).set({ value, rev, at: Date.now() });
         } else {
           const wid = Date.now().toString(36) + Math.random().toString(36).slice(2,8);
           const n = Math.ceil(value.length / CHUNK);
           for(let i=0;i<n;i++) await partRef(key, wid, i).set({ s: value.slice(i*CHUNK, (i+1)*CHUNK) });
-          await mainRef(key).set({ wid, n, at: Date.now() });
+          await mainRef(key).set({ wid, n, rev, at: Date.now() });
         }
+        lastRevs[key] = rev;
         if(old && old.wid && old.n){
           setTimeout(()=>{ for(let i=0;i<old.n;i++) partRef(key, old.wid, i).delete().catch(()=>{}); }, 15000);
         }
@@ -1114,6 +1143,19 @@ window.addEventListener('error', function(e){
       return { keys, prefix, shared };
     }
   };
+
+  fbStore.getWithRev = async (key, knownRev)=>{
+    let r;
+    try{ r = await fbGetOnce(key, knownRev); }
+    catch(e){ r = await fbGetOnce(key, knownRev); }
+    return r;
+  };
+  fbStore.setIfRev = setIfRev;
+  fbStore.lastRev = key => lastRevs[key] || 0;
+  fbStore.watch = (key, cb)=> mainRef(key).onSnapshot(snap=>{
+    if(snap.metadata.hasPendingWrites) return;
+    cb(snap.exists ? (snap.data().rev || 0) : 0);
+  }, err=>console.error('watch failed', err));
 
   window.storage = fbStore;
   window.__usingLocalStorageFallback = false;
@@ -1185,463 +1227,6 @@ const GROUPS = [
   {id:'makhdomeen-had', name:'المخدومين - الأحد'}
 ];
 const groupName = id => GROUPS.find(g=>g.id===id)?.name || id;
-
-const SEED_DATA = [
-  {name:'ارميا جورج', phone:'01141396136', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'اسامة ثابت', phone:'01272708263', birthDate:'24/11', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'اسامة مكرم', phone:'01204442110', birthDate:'11/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'اسامه نبيل', phone:'', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'استر شوقى', phone:'01222650708', birthDate:'25/12', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'استير رزقي', phone:'01094993430', birthDate:'14/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'استيرهندى', phone:'01555178508', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'اسعد لمعي صادق مساك', phone:'01223344056', birthDate:'3/3', area:'حمامات القبه', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had','anba-boula']},
-  {name:'اشرف ذكى', phone:'01004136260', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'اغابى بطرس', phone:'01282049290', birthDate:'3/2', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'اغابى مجدي', phone:'01555051488', birthDate:'3/11', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'اقبال مليكة', phone:'01224004322', birthDate:'25/12', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'البير رمزى', phone:'01221500146', birthDate:'4/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'الفت خلف عطالله', phone:'01271696023', birthDate:'12/12', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'الين البير', phone:'01224524446', birthDate:'11/3', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ام اشرف', phone:'01271434912', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'امال فوزي', phone:'01202318640', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'امانى فوزى لمعى صادق', phone:'012210811525', birthDate:'31/7', area:'حمامات القبه', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had','anba-boula']},
-  {name:'اماني ابسخيرون', phone:'01225565363', birthDate:'20/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'اماني الفي', phone:'01226804595', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'اماني راضي', phone:'01228168411', birthDate:'6/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had']},
-  {name:'امانى فاروق لبيب تاوضروس', phone:'01223580959', birthDate:'1/1', area:'سراي القبه', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','anba-boula']},
-  {name:'اماني شكري', phone:'01227171103', birthDate:'19/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'اماني مكرم', phone:'01286249889', birthDate:'25/12', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'امجد صموئيل', phone:'01200251553', birthDate:'2/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'امجد عادل', phone:'01205053644', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'امل سمير', phone:'01225846696', birthDate:'22/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'امل مراد', phone:'01222394797', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'امير تادرس', phone:'01159888215', birthDate:'10/7', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'اميرة سريان', phone:'01272080849', birthDate:'9/12', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'اميرة فرح', phone:'01272605450', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'اميل شكرى', phone:'01212788220', birthDate:'23/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'اميمة منير', phone:'01224149969', birthDate:'13/3', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'انجي فكري', phone:'01227091024', birthDate:'17/2', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'انجي منير', phone:'01206909363', birthDate:'23/8', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had']},
-  {name:'انطوانيت ايليا زكى تادرس', phone:'01289775688', birthDate:'16/6', area:'الزيتون', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','anba-boula']},
-  {name:'اوديت جون', phone:'01286979910', birthDate:'17/8', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ايرينى ابو الفضل', phone:'01003544661', birthDate:'3/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ايرينى جمال', phone:'01222287204', birthDate:'19/2', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ايرينى فتحى', phone:'01557704130', birthDate:'20/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ايرينى منير', phone:'01000673924', birthDate:'23/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ايرينى يسرى', phone:'01284477321', birthDate:'10/8', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ايريني جرجس', phone:'01285478796', birthDate:'1/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ايريني عماد', phone:'01206023770', birthDate:'25/5', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ايريني فكري', phone:'01204492291', birthDate:'18/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ايريني ميخائيل', phone:'01220896176', birthDate:'17/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ايفا اشرف', phone:'01093191978', birthDate:'23/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had']},
-  {name:'ايفا امير', phone:'', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'ايفون بطرس', phone:'01285095243', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ايفون فوزي', phone:'01025035249', birthDate:'24/5', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ايفيت وليم صادق بولس', phone:'01093838847', birthDate:'6/11', area:'سراي القبه', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','anba-boula']},
-  {name:'ايفيلين ميشيل', phone:'01221181554', birthDate:'29/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ايلين ايليا', phone:'01221812087', birthDate:'9/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ايلين حلمى', phone:'01289829976', birthDate:'19/8', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ايمان حليم', phone:'01285884912', birthDate:'27/12', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ايمان سمير عزمى بشارة', phone:'01286838641', birthDate:'9/9', area:'حمامات القبه', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','anba-boula']},
-  {name:'ايمان عطا', phone:'01227553484', birthDate:'9/12', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ايمان فوزي', phone:'01286648769', birthDate:'6/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ايمان نبيل', phone:'01281575388', birthDate:'29/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ايمن اسحق', phone:'01006019034', birthDate:'20/5', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ايمن جبره', phone:'01225763248', birthDate:'14/3', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ايميل انيس', phone:'01558010001', birthDate:'23/3', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ايناس سمير', phone:'01222362670', birthDate:'29/8', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ايهاب فايق', phone:'01220749912', birthDate:'8/8', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'باسم سليمان', phone:'01001234836', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'بسمة سمير', phone:'01210932984', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'بسمة عادل', phone:'01277425304', birthDate:'1/3', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'بشرى فايق', phone:'01227638493', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'بطرس سليم', phone:'01277663845', birthDate:'16/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'بطرس ميشيل', phone:'01221064838', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'بطرس ميشيل سعد', phone:'01200119015', birthDate:'15/7', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'بلانش سامي', phone:'01287168004', birthDate:'20/3', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'بيتر رأفت', phone:'01222785080', birthDate:'2/11', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'بيشوى جرجس', phone:'011111199976', birthDate:'8/11', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'بيشوى مترى', phone:'01274651573', birthDate:'10/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'بيشوى نبيل', phone:'01229694609', birthDate:'1/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'بيشوي محسن', phone:'01280004759', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'بيلاجيه مجدي', phone:'01202958755', birthDate:'24/2', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'تاوضروس عزيز', phone:'01202245429', birthDate:'25/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'تريز جرجس', phone:'01221926056', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'تريز شاكر', phone:'01288253944', birthDate:'27/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'تريزا سعد', phone:'01273370701', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'تريزا عطيه', phone:'01211684151', birthDate:'3/3', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'تهانى حنا', phone:'01222810899', birthDate:'6/3', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'تهاني اديب', phone:'01229569998', birthDate:'15/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had']},
-  {name:'ثاؤبستا حشمت', phone:'01555308266', birthDate:'19/7', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had']},
-  {name:'ثناء فؤاد الياس مقار', phone:'01284938165', birthDate:'20/11', area:'سراي القبه', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','anba-boula']},
-  {name:'جاكلين ثابت', phone:'01224879876', birthDate:'20/3', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'جاكلين ثابت يوسف سليمان', phone:'01224879877', birthDate:'', area:'كوبرى القبة', address:'', confessionFather:'', church:'', groups:['anba-boula']},
-  {name:'جاكلين جمال', phone:'01286923096', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'جاكلين جورج', phone:'01029912440', birthDate:'5/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'جاكلين شوقى', phone:'01225266619', birthDate:'26/3', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'جاكلين ماهر', phone:'01207515250', birthDate:'20/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'جاكلين مكرم', phone:'01223330049', birthDate:'21/12', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'جاكلين مكرم جاد السيد عبد السيد', phone:'01222330049', birthDate:'', area:'سراي القبه', address:'', confessionFather:'', church:'', groups:['anba-boula']},
-  {name:'جاكو انطون', phone:'01201869343', birthDate:'3/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'جرجس صدقى', phone:'01279366957', birthDate:'26/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had']},
-  {name:'جمال حلمى', phone:'01222383558', birthDate:'14/11', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'جمالات متى', phone:'01276950008', birthDate:'1/12', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'جورج جبران', phone:'01227342018', birthDate:'1/11', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'جورج فارس', phone:'01210055785', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'جورج ميشيل ارمانيو', phone:'01006006685', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'جورجيت بطرس', phone:'01202936441', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'جوزفين نجيب', phone:'01211622216', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'جون مراد', phone:'01142378861', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'جون ناجى', phone:'01279116511', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'جون وهبه', phone:'01221820860', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'جينفر نادر', phone:'01271042089', birthDate:'20/2', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'جيهان جورج', phone:'01276192718', birthDate:'8/8', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'جيهان رياض', phone:'012703910839', birthDate:'25/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'جيهان كامل', phone:'01202744409', birthDate:'6/7', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'جيهان ينى', phone:'01212502071', birthDate:'27/5', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'حسام بولس', phone:'01124884840', birthDate:'13/5', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'حنان اسعد', phone:'01273042389', birthDate:'20/8', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'حنان فؤاء', phone:'01288911335', birthDate:'28/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'حنان نزيه', phone:'01204382183', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'حنان نصحي', phone:'01202954797', birthDate:'2/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'حنه لوندي', phone:'01277336708', birthDate:'12/5', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'د.ماهر ناشد', phone:'01221521757', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'داليا رضا', phone:'01289518207', birthDate:'11/11', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'داليا صادق عوض كامل', phone:'01273997187', birthDate:'13/7', area:'حمامات القبه', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had','anba-boula']},
-  {name:'داليا عياد', phone:'01202160007', birthDate:'4/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'داليا كمال', phone:'01211400955', birthDate:'18/5', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'داليا ناجح عزيز خليل', phone:'01275326165', birthDate:'6/10', area:'حمامات القبه', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','anba-boula']},
-  {name:'دليا تداوس', phone:'01207503745', birthDate:'26/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'دميانة يعقوب', phone:'01228869565', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'دميانه جون', phone:'01120665995', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ديانا امير', phone:'', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'ديانا جورج', phone:'01223378502', birthDate:'27/8', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ديانا سامي', phone:'01065309708', birthDate:'6/2', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had']},
-  {name:'ديانا فهيم', phone:'01066158808', birthDate:'8/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had']},
-  {name:'ديانا مراد', phone:'01203343311', birthDate:'18/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'دينا بشرى', phone:'01204123316', birthDate:'1/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'دينا جرجس', phone:'01220500551', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'دينا سمير اندراوس', phone:'01227804928', birthDate:'5/11', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'دينا سمير نسيم', phone:'01004186807', birthDate:'10/3', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'دينا عازر', phone:'01273836580', birthDate:'10/11', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'دينا عاطف', phone:'01284149338', birthDate:'4/5', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'دينا عاطف /سامح', phone:'01016197700', birthDate:'2/5', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'رأفت جرجس', phone:'01001787722', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'رامى يوسف', phone:'01227277721', birthDate:'15/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'رانيا بخيت', phone:'01273500720', birthDate:'19/3', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'رانيا ذكى', phone:'01225241298', birthDate:'19/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'رانيا عادل', phone:'01287651751', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'رانيا كامل', phone:'01210607762', birthDate:'10/8', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'رانيا وجيه', phone:'01003474519', birthDate:'14/11', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'رشا سعيد', phone:'01212662441', birthDate:'8/7', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'رشا شفيق', phone:'01221842326', birthDate:'20/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'رشا نبيل', phone:'', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'رضا فهمي', phone:'01277531121', birthDate:'21/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'رفقة سمير', phone:'01286790414', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'رنا هانى', phone:'01001932000', birthDate:'5/5', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had']},
-  {name:'روجينا عادل', phone:'01270118422', birthDate:'23/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'روزيت سمير', phone:'01222929800', birthDate:'2/7', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ريمون عزمى', phone:'01006034555', birthDate:'10/5', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ريموندا رشدي زكري', phone:'01278882845', birthDate:'12/8', area:'الزيتون', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','anba-boula']},
-  {name:'ريهام روميل', phone:'01224716680', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ريهام مراد', phone:'01288333181', birthDate:'11/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ريهام وجيه', phone:'0127377123', birthDate:'28/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'زاهر رشدى', phone:'01201229203', birthDate:'25/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'زكريا زغلول', phone:'01068431025', birthDate:'11/3', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ساره عادل', phone:'01005496784', birthDate:'22/8', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ساره عاطف', phone:'01277278819', birthDate:'12/8', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'سالى سامى', phone:'01226418221', birthDate:'23/12', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'سالي سامي', phone:'01226418224', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'سالي موريس', phone:'01280890910', birthDate:'26/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'سالي ناجي', phone:'01223320774', birthDate:'7/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'سامح صفوت كمال فهيم', phone:'01010816302', birthDate:'1/9', area:'حمامات القبه', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','anba-boula']},
-  {name:'سامية فرج سليمان جرجس', phone:'01204134619', birthDate:'26/9', area:'حمامات القبه', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','anba-boula']},
-  {name:'سامية يوسف', phone:'01203892072', birthDate:'7/12', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had']},
-  {name:'سحر مكرم', phone:'01221774250', birthDate:'28/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had']},
-  {name:'سحر منير', phone:'01201868334', birthDate:'22/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'سعاد سلامه', phone:'01005631354', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'سعاد فايز', phone:'01212976588', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'سعيد بشرى', phone:'01228948770', birthDate:'1/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'سعيد رياض', phone:'01001570701', birthDate:'1/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'سماح ابو اليمين', phone:'01281066818', birthDate:'12/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'سماح ماهر', phone:'01222513939', birthDate:'23/7', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'سماح مجدي', phone:'01204377599', birthDate:'27/2', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'سمر اسحق', phone:'01200510477', birthDate:'4/8', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'سمر سمير', phone:'01204106615', birthDate:'21/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had']},
-  {name:'سمر عبد المالك نصيف حفيظ', phone:'01203036437', birthDate:'12/7', area:'حمامات القبه', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','anba-boula']},
-  {name:'سميرة زكريا', phone:'01270678338', birthDate:'19/5', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'سميرة سامى', phone:'01206850658', birthDate:'28/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'سميرة ناجح', phone:'01289185058', birthDate:'13/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'سناء نصرى', phone:'01019382937', birthDate:'1/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'سهير لطفي', phone:'01228734361', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'سوزان عبد العاطى فريج لوقا', phone:'01229211797', birthDate:'4/12', area:'حمامات القبه', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had','anba-boula']},
-  {name:'سوزان عطية', phone:'01210566505', birthDate:'24/2', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'سوزان فهيم سيدهم سيدراك', phone:'01225824941', birthDate:'6/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had','anba-boula']},
-  {name:'سوزان مجدي', phone:'01285021030', birthDate:'21/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'سوزى سميح', phone:'01211397971', birthDate:'1/11', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'سيلفيا سيف', phone:'01006737606', birthDate:'6/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'سيمون سعد', phone:'01211143550', birthDate:'18/12', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'شادى اسعد', phone:'01064646657', birthDate:'5/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'شنودة سمير', phone:'01225325495', birthDate:'1/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'شيرى جرجس', phone:'01283527939', birthDate:'22/7', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'شيري مجدي', phone:'01270919001', birthDate:'24/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had']},
-  {name:'شيرين ماهر', phone:'01202341448', birthDate:'24/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'صباح سمير', phone:'01200623255', birthDate:'17/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'صلاح عياد', phone:'01005656962', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'عاطف كالوست', phone:'01270022427', birthDate:'2/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had']},
-  {name:'عامر جرجس', phone:'01286055338', birthDate:'5/12', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'عبير ظريف ناشد روفائيل', phone:'01224257402', birthDate:'18/5', area:'سراي القبه', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','anba-boula']},
-  {name:'عدلى بطرس', phone:'01274225202', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'عزة جاد', phone:'01068603995', birthDate:'27/7', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'عصام بطرس ناشد', phone:'01225115725', birthDate:'24/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had']},
-  {name:'عصام رفعت', phone:'01221120016', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'عصمت عزيز', phone:'01271732774', birthDate:'14/3', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'عفاف عزيز', phone:'01223517873', birthDate:'24/3', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'عماد بشرى', phone:'01223307738', birthDate:'1/8', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'عماد لمعى صادق مساك', phone:'01222857164', birthDate:'18/12', area:'حمامات القبه', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had','anba-boula']},
-  {name:'عواطف زكرى', phone:'01228859250', birthDate:'16/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'غادة نسيم', phone:'01069856698', birthDate:'4/11', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had']},
-  {name:'فاتن ماهر اسعد ابراهيم', phone:'01228178106', birthDate:'16/9', area:'سراي القبه', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','anba-boula']},
-  {name:'فاتن نبيل', phone:'01200066721', birthDate:'20/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'فارس فرج واصف بطرس', phone:'01225657001', birthDate:'11/10', area:'حمامات القبه', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','anba-boula']},
-  {name:'فايقة جاد', phone:'0184608012', birthDate:'1/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'فتنة حبيب', phone:'22599675', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'فلورا فؤاد', phone:'01273809111', birthDate:'3/5', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'فيبى سعد تادرس فرج', phone:'01278915074', birthDate:'10/9', area:'حمامات القبه', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had','anba-boula']},
-  {name:'فيبى فرج', phone:'01098626992', birthDate:'1/5', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'فيرا سمير', phone:'01282428886', birthDate:'11/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'فيريال بيباوي', phone:'01225746066', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'فيفان عادل', phone:'01285076195', birthDate:'26/11', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'فيفيان الفى', phone:'01275284081', birthDate:'25/5', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'فيفيان سمير', phone:'01223605900', birthDate:'19/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'فيفيان عاطف', phone:'01221834438', birthDate:'24/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'فيفيان كرم', phone:'01226637456', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'فيكتور ذكرى', phone:'01222848969', birthDate:'4/7', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'فيولا البير', phone:'01210021317', birthDate:'3/2', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'فيولت فؤاد', phone:'01280185234', birthDate:'23/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'كاترين وجدي', phone:'01271698183', birthDate:'1/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'كارمن ميلاد', phone:'01285571254', birthDate:'30/3', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'كارن ادور', phone:'', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'كارولين صليب', phone:'', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'كارولين كامل', phone:'01224349462', birthDate:'10/7', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'كارولينا ابراهيم', phone:'01200822047', birthDate:'12/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'كارين ايميل', phone:'01276582488', birthDate:'5/3', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'كرستين القمص غبريال', phone:'01224373597', birthDate:'1/8', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'كرستين برسوم', phone:'01207476772', birthDate:'4/11', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'كرستين ثناء', phone:'01143042814', birthDate:'30/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'كرستين جرجس', phone:'01006811042', birthDate:'22/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'كرستين رومانى', phone:'01282248180', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'كرستين فرح', phone:'01205257793', birthDate:'19/12', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'كرستين ماهر', phone:'01210540958', birthDate:'1/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'كرستين مدحت', phone:'01006225828', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'كرستين موريس', phone:'01228134527', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'كرستين نجيب', phone:'01208773810', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'كرستين وجدي', phone:'01222550304', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'كرستينا يحيى', phone:'01122523524', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'كريستين صبري', phone:'01208383824', birthDate:'30/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'كريمان ميرهم شنودة فرح', phone:'01223422547', birthDate:'5/1', area:'سراي القبه', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had','anba-boula']},
-  {name:'كريمة حزقيال', phone:'01278589771', birthDate:'23/2', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'كلير عادل', phone:'01222313519', birthDate:'9/12', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'لوسينا ايميل', phone:'01229383811', birthDate:'8/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ليديا رؤوف', phone:'01220238655', birthDate:'26/3', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'ليديا روؤف', phone:'01227255823', birthDate:'17/12', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ليزا حلمى', phone:'01202235823', birthDate:'1/8', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ليزا كمال', phone:'01223005427', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ليليان رفعت', phone:'01225819829', birthDate:'6/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماجدة ساويرس', phone:'01289101038', birthDate:'14/3', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماجي جمال', phone:'01019360020', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماجي سامي', phone:'01223402923', birthDate:'29/7', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماجي ماجد', phone:'01201992040', birthDate:'20/7', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماجي يوسف', phone:'01225080763', birthDate:'7/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مادونا مجدى', phone:'01201988616', birthDate:'1/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مادونا مختار', phone:'01285516483', birthDate:'6/2', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مارتينا موريس', phone:'01229818580', birthDate:'1/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مارسيل زكي', phone:'01224482674', birthDate:'6/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مارسيل فكري', phone:'01202220706', birthDate:'18/2', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماركو منير', phone:'01221834624', birthDate:'22/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مارى باهورى', phone:'01284190806', birthDate:'18/3', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مارى موريس', phone:'01221756101', birthDate:'5/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماري اليشع', phone:'01225950718', birthDate:'1/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماري جوده', phone:'01227538683', birthDate:'8/2', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماري حلمي', phone:'01224049496', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماري سعيد', phone:'01279785010', birthDate:'7/11', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماري كرم', phone:'01220217426', birthDate:'1/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماري ماهر سليمان', phone:'01207650648', birthDate:'23/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماري مراد', phone:'01225255501', birthDate:'7/7', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماري ممدوح', phone:'01228183174', birthDate:'12/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماري يحيي', phone:'01289764202', birthDate:'1/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماريا نجيب', phone:'01228639938', birthDate:'2/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماريا هندى', phone:'01229506703', birthDate:'1/11', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماريا وجيه', phone:'01272244846', birthDate:'26/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماريام جمال', phone:'01003881136', birthDate:'11/11', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماريان حنا', phone:'01203914590', birthDate:'10/8', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماريان رومانى', phone:'01060234641', birthDate:'12/2', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماريان عطيه', phone:'01064727630', birthDate:'5/11', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماريان كرم', phone:'01283223367', birthDate:'14/12', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماريان مراد', phone:'01280095059', birthDate:'8/7', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماريان مسعد', phone:'01228115363', birthDate:'7/2', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماريان مسعود', phone:'01286274923', birthDate:'18/8', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماريان ملاك', phone:'01170665453', birthDate:'13/8', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماريان ممدوح', phone:'01204003640', birthDate:'25/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'ماريان ممدوح رمسيس', phone:'01285588690', birthDate:'25/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','anba-boula']},
-  {name:'ماريان ميخائل', phone:'01006464171', birthDate:'17/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماريان وجدي', phone:'01288165699', birthDate:'5/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ماريانا نصحى', phone:'01281501855', birthDate:'13/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'ماريانة عياد بشاى عبد المسيح', phone:'01277591433', birthDate:'16/7', area:'حمامات القبه', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had','anba-boula']},
-  {name:'مارينا جورج', phone:'01286517452', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'مارينا رومانى', phone:'01204410115', birthDate:'1/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مارينا ريمون', phone:'01225276886', birthDate:'6/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مارينا سمير', phone:'01282444198', birthDate:'16/2', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مارينا عادل خلف', phone:'01283059471', birthDate:'20/8', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مارينا عادل صابر', phone:'01010262791', birthDate:'4/12', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مارينا كامل', phone:'01279860160', birthDate:'23/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had']},
-  {name:'مارينا موريس', phone:'01010483483', birthDate:'25/2', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مارينا نادر لطفى R', phone:'01283900800', birthDate:'22/8', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مايفن باسم', phone:'01288167033', birthDate:'1/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مايكل ثروت', phone:'01223910741', birthDate:'10/11', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مايكل جورج', phone:'01226991144', birthDate:'27/7', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مايكل حليم', phone:'01004034933', birthDate:'20/12', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مايكل طلعت', phone:'01004070533', birthDate:'25/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مايكل مسيحه', phone:'01005237898', birthDate:'13/11', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مايكل ملاك وليم', phone:'01003561080', birthDate:'5/2', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مايكل منير', phone:'01066814526', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مجدالية مرسال', phone:'', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مجدى طلباوى', phone:'01277211631', birthDate:'1/7', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مجدى لويس', phone:'01285998841', birthDate:'24/3', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'محب ثابت', phone:'01223807220', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had']},
-  {name:'محب نجيب', phone:'01280323241', birthDate:'14/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مديحة طلعت مفيد مبارك', phone:'01274555491', birthDate:'7/12', area:'منشيه البكري', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','anba-boula']},
-  {name:'مرثا اسحق', phone:'01207334449', birthDate:'7/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had','anba-boula']},
-  {name:'مرثا شفيق', phone:'01288777807', birthDate:'18/2', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had']},
-  {name:'مرثا فاروق', phone:'01206600355', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مرسا اسحق ابراهيم شرقاوى', phone:'', birthDate:'', area:'حمامات القبه', address:'', confessionFather:'', church:'', groups:['anba-boula']},
-  {name:'مريتارفعت', phone:'01555299495', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مريم القمص غبريال', phone:'01227340348', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مريم ايمن', phone:'01289367148', birthDate:'30/8', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مريم تاودرس', phone:'01275439010', birthDate:'15/5', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مريم جمال', phone:'01202698540', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مريم جورج', phone:'01205528422', birthDate:'22/11', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مريم جوزيف', phone:'01205095090', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مريم خير', phone:'01286347940', birthDate:'1/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'مريم رضا', phone:'01222652305', birthDate:'1/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مريم سعد', phone:'01226792510', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'مريم سمير ثابت', phone:'01205180490', birthDate:'13/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مريم شفيق', phone:'01270565468', birthDate:'28/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مريم شمعون', phone:'01551721689', birthDate:'20/7', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مريم صفوت', phone:'01204492283', birthDate:'19/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مريم طلعت فوزى بولس', phone:'01280400293', birthDate:'12/8', area:'الساحل', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','anba-boula']},
-  {name:'مريم عادل (2299)', phone:'01557142299', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مريم عادل (5186)', phone:'01224315186', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مريم عاطف', phone:'01275480842', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مريم عزيز لوندى', phone:'01227863439', birthDate:'22/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مريم عطيه', phone:'01554117342', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مريم عمران', phone:'01207746072', birthDate:'10/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مريم غطاس (0101)', phone:'01116060101', birthDate:'1/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had']},
-  {name:'مريم غطاس (5423)', phone:'01229045423', birthDate:'3/5', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مريم فتحي', phone:'01222961247', birthDate:'20/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مريم كمال', phone:'01226718119', birthDate:'1/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مريم ماجد', phone:'01221044849', birthDate:'8/12', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had']},
-  {name:'مريم مينا', phone:'01222663491', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had']},
-  {name:'مريم نجيب', phone:'01228873505', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مريم هاني', phone:'01224423883', birthDate:'14/2', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مريم وهيب سويحه عبد المالك', phone:'01271679337', birthDate:'29/9', area:'سراي القبه', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','anba-boula']},
-  {name:'معلم رومانى النوبى', phone:'01271244166', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'منال انور', phone:'01273466901', birthDate:'12/8', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had']},
-  {name:'منال عادل', phone:'01217122257', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'منال وهيب', phone:'01208080666', birthDate:'24/8', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مني عطية خزام خليل', phone:'01227228268', birthDate:'29/9', area:'الزيتون', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','anba-boula']},
-  {name:'مني سمير', phone:'01229734639', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مني ماهر', phone:'01221468054', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مني نبيل', phone:'01004925405', birthDate:'18/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'منيرة شيحاته', phone:'01227975831', birthDate:'12/3', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مها بشرى', phone:'01225772674', birthDate:'21/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مهيب سمير', phone:'01286568631', birthDate:'6/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مونيكا عادل', phone:'01277226902', birthDate:'5/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مونيكا لطفى', phone:'01208943074', birthDate:'16/7', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ميخائيل عبد الملاك', phone:'01222846715', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ميرفت امين', phone:'01251359044', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ميرفت ثروت', phone:'01220323578', birthDate:'17/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ميرفت حنين', phone:'01286611379', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ميرنا جمال فرنسيس', phone:'01228520336', birthDate:'20/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ميرنا عادل', phone:'01287694905', birthDate:'1/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ميرنا مجدى', phone:'01206644869', birthDate:'23/5', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ميريت محسن', phone:'01008344875', birthDate:'9/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ميلاد رويس', phone:'01221333208', birthDate:'30/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مينا ادورد', phone:'01222857933', birthDate:'10/11', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مينا حبيب', phone:'01006661190', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مينا رؤوف', phone:'01006665762', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'مينا زكرىا', phone:'01271888821', birthDate:'1/3', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مينا عزمى جمال', phone:'01272498444', birthDate:'19/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'مينا فايز', phone:'01286590251', birthDate:'23/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نادية عدلى', phone:'01223436290', birthDate:'21/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'ناديه عدلي', phone:'01202318407', birthDate:'21/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ناريمان فوزي', phone:'01558365160', birthDate:'5/12', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نانسى جورج', phone:'01220885277', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نانسى جوزيف', phone:'01288310965', birthDate:'20/7', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نانسى فادى', phone:'01559051108', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نانسي صبحي', phone:'01280405096', birthDate:'30/5', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نانسي صليب', phone:'01282002232', birthDate:'5/11', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نانسي فايز', phone:'01221295200', birthDate:'20/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'ناهد محفوظ', phone:'01221666236', birthDate:'1/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نبيل بولس', phone:'01221152777', birthDate:'27/5', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نبيله رشاد', phone:'01286812991', birthDate:'20/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had']},
-  {name:'نجلاء عزت', phone:'01226052570', birthDate:'21/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had']},
-  {name:'نجلاء فريد', phone:'01200444738', birthDate:'12/7', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نرمين صابر', phone:'01224062780', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نرمين عادل', phone:'01508730787', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نرمين فوزي', phone:'01288474756', birthDate:'1/5', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نرمين مكرم', phone:'01203382727', birthDate:'21/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نرمين ناجى', phone:'01030085719', birthDate:'5/7', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نرمين نشات', phone:'012241556755', birthDate:'28/8', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نرمين نصحي', phone:'01270544123', birthDate:'10/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نسرين منير', phone:'01222770882', birthDate:'1/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had']},
-  {name:'نسيم فوزى (3403) (01222303403)', phone:'01222303403', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'نسيم فوزى (3403) (01282303403)', phone:'01282303403', birthDate:'10/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نشأت فريد', phone:'01222841945', birthDate:'9/2', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نعمة حكيم', phone:'01274433519', birthDate:'19/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'نعمة حليم', phone:'01273344519', birthDate:'1/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نهى عشم', phone:'012774015730', birthDate:'13/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'نيفين رفعت', phone:'01211154716', birthDate:'24/5', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نيفين رمزي', phone:'01116319393', birthDate:'30/3', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نيفين سامى', phone:'01205744356', birthDate:'3/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'نيفين شكرى', phone:'01007558372', birthDate:'4/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نيفين صبرى', phone:'01008678670', birthDate:'2/11', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نيفين عاطف', phone:'01286456163', birthDate:'27/5', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نيفين عبد الملاك', phone:'', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نيفين غطاس', phone:'01271143353', birthDate:'22/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نيفين محروس', phone:'01289346659', birthDate:'25/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'نيفين يوسف', phone:'01222618433', birthDate:'10/8', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'هاله صابر', phone:'01205079555', birthDate:'15/12', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'هانى حافظ', phone:'01003921707', birthDate:'22/11', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'هانى رؤوف', phone:'01223946228', birthDate:'19/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'هايدي جميل', phone:'01228414272', birthDate:'14/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'هايدي ماهر', phone:'01272920307', birthDate:'8/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'هايدي نبيل', phone:'01289189009', birthDate:'2/7', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'هبه ناجي', phone:'01210758893', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'هدى كمال فارس كندي', phone:'01202255715', birthDate:'5/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','anba-boula']},
-  {name:'هناء عاطف (0082)', phone:'01110300082', birthDate:'30/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'هناء عاطف (8108)', phone:'01222248108', birthDate:'30/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'هناء كامل رزق الله خليل', phone:'01283652007', birthDate:'17/5', area:'منشيه البكري', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','anba-boula']},
-  {name:'هناء نيازي', phone:'01279725640', birthDate:'26/9', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'وائل بهجت', phone:'01224155515', birthDate:'19/8', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'وائل سعد', phone:'01281170456', birthDate:'1/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'وجدى سعيد صليب شحاته', phone:'01272355553', birthDate:'1/5', area:'سراي القبه', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','anba-boula']},
-  {name:'وجيه ميرهم', phone:'01003684149', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'وسيم فريد', phone:'01225471298', birthDate:'3/12', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'وسيم مقار', phone:'01229332363', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-had']},
-  {name:'وفاء سمير', phone:'01211156840', birthDate:'20/6', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'وفاء مسعد', phone:'01279146533', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'وليد جميل', phone:'01204945888', birthDate:'21/11', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'وليد يعقوب', phone:'01279407422', birthDate:'1/1', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'وليد يعقوب حنا شحاتة', phone:'01068246632', birthDate:'', area:'سراي القبه', address:'', confessionFather:'', church:'', groups:['anba-boula']},
-  {name:'يؤانا مينا', phone:'01285620218', birthDate:'1/10', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'يوحنا فايق', phone:'01005093806', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'يوستينا سكرى', phone:'01277580768', birthDate:'24/4', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'يوسف امين', phone:'01224819071', birthDate:'', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa']},
-  {name:'يوسف نبيل', phone:'01222616028', birthDate:'21/3', area:'', address:'', confessionFather:'', church:'', groups:['makhdomeen-gomaa','makhdomeen-had']},
-  {name:'يوسف نبيل كامل معوض', phone:'', birthDate:'', area:'منشيه البكري', address:'', confessionFather:'', church:'', groups:['anba-boula']}
-
-];
 
 const STORAGE_KEY = 'khodam_attendance_data';
 let DATA = { servants: [], sessions: {} }; // sessions[groupId] = [{date, present:[servantId,...]}]
@@ -1803,7 +1388,10 @@ async function loadData(){
       DATA = JSON.parse(result.value);
       DATA.servants = DATA.servants || [];
       DATA.sessions = DATA.sessions || {};
+      DATA_BASE = result.value;
     }
+    if(window.storage.lastRev) DATA_REV = window.storage.lastRev(STORAGE_KEY);
+    startDataWatch();
     if(ensureAllHaveCodes()) await saveData();
     renderAll();
     return { confirmed:true };
@@ -1820,13 +1408,163 @@ async function refreshLatestDataForExport(){
   try{ await loadUsers(); }catch(e){ console.error('refresh users failed', e); }
 }
 
-async function saveData(){
+/* ---------- SAFE SHARED SAVING ----------
+   Several servants can edit at the same time. DATA_BASE is the last version
+   this device loaded or saved. When saving, if someone else saved in between,
+   their changes and ours are merged person-by-person and meeting-by-meeting
+   (attendance lists merge name-by-name), so nobody's work is overwritten.
+   Other devices' saves also flow into this page live. */
+let DATA_BASE = '{"servants":[],"sessions":{}}';
+let DATA_REV = 0;
+let dataSaving = false;
+let dataWatchStarted = false;
+let pendingServantRerender = false;
+
+function stableStr(v){
+  if(v === undefined) return 'undefined';
+  if(v === null || typeof v !== 'object') return JSON.stringify(v);
+  if(Array.isArray(v)) return '[' + v.map(stableStr).join(',') + ']';
+  return '{' + Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+stableStr(v[k])).join(',') + '}';
+}
+function threeWayPick(b, l, r){
+  return stableStr(b) !== stableStr(l) ? l : r;
+}
+function mergeList(bArr, lArr, rArr, keyOf, mergeItem){
+  const bm = new Map((bArr||[]).map(x=>[keyOf(x), x]));
+  const lm = new Map((lArr||[]).map(x=>[keyOf(x), x]));
+  const rm = new Map((rArr||[]).map(x=>[keyOf(x), x]));
+  const order = [];
+  (rArr||[]).forEach(x=>order.push(keyOf(x)));
+  (lArr||[]).forEach(x=>{ const k = keyOf(x); if(!rm.has(k)) order.push(k); });
+  const out = [];
+  order.forEach(k=>{
+    const v = mergeItem(bm.get(k), lm.get(k), rm.get(k));
+    if(v !== undefined) out.push(v);
+  });
+  return out;
+}
+function mergeSets(b, l, r){
+  const res = new Set(r||[]);
+  const bs = new Set(b||[]), ls = new Set(l||[]);
+  ls.forEach(x=>{ if(!bs.has(x)) res.add(x); });
+  bs.forEach(x=>{ if(!ls.has(x)) res.delete(x); });
+  return Array.from(res);
+}
+function mergeSession(b, l, r){
+  if(!l && !r) return undefined;
+  if(b && !l) return undefined;                       // deleted here
+  if(b && !r) return stableStr(b) === stableStr(l) ? undefined : l; // deleted there
+  if(!r) return l;
+  if(!l) return r;
+  const base = b || { present: [] };
+  const out = Object.assign({}, r, stableStr(base) !== stableStr(l) ? l : {});
+  out.present = mergeSets(base.present, l.present, r.present);
+  return out;
+}
+function mergeData(base, local, remote){
+  const merged = { servants: [], sessions: {} };
+  merged.servants = mergeList(base.servants, local.servants, remote.servants, x=>x.id, threeWayPick);
+  const gids = new Set([...Object.keys(base.sessions||{}), ...Object.keys(local.sessions||{}), ...Object.keys(remote.sessions||{})]);
+  gids.forEach(gid=>{
+    const list = mergeList((base.sessions||{})[gid], (local.sessions||{})[gid], (remote.sessions||{})[gid], x=>x.date, mergeSession);
+    if(list.length || (local.sessions||{})[gid] || (remote.sessions||{})[gid]) merged.sessions[gid] = list;
+  });
+  // drop attendance marks for people someone deleted meanwhile
+  const ids = new Set(merged.servants.map(x=>x.id));
+  Object.values(merged.sessions).forEach(list=>list.forEach(sess=>{ sess.present = (sess.present||[]).filter(id=>ids.has(id)); }));
+  return merged;
+}
+// Put merged content into DATA without replacing the objects other code holds.
+function applyDataInPlace(merged){
+  const byId = new Map(DATA.servants.map(x=>[x.id, x]));
+  const next = merged.servants.map(m=>{
+    const o = byId.get(m.id);
+    if(!o) return m;
+    Object.keys(o).forEach(k=>{ if(!(k in m)) delete o[k]; });
+    Object.assign(o, m);
+    return o;
+  });
+  DATA.servants.splice(0, DATA.servants.length, ...next);
+  Object.keys(DATA.sessions).forEach(k=>delete DATA.sessions[k]);
+  Object.assign(DATA.sessions, merged.sessions);
+}
+function attendSessionPresent(obj){
+  if(!currentGroupId) return null;
+  const date = (document.getElementById('attendDate')||{}).value;
+  const sess = ((obj.sessions||{})[currentGroupId]||[]).find(x=>x.date===date);
+  return sess ? sess.present : [];
+}
+function refreshAfterRemoteChange(oldRemote, newRemote){
+  // keep ticks on the attendance screen in step with what others saved
   try{
-    await window.storage.set(STORAGE_KEY, JSON.stringify(DATA), true);
-    return true;
+    const before = attendSessionPresent(oldRemote), after = attendSessionPresent(newRemote);
+    if(before && after){
+      const b = new Set(before), a = new Set(after);
+      a.forEach(id=>{ if(!b.has(id)) attendCheckedIds.add(id); });
+      b.forEach(id=>{ if(!a.has(id)) attendCheckedIds.delete(id); });
+    }
+  }catch(e){}
+  const servantsPanel = document.getElementById('panel-servants');
+  const editing = Array.from(document.querySelectorAll('.edit-panel')).some(el=>el.style.display !== 'none' && el.innerHTML.trim() !== '')
+    || (servantsPanel && servantsPanel.contains(document.activeElement) && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName));
+  if(editing){ pendingServantRerender = true; }
+  else { try{ renderServantList(); }catch(e){} }
+  try{ if(currentGroupId){ renderAttendList(); renderHistory(); } }catch(e){}
+}
+async function pullRemoteData(){
+  if(dataSaving || !window.storage.getWithRev) return;
+  try{
+    const r = await window.storage.getWithRev(STORAGE_KEY, DATA_REV);
+    if(r.same || !r.exists || dataSaving) return;
+    const remote = JSON.parse(r.value);
+    remote.servants = remote.servants || []; remote.sessions = remote.sessions || {};
+    const base = JSON.parse(DATA_BASE);
+    applyDataInPlace(mergeData(base, DATA, remote));
+    DATA_BASE = r.value; DATA_REV = r.rev;
+    refreshAfterRemoteChange(base, remote);
+  }catch(e){ console.error('live update failed', e); }
+}
+function startDataWatch(){
+  if(dataWatchStarted || !window.storage.watch) return;
+  dataWatchStarted = true;
+  window.storage.watch(STORAGE_KEY, rev=>{ if(rev !== DATA_REV) pullRemoteData(); });
+}
+
+async function saveData(){
+  if(!window.storage.setIfRev){
+    try{ await window.storage.set(STORAGE_KEY, JSON.stringify(DATA), true); return true; }
+    catch(e){ console.error('storage error', e); return false; }
+  }
+  dataSaving = true;
+  try{
+    for(let attempt=0; attempt<5; attempt++){
+      const r = await window.storage.getWithRev(STORAGE_KEY, DATA_REV);
+      let merged = false;
+      if(!r.same && r.rev !== DATA_REV){
+        const remote = r.exists ? JSON.parse(r.value) : { servants: [], sessions: {} };
+        remote.servants = remote.servants || []; remote.sessions = remote.sessions || {};
+        applyDataInPlace(mergeData(JSON.parse(DATA_BASE), DATA, remote));
+        DATA_BASE = r.exists ? r.value : JSON.stringify(remote);
+        DATA_REV = r.rev;
+        merged = true;
+      }
+      const str = JSON.stringify(DATA);
+      const res = await window.storage.setIfRev(STORAGE_KEY, str, DATA_REV);
+      if(res.ok){
+        DATA_BASE = str; DATA_REV = res.rev;
+        if(merged || pendingServantRerender){ pendingServantRerender = false; setTimeout(()=>{ try{ renderServantList(); }catch(e){} }, 0); }
+        return true;
+      }
+      await new Promise(res=>setTimeout(res, 200 + Math.random()*400));
+    }
+    alert('مقدرناش نحفظ دلوقتي لأن في ناس كتير بتحفظ في نفس اللحظة. جرّب تاني بعد ثواني.');
+    return false;
   }catch(e){
     console.error('storage error', e);
+    alert('حصلت مشكلة في الحفظ. اتأكد إن النت شغال وجرّب تاني.');
     return false;
+  }finally{
+    dataSaving = false;
   }
 }
 
@@ -2006,38 +1744,6 @@ function refreshNewServantGroupsGrid(){
   buildGroupGrid(document.getElementById('newServantGroups'), [], avail);
 }
 
-document.getElementById('importSeedBtn').addEventListener('click', async ()=>{
-  if(!confirm(`سيتم استيراد ${SEED_DATA.length} اسم من القوائم اللي بعتّها. الأسماء اللي هتلاقيها موجودة بالظبط هتتحدّث بياناتها الناقصة بس (اجتماعات، تليفون، تاريخ ميلاد)، ومش هتتكرر. متابع؟`)) return;
-  let added = 0, updated = 0;
-  SEED_DATA.forEach(seed=>{
-    const existing = DATA.servants.find(s => s.name.trim() === seed.name.trim());
-    if(existing){
-      let changed = false;
-      seed.groups.forEach(g=>{ if(!existing.groups.includes(g)){ existing.groups.push(g); changed = true; } });
-      if(seed.phone && !existing.phone){ existing.phone = seed.phone; changed = true; }
-      if(seed.area && !existing.area){ existing.area = seed.area; changed = true; }
-      if(seed.birthDate && !existing.birthDate){ existing.birthDate = seed.birthDate; changed = true; }
-      if(seed.address && !existing.address){ existing.address = seed.address; changed = true; }
-      if(seed.confessionFather && !existing.confessionFather){ existing.confessionFather = seed.confessionFather; changed = true; }
-      if(seed.church && !existing.church){ existing.church = seed.church; changed = true; }
-      if(changed) updated++;
-    } else {
-      DATA.servants.push({
-        id: 's_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
-        name: seed.name, phone: seed.phone||'', area: seed.area||'', birthDate: seed.birthDate||'',
-        address: seed.address||'', confessionFather: seed.confessionFather||'', church: seed.church||'',
-        groups: [...seed.groups], addedBy: currentUser ? currentUser.name : 'استيراد'
-      });
-      added++;
-    }
-  });
-  await saveData();
-  flashSaved('importSavedMsg');
-  renderServantList();
-  renderMeetingPicker();
-  alert(`تم الاستيراد ✓\nاتضاف ${added} خادم/مخدوم جديد.\nاتحدّثت بيانات ${updated} كانوا موجودين بالفعل.`);
-});
-
 document.getElementById('newServantMoreToggle').addEventListener('click', ()=>{
   const box = document.getElementById('newServantMore');
   box.style.display = box.style.display === 'none' ? 'block' : 'none';
@@ -2192,7 +1898,7 @@ function renderServantList(){
       <div class="row-actions">
         ${can('editServant') ? `<button class="ghost edit-servant">تعديل البيانات</button>` : ''}
         ${isSupervisorOrAdmin() ? `<button class="ghost ${s.cancelled?'':'danger'} toggle-cancel-servant">${s.cancelled?'إعادة تفعيل':'إلغاء'}</button>` : ''}
-        ${isAdmin() ? `<button class="ghost danger del-servant">حذف</button>` : ''}
+        ${isSupervisorOrAdmin() ? `<button class="ghost danger del-servant">حذف</button>` : ''}
       </div>
     </div>
     <div class="edit-panel" data-edit-for="${s.id}" style="display:none;padding:10px 0;"></div>
