@@ -1101,7 +1101,7 @@ window.addEventListener('error', function(e){
       try{ r = await fbGetOnce(key); }
       catch(e){ r = await fbGetOnce(key); }
       lastRevs[key] = r.rev || 0;
-      if(!r.exists) throw new Error('key not found');
+      if(!r.exists){ const e = new Error('key not found'); e.notFound = true; throw e; }
       return { key, value: r.value, shared };
     },
     async set(key, value, shared){
@@ -1138,8 +1138,13 @@ window.addEventListener('error', function(e){
     },
     async list(prefix, shared){
       if(!shared) return lsStore.list(prefix, shared);
+      if(prefix){
+        // every caller passes a full key: check that one small document only
+        const snap = await mainRef(prefix).get();
+        return { keys: snap.exists ? [prefix] : [], prefix, shared };
+      }
       const snap = await db.collection('kv').get();
-      const keys = snap.docs.map(d=>d.id).filter(id=>id.indexOf(PART_SEP) === -1 && (!prefix || id.indexOf(prefix) === 0));
+      const keys = snap.docs.map(d=>d.id).filter(id=>id.indexOf(PART_SEP) === -1);
       return { keys, prefix, shared };
     }
   };
@@ -2403,6 +2408,7 @@ async function storageGetWithRetry(key, shared, attempts=3, delayMs=350){
       const res = await window.storage.get(key, shared);
       return { confirmed:true, value: res ? res.value : null };
     }catch(e){
+      if(e && e.notFound) return { confirmed:true, value:null }; // definitely never created
       if(i < attempts-1) await new Promise(r=>setTimeout(r, delayMs));
     }
   }
