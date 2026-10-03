@@ -962,7 +962,7 @@ table.hist th{color:var(--ink-soft);font-weight:700;}
   <div class="login-card" id="loginFormCard">
     <img class="login-logo" src="" id="loginLogoImg" alt="شعار الكنيسة">
     <h1 id="loginTitle">تسجيل الدخول</h1>
-    <p id="loginSubtitle">اكتب اسمك وكلمة السر للدخول</p>
+    <p id="loginSubtitle">جاري تحميل البيانات… استنى ثواني</p>
     <input type="text" id="loginNameInput" placeholder="الاسم" autocomplete="username">
     <div style="position:relative;margin-top:8px;">
       <input type="password" id="loginPasswordInput" placeholder="كلمة السر" autocomplete="current-password" style="padding-inline-end:42px;">
@@ -1175,6 +1175,7 @@ window.addEventListener('error', function(e){
     }
     firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
+    try{ db.settings({ experimentalAutoDetectLongPolling: true, merge: true }); }catch(e){ console.warn('firestore settings', e); }
     const auth = firebase.auth();
 
     form.style.display = 'none';
@@ -2705,10 +2706,12 @@ function hideLoginOverlay(){
   document.getElementById('loginOverlay').style.display = 'none';
 }
 
+let APP_READY = false;
 async function doLogin(name, password){
   name = (name||'').trim();
   password = password||'';
   const note = document.getElementById('loginNote');
+  if(!APP_READY){ note.textContent = 'لحظة… البيانات لسه بتتحمّل. استنى ثواني وجرّب تاني.'; return; }
   if(!name || !password){ note.textContent = 'لازم تكتب الاسم وكلمة السر.'; return; }
 
   try{
@@ -3683,6 +3686,11 @@ document.getElementById('retryLoadBtn').addEventListener('click', ()=>{
 async function init(){
  try{
   await window.__storageReady;
+  setTimeout(()=>{
+    if(!APP_READY && document.getElementById('loginFormCard').style.display !== 'none'){
+      document.getElementById('loginNote').textContent = 'التحميل واخد وقت أطول من العادي. اتأكد إن النت شغال واعمل تحديث للصفحة.';
+    }
+  }, 20000);
   const modeNotice = document.getElementById('storageModeNotice');
   if(window.__usingLocalStorageFallback){
     modeNotice.textContent = '⚠️ البيانات دي متخزنة على الجهاز/المتصفح ده بس، ومش بتتشارك تلقائيًا مع أي نسخة تانية من الملف عند حد تاني. استخدم "تنزيل نسخة احتياطية كاملة" و"استعادة من نسخة احتياطية" من الإعدادات عشان تنقل البيانات بين أجهزة مختلفة.';
@@ -3726,6 +3734,7 @@ async function init(){
     // confirmed: the key genuinely has never been created — safe, this is a fresh install
   }
 
+  APP_READY = true;
   const personal = await getPersonalLogin();
   if(personal && personal.name){
     const user = USERS.find(u=>u.name === personal.name);
