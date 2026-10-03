@@ -1190,16 +1190,43 @@ window.addEventListener('error', function(e){
 
     form.style.display = 'none';
     sub.textContent = 'جاري التحميل...';
-    let done = false;
+    // iPhone home-screen apps don't always keep Firebase's own sign-in between
+    // launches, so this device also remembers the service password it was
+    // given and signs in again quietly. Changing the password in Firebase
+    // makes every saved copy stop working.
+    const SAVED_PW_KEY = 'khodam_service_pw';
+    const getSavedPw = ()=>{ try{ return localStorage.getItem(SAVED_PW_KEY); }catch(e){ return null; } };
+    const setSavedPw = v=>{ try{ if(v) localStorage.setItem(SAVED_PW_KEY, v); else localStorage.removeItem(SAVED_PW_KEY); }catch(e){} };
+    try{ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{}); }catch(e){}
+    let done = false, triedSaved = false;
+    function showForm(){
+      sub.textContent = 'اكتب باسورد الخدمة عشان تدخل';
+      form.style.display = 'block';
+      setTimeout(()=>pw.focus(), 50);
+    }
     auth.onAuthStateChanged(user=>{
       if(user && !done){
         done = true;
         gate.style.display = 'none';
         resolve();
       } else if(!user){
-        sub.textContent = 'اكتب باسورد الخدمة عشان تدخل';
-        form.style.display = 'block';
-        setTimeout(()=>pw.focus(), 50);
+        const saved = getSavedPw();
+        if(saved && !triedSaved){
+          triedSaved = true;
+          sub.textContent = 'جاري الدخول...';
+          auth.signInWithEmailAndPassword(SERVICE_EMAIL, saved).catch(err=>{
+            const c = err && err.code || '';
+            if(c.includes('wrong-password') || c.includes('invalid-credential') || c.includes('invalid-login') || c.includes('user-disabled')){
+              setSavedPw(null);
+              msg.textContent = 'باسورد الخدمة اتغيّر. اكتب الباسورد الجديد.';
+            } else if(c.includes('network')){
+              msg.textContent = 'مفيش إنترنت، اتأكد من الاتصال';
+            }
+            showForm();
+          });
+          return;
+        }
+        showForm();
       }
     });
 
@@ -1209,6 +1236,7 @@ window.addEventListener('error', function(e){
       btn.disabled = true; btn.textContent = 'لحظة...'; msg.textContent = '';
       try{
         await auth.signInWithEmailAndPassword(SERVICE_EMAIL, val);
+        setSavedPw(val);
       }catch(err){
         const c = err && err.code || '';
         if(c.includes('wrong-password') || c.includes('invalid-credential') || c.includes('invalid-login')) msg.textContent = 'الباسورد غلط، جرّب تاني';
