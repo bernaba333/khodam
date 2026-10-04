@@ -567,6 +567,7 @@ table.hist th{color:var(--ink-soft);font-weight:700;}
       <button id="gateBtn" style="margin-top:12px;width:100%;background:#7A2E2E;color:#fdf8ec;border:none;padding:11px 20px;border-radius:10px;font-family:'Cairo',sans-serif;font-weight:700;font-size:.95rem;cursor:pointer;">دخول</button>
     </div>
     <p id="gateMsg" style="color:#7A2E2E;font-size:.85rem;margin:12px 0 0;min-height:1.2em;"></p>
+    <p class="app-version" style="color:#a39673;font-size:.72rem;margin:10px 0 0;"></p>
   </div>
 </div>
 <div class="wrap">
@@ -866,6 +867,7 @@ table.hist th{color:var(--ink-soft);font-weight:700;}
 
 <!-- SETTINGS TAB -->
 <section class="panel" id="panel-settings">
+  <p class="app-version" style="text-align:center;color:#a39673;font-size:.75rem;margin:0 0 10px;"></p>
   <div class="card" id="notAdminNote" style="display:none;">
     <h2>الإعدادات</h2>
     <div class="empty-note">إدارة المستخدمين وتصفير البيانات متاحة للمدير فقط. لو محتاج صلاحية مدير كلّم اللي مسؤول عن البرنامج.</div>
@@ -1195,6 +1197,10 @@ window.addEventListener('error', function(e){
     return r;
   };
   fbStore.setIfRev = setIfRev;
+  // photos live in their own small documents instead of inside the big data blob
+  fbStore.photoGet = async id=>{ const snap = await db.collection('ph').doc(id).get(); return snap.exists ? snap.data() : null; };
+  fbStore.photoSet = (id, v, ver)=> db.collection('ph').doc(id).set({ v, ver, at: Date.now() });
+  fbStore.photoDelete = id=> db.collection('ph').doc(id).delete();
   fbStore.lastRev = key => lastRevs[key] || 0;
   fbStore.watch = (key, cb)=> mainRef(key).onSnapshot(snap=>{
     if(snap.metadata.hasPendingWrites) return;
@@ -1469,10 +1475,13 @@ async function loadData(){
       DATA = JSON.parse(result.value);
       DATA.servants = DATA.servants || [];
       DATA.sessions = DATA.sessions || {};
-      DATA_BASE = result.value;
+      DATA_BASE = stripPhotos(result.value);
     }
     if(window.storage.lastRev) DATA_REV = window.storage.lastRev(STORAGE_KEY);
+    reattachPhotos();
     startDataWatch();
+    // first run of this version: move photos out of the main data
+    if(window.storage.photoSet && DATA.servants.some(s=>isInlinePhoto(s.photo) && !s.photoVer)) saveData();
     if(ensureAllHaveCodes()) await saveData();
     renderAll();
     return { confirmed:true };
@@ -1487,6 +1496,129 @@ async function loadData(){
 async function refreshLatestDataForExport(){
   try{ await loadData(); }catch(e){ console.error('refresh data failed', e); }
   try{ await loadUsers(); }catch(e){ console.error('refresh users failed', e); }
+}
+
+/* ---------- PHOTOS (stored apart from the main data) ----------
+   The main data used to carry every photo inside it, which made each save
+   and each live update several megabytes. Now each photo is its own small
+   document, the main data only keeps a version tag (photoVer), and photos
+   are cached on the device so they download once. */
+const PHOTO_MEM = new Map();   // id -> { ver, v }
+const photoCache = {
+  _db: null,
+  async open(){
+    if(this._db !== null) return this._db;
+    this._db = await new Promise(res=>{
+      try{
+        const rq = indexedDB.open('khodam-cache', 1);
+        rq.onupgradeneeded = ()=>rq.result.createObjectStore('photos');
+        rq.onsuccess = ()=>res(rq.result);
+        rq.onerror = ()=>res(false);
+      }catch(e){ res(false); }
+    });
+    return this._db;
+  },
+  async get(id){
+    const db = await this.open(); if(!db) return null;
+    return new Promise(res=>{ try{ const r = db.transaction('photos').objectStore('photos').get(id); r.onsuccess = ()=>res(r.result||null); r.onerror = ()=>res(null); }catch(e){ res(null); } });
+  },
+  async put(id, rec){
+    const db = await this.open(); if(!db) return;
+    try{ db.transaction('photos','readwrite').objectStore('photos').put(rec, id); }catch(e){}
+  },
+  async del(id){
+    const db = await this.open(); if(!db) return;
+    try{ db.transaction('photos','readwrite').objectStore('photos').delete(id); }catch(e){}
+  }
+};
+function isInlinePhoto(v){ return typeof v === 'string' && v.startsWith('data:'); }
+function photoReplacer(k, v){ return (k === 'photo' && isInlinePhoto(v)) ? undefined : v; }
+function serializeData(obj){ return JSON.stringify(obj || DATA, photoReplacer); }
+function stripPhotos(jsonStr){ return JSON.stringify(JSON.parse(jsonStr), photoReplacer); }
+function toJpeg(dataUrl){
+  return new Promise(res=>{
+    if(!/^data:image\/png/.test(dataUrl)) return res(dataUrl);
+    const img = new Image();
+    img.onload = ()=>{
+      try{
+        const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+        const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(img,0,0);
+        res(c.toDataURL('image/jpeg', 0.82));
+      }catch(e){ res(dataUrl); }
+    };
+    img.onerror = ()=>res(dataUrl);
+    img.src = dataUrl;
+  });
+}
+// Upload new/changed photos and record removals before the main data is saved.
+async function preparePhotos(){
+  if(!window.storage.photoSet) return;
+  const uploads = [];
+  for(const s of DATA.servants){
+    const mem = PHOTO_MEM.get(s.id);
+    if(isInlinePhoto(s.photo)){
+      if(mem && mem.v === s.photo){ if(s.photoVer !== mem.ver) s.photoVer = mem.ver; continue; }
+      uploads.push(s);
+    } else if(s.photo === ''){
+      // the photo was removed on purpose
+      delete s.photo;
+      if(s.photoVer){
+        delete s.photoVer;
+        PHOTO_MEM.delete(s.id); photoCache.del(s.id);
+        window.storage.photoDelete(s.id).catch(()=>{});
+      }
+    }
+  }
+  // upload 8 at a time
+  for(let i=0; i<uploads.length; i+=8){
+    await Promise.all(uploads.slice(i, i+8).map(async s=>{
+      const original = s.photo;
+      const v = await toJpeg(original);
+      const ver = Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+      await window.storage.photoSet(s.id, v, ver);
+      if(s.photo === original) s.photo = v;
+      s.photoVer = ver;
+      PHOTO_MEM.set(s.id, { ver, v });
+      photoCache.put(s.id, { ver, v });
+    }));
+  }
+}
+let photoFetchTimer = null;
+const photoWanted = new Map();  // id -> ver
+function reattachPhotos(){
+  DATA.servants.forEach(s=>{
+    if(!s.photoVer){ return; }
+    const mem = PHOTO_MEM.get(s.id);
+    if(mem && mem.ver === s.photoVer){ s.photo = mem.v; return; }
+    if(!isInlinePhoto(s.photo)) delete s.photo;
+    photoWanted.set(s.id, s.photoVer);
+  });
+  if(photoWanted.size){ clearTimeout(photoFetchTimer); photoFetchTimer = setTimeout(fetchWantedPhotos, 50); }
+}
+async function fetchWantedPhotos(){
+  const jobs = Array.from(photoWanted.entries()); photoWanted.clear();
+  let changed = false;
+  const misses = [];
+  await Promise.all(jobs.map(async ([id, ver])=>{
+    const rec = await photoCache.get(id);
+    if(rec && rec.ver === ver){ PHOTO_MEM.set(id, rec); changed = true; } else misses.push([id, ver]);
+  }));
+  for(let i=0; i<misses.length; i+=8){
+    await Promise.all(misses.slice(i, i+8).map(async ([id, ver])=>{
+      try{
+        const rec = await window.storage.photoGet(id);
+        if(rec && rec.v){ const r = { ver: rec.ver, v: rec.v }; PHOTO_MEM.set(id, r); photoCache.put(id, r); changed = true; }
+      }catch(e){}
+    }));
+  }
+  if(changed){
+    DATA.servants.forEach(s=>{ const m = PHOTO_MEM.get(s.id); if(m && s.photoVer === m.ver) s.photo = m.v; });
+    try{ refreshScreensAfterRemoteChange(); }catch(e){}
+  }
+}
+async function loadAllPhotosNow(){
+  reattachPhotos();
+  if(photoWanted.size) await fetchWantedPhotos();
 }
 
 /* ---------- SAFE SHARED SAVING ----------
@@ -1567,13 +1699,15 @@ function applyDataInPlace(merged){
   const next = merged.servants.map(m=>{
     const o = byId.get(m.id);
     if(!o) return m;
-    Object.keys(o).forEach(k=>{ if(!(k in m)) delete o[k]; });
+    const keepUnsavedPhoto = isInlinePhoto(o.photo) && !o.photoVer;  // a new photo not uploaded yet
+    Object.keys(o).forEach(k=>{ if(!(k in m) && !(k === 'photo' && keepUnsavedPhoto)) delete o[k]; });
     Object.assign(o, m);
     return o;
   });
   DATA.servants.splice(0, DATA.servants.length, ...next);
   Object.keys(DATA.sessions).forEach(k=>delete DATA.sessions[k]);
   Object.assign(DATA.sessions, merged.sessions);
+  reattachPhotos();
 }
 function attendSessionPresent(obj){
   if(!currentGroupId) return null;
@@ -1610,11 +1744,12 @@ async function pullRemoteData(){
   try{
     const r = await window.storage.getWithRev(STORAGE_KEY, DATA_REV);
     if(r.same || !r.exists || dataSaving) return;
-    const remote = JSON.parse(r.value);
+    const remoteStr = stripPhotos(r.value);
+    const remote = JSON.parse(remoteStr);
     remote.servants = remote.servants || []; remote.sessions = remote.sessions || {};
     const base = JSON.parse(DATA_BASE);
-    applyDataInPlace(mergeData(base, DATA, remote));
-    DATA_BASE = r.value; DATA_REV = r.rev;
+    applyDataInPlace(mergeData(base, JSON.parse(serializeData()), remote));
+    DATA_BASE = remoteStr; DATA_REV = r.rev;
     refreshAfterRemoteChange(base, remote);
   }catch(e){ console.error('live update failed', e); }
 }
@@ -1628,12 +1763,14 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
+const APP_VERSION = '4 أكتوبر 2026 (ج)';
+document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
   if(!el){
     el = document.createElement('div');
     el.id = 'saveStatus';
-    el.style.cssText = 'position:fixed;left:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:9500;padding:7px 14px;border-radius:20px;font-family:Cairo,sans-serif;font-size:.82rem;box-shadow:0 3px 10px rgba(0,0,0,.18);transition:opacity .4s;direction:rtl;pointer-events:none;';
+    el.style.cssText = 'position:fixed;left:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:100001;padding:7px 14px;border-radius:20px;font-family:Cairo,sans-serif;font-size:.82rem;box-shadow:0 3px 10px rgba(0,0,0,.18);transition:opacity .4s;direction:rtl;pointer-events:none;';
     document.body.appendChild(el);
   }
   clearTimeout(el._t);
@@ -1679,21 +1816,23 @@ async function saveDataNow(){
   while(dataSaving) await new Promise(r=>setTimeout(r, 50));
   dataSaving = true;
   try{
+    await preparePhotos();
     for(let attempt=0; attempt<5; attempt++){
       let merged = false;
       // the live watch already tells us when nobody else saved: skip the extra read then
       if(!(attempt === 0 && remoteKnownRev === DATA_REV)){
         const r = await window.storage.getWithRev(STORAGE_KEY, DATA_REV);
         if(!r.same && r.rev !== DATA_REV){
-          const remote = r.exists ? JSON.parse(r.value) : { servants: [], sessions: {} };
+          const remoteStr = r.exists ? stripPhotos(r.value) : '{"servants":[],"sessions":{}}';
+          const remote = JSON.parse(remoteStr);
           remote.servants = remote.servants || []; remote.sessions = remote.sessions || {};
-          applyDataInPlace(mergeData(JSON.parse(DATA_BASE), DATA, remote));
-          DATA_BASE = r.exists ? r.value : JSON.stringify(remote);
+          applyDataInPlace(mergeData(JSON.parse(DATA_BASE), JSON.parse(serializeData()), remote));
+          DATA_BASE = remoteStr;
           DATA_REV = r.rev;
           merged = true;
         }
       }
-      const str = JSON.stringify(DATA);
+      const str = serializeData();
       const res = await window.storage.setIfRev(STORAGE_KEY, str, DATA_REV);
       if(res.ok){
         DATA_BASE = str; DATA_REV = res.rev;
@@ -1806,10 +1945,23 @@ function ensureAllHaveCodes(){
 
 
 let afeqadSearchTerm = '';
+let afeqadSearchTimer = null;
 document.getElementById('afeqadSearch').addEventListener('input', (e)=>{
-  afeqadSearchTerm = e.target.value.trim();
-  renderAfeqadList();
+  clearTimeout(afeqadSearchTimer);
+  afeqadSearchTimer = setTimeout(()=>{
+    afeqadSearchTerm = e.target.value.trim();
+    afeqadListLimit = LIST_PAGE;
+    renderAfeqadList();
+  }, 220);
 });
+// long lists show a page at a time: drawing 450 rows at once is slow on phones
+const LIST_PAGE = 60;
+let servantListLimit = LIST_PAGE, afeqadListLimit = LIST_PAGE;
+function moreButtonHtml(shownCount, total, kind){
+  if(shownCount >= total) return '';
+  const next = Math.min(LIST_PAGE, total - shownCount);
+  return `<div style="text-align:center;margin:14px 0;"><button class="ghost show-more" data-kind="${kind}">عرض ${next} كمان (باقي ${total - shownCount})</button></div>`;
+}
 
 function renderAfeqadList(){
   refreshAreaChurchDatalists();
@@ -1832,6 +1984,8 @@ function renderAfeqadList(){
     if(!bd) return 1;
     return ad.localeCompare(bd);
   });
+  const totalPeople = people.length;
+  people = people.slice(0, afeqadListLimit);
   list.innerHTML = people.map(s=>`
     <div class="servant-row" data-id="${s.id}">
       <div>
@@ -1843,7 +1997,9 @@ function renderAfeqadList(){
       </div>
     </div>
     <div class="edit-panel" data-visit-edit-for="${s.id}" style="display:none;padding:10px 0;"></div>
-  `).join('');
+  `).join('') + moreButtonHtml(people.length, totalPeople, 'afeqad');
+  const moreA = list.querySelector('.show-more[data-kind="afeqad"]');
+  if(moreA) moreA.addEventListener('click', ()=>{ afeqadListLimit += LIST_PAGE; renderAfeqadList(); });
 
   list.querySelectorAll('.record-visit').forEach(btn=>{
     btn.addEventListener('click', (e)=>{
@@ -1987,9 +2143,14 @@ function sortByName(arr){
 }
 
 let servantSearchTerm = '';
+let servantSearchTimer = null;
 document.getElementById('servantSearch').addEventListener('input', (e)=>{
-  servantSearchTerm = e.target.value.trim();
-  renderServantList();
+  clearTimeout(servantSearchTimer);
+  servantSearchTimer = setTimeout(()=>{
+    servantSearchTerm = e.target.value.trim();
+    servantListLimit = LIST_PAGE;
+    renderServantList();
+  }, 220);
 });
 
 function renderServantList(){
@@ -2010,14 +2171,18 @@ function renderServantList(){
     list.innerHTML = '<div class="empty-note">مفيش نتايج مطابقة للبحث</div>';
     return;
   }
+  const totalShown = shown.length;
+  shown = shown.slice(0, servantListLimit);
+  const spouseOf = new Map();
+  DATA.servants.forEach(o=>{ if(o.spouseName && !spouseOf.has(o.spouseName)) spouseOf.set(o.spouseName, o); });
   list.innerHTML = shown.map(s=>{
-    const spouse = !s.spouseName ? DATA.servants.find(o=>o.spouseName && o.spouseName === s.name) : null;
+    const spouse = !s.spouseName ? (spouseOf.get(s.name) || null) : null;
     const childrenListRaw = (s.children && s.children.length) ? s.children : (s.childrenNames ? s.childrenNames.split(',').map(c=>c.trim()).filter(Boolean) : []);
     const childrenList = childrenListRaw.map(c=> typeof c === 'string' ? {name:c} : c);
     return `
     <div class="servant-row" data-id="${s.id}">
       <div style="display:flex;gap:10px;flex:1;">
-        ${s.photo ? `<img src="${s.photo}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex:none;">` : ''}
+        ${s.photo ? `<img src="${s.photo}" loading="lazy" decoding="async" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex:none;">` : ''}
         <div>
         <div class="servant-name">${s.name} ${s.personCode ? `<span class="chip" style="background:var(--ink);color:#fdf8ec;font-size:.65rem;">${s.personCode}</span>` : ''}</div>
         ${(s.phone && can('phones')) ? `<div style="font-size:.78rem;color:#8a7d55;margin-top:2px;">📞 ${s.phone}</div>` : ''}
@@ -2046,7 +2211,9 @@ function renderServantList(){
       </div>
     </div>
     <div class="edit-panel" data-edit-for="${s.id}" style="display:none;padding:10px 0;"></div>
-  `;}).join('');
+  `;}).join('') + moreButtonHtml(shown.length, totalShown, 'servants');
+  const moreS = list.querySelector('.show-more[data-kind="servants"]');
+  if(moreS) moreS.addEventListener('click', ()=>{ servantListLimit += LIST_PAGE; renderServantList(); });
 
   list.querySelectorAll('.del-servant').forEach(btn=>{
     btn.addEventListener('click', async (e)=>{
@@ -2252,9 +2419,13 @@ function renderAttendList(){
   });
 }
 
+let attendSearchTimer = null;
 document.getElementById('attendSearch').addEventListener('input', (e)=>{
-  attendSearchTerm = e.target.value.trim();
-  renderAttendList();
+  clearTimeout(attendSearchTimer);
+  attendSearchTimer = setTimeout(()=>{
+    attendSearchTerm = e.target.value.trim();
+    renderAttendList();
+  }, 150);
 });
 
 document.getElementById('attendDate').addEventListener('change', (e)=>{
@@ -2661,7 +2832,10 @@ function applyBranding(title, logo){
   if(titleInput && !titleInput.matches(':focus')) titleInput.value = title;
 }
 
-function resizeImageFile(file, maxSize, callback, mimeType='image/png', quality=0.92){
+function resizeImageFile(file, maxSize, callback, mimeType, quality){
+  // person photos (small) are stored as JPEG: about 5x smaller than PNG
+  if(!mimeType) mimeType = maxSize <= 200 ? 'image/jpeg' : 'image/png';
+  if(quality === undefined) quality = mimeType === 'image/jpeg' ? 0.82 : 0.92;
   const reader = new FileReader();
   reader.onload = (ev)=>{
     const img = new Image();
@@ -3319,6 +3493,7 @@ document.getElementById('exportAllDataBtn').addEventListener('click', async ()=>
 /* ---------- FULL BACKUP (JSON — everything: servants, attendance, users, permissions) ---------- */
 async function performFullBackupDownload(){
   await refreshLatestDataForExport();
+  await loadAllPhotosNow();   // backups keep the photos too
   let brandingTitle = '', brandingLogo = '', verses = null;
   try{ const r = await window.storage.get(BRANDING_TITLE_KEY, true); if(r && r.value) brandingTitle = r.value; }catch(e){}
   try{ const r = await window.storage.get(BRANDING_LOGO_KEY, true); if(r && r.value) brandingLogo = r.value; }catch(e){}
@@ -3365,7 +3540,7 @@ document.getElementById('downloadBackupExcelBtn').addEventListener('click', asyn
     'الأبناء': formatChildrenForExcel(s.children),
       'الزوج/الزوجة': s.spouseName || '',
     'الاجتماعات': s.groups.map(gid=>groupName(gid)).join(' - '),
-    'له صورة': s.photo ? 'نعم' : 'لا',
+    'له صورة': (s.photo || s.photoVer) ? 'نعم' : 'لا',
     'أضافه': s.addedBy || '',
     'آخر من عدّل': s.lastEditedBy || '',
     'تاريخ آخر تعديل': s.lastEditedAt || ''
@@ -3780,6 +3955,8 @@ document.getElementById('exportCustomReportBtn').addEventListener('click', ()=>{
 /* ---------- MOVES (departed / emigrated / moved elsewhere) ---------- */
 let moveSelectedId = null;
 async function deletePersonById(id){
+  const gone = DATA.servants.find(s=>s.id===id);
+  if(gone && gone.photoVer && window.storage.photoDelete){ window.storage.photoDelete(id).catch(()=>{}); PHOTO_MEM.delete(id); photoCache.del(id); }
   DATA.servants = DATA.servants.filter(s=>s.id!==id);
   Object.keys(DATA.sessions).forEach(gid=>{
     DATA.sessions[gid].forEach(sess=>{ sess.present = sess.present.filter(pid=>pid!==id); });
