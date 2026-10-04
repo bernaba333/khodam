@@ -1763,7 +1763,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '4 أكتوبر 2026 (ج)';
+const APP_VERSION = '4 أكتوبر 2026 (د)';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -4071,7 +4071,7 @@ document.getElementById('moveConfirmBtn').addEventListener('click', async ()=>{
   renderMovesPanel(); renderServantList(); renderMeetingPicker();
 });
 
-/* ---------- BIRTHDAYS: reminders, WhatsApp, phone calendar ---------- */
+/* ---------- BIRTHDAYS: reminders and WhatsApp ---------- */
 const AR_MONTHS = ['','يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 function parseDM(dm){
   const parts = String(dm||'').split('/').map(p=>parseInt(p,10));
@@ -4118,14 +4118,11 @@ function renderDashboardBirthdays(){
   const el = document.getElementById('dashboardBirthdays');
   if(!el) return;
   const list = upcomingBirthdays(30);
-  const calBtn = `<div style="margin-top:12px;"><button class="ghost" id="dashBdayCalBtn">📅 أضف أعياد الميلاد لتقويم موبايلك</button></div>`;
   if(list.length === 0){
-    el.innerHTML = '<div class="empty-note">مفيش أعياد ميلاد في الـ٣٠ يوم الجايين (أو تاريخ الميلاد مش متسجّل)</div>' + calBtn;
+    el.innerHTML = '<div class="empty-note">مفيش أعياد ميلاد في الـ٣٠ يوم الجايين (أو تاريخ الميلاد مش متسجّل)</div>';
   } else {
-    el.innerHTML = list.slice(0,15).map(birthdayRowHtml).join('') + calBtn;
+    el.innerHTML = list.slice(0,15).map(birthdayRowHtml).join('');
   }
-  const b = document.getElementById('dashBdayCalBtn');
-  if(b) b.addEventListener('click', exportBirthdaysICS);
 }
 function maybeShowBirthdayPopup(){
   if(!currentUser) return;
@@ -4146,56 +4143,13 @@ function maybeShowBirthdayPopup(){
       ${week.length ? `<h3 style="margin:14px 0 4px;font-size:1rem;color:#1B2A4A;">الأسبوع ده</h3>${week.map(birthdayRowHtml).join('')}` : ''}
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;">
         <button class="primary" id="bdayPopupClose">تمام</button>
-        <button class="ghost" id="bdayPopupCal">📅 أضفهم لتقويم موبايلك</button>
       </div>
     </div>`;
   document.body.appendChild(wrap);
   const close = ()=>wrap.remove();
   wrap.addEventListener('click', e=>{ if(e.target === wrap) close(); });
   document.getElementById('bdayPopupClose').addEventListener('click', close);
-  document.getElementById('bdayPopupCal').addEventListener('click', exportBirthdaysICS);
 }
-function icsEscape(t){ return String(t||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n'); }
-function icsFold(line){
-  // lines longer than 75 bytes are folded (Arabic letters take 2 bytes each)
-  const enc = new TextEncoder();
-  let out = '', cur = '', bytes = 0;
-  for(const ch of line){
-    const b = enc.encode(ch).length;
-    if(bytes + b > 73){ out += cur + '\r\n '; cur = ''; bytes = 1; }
-    cur += ch; bytes += b;
-  }
-  return out + cur;
-}
-function exportBirthdaysICS(){
-  const people = activeServants().filter(s=>personVisible(s) && parseDM(s.birthDate));
-  if(people.length === 0){ alert('مفيش أعياد ميلاد متسجّلة.'); return; }
-  const pad = n=>String(n).padStart(2,'0');
-  const now = new Date();
-  const stamp = now.getUTCFullYear()+pad(now.getUTCMonth()+1)+pad(now.getUTCDate())+'T'+pad(now.getUTCHours())+pad(now.getUTCMinutes())+pad(now.getUTCSeconds())+'Z';
-  const lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//khodam//birthdays//AR','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:أعياد ميلاد الاجتماع'];
-  people.forEach(s=>{
-    const dm = parseDM(s.birthDate);
-    let y = now.getFullYear();
-    while(new Date(y, dm.month-1, dm.day).getMonth() !== dm.month-1) y++; // 29 Feb
-    const start = y + pad(dm.month) + pad(dm.day);
-    const desc = [(s.groups||[]).map(groupName).join(' + '), (can('phones') && s.phone) ? ('تليفون: ' + s.phone) : ''].filter(Boolean).join('\n');
-    lines.push('BEGIN:VEVENT','UID:bday-'+s.id+'@khodam','DTSTAMP:'+stamp,'DTSTART;VALUE=DATE:'+start,'RRULE:FREQ=YEARLY',
-      'SUMMARY:'+icsEscape('🎂 عيد ميلاد '+s.name), 'DESCRIPTION:'+icsEscape(desc), 'TRANSP:TRANSPARENT',
-      'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+icsEscape('عيد ميلاد '+s.name),'TRIGGER:PT9H','END:VALARM','END:VEVENT');
-  });
-  lines.push('END:VCALENDAR');
-  const blob = new Blob([lines.map(icsFold).join('\r\n') + '\r\n'], { type: 'text/calendar;charset=utf-8' });
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  if(isIOS){
-    const url = URL.createObjectURL(blob);
-    window.location.href = url;
-    setTimeout(()=>URL.revokeObjectURL(url), 60000);
-  } else {
-    window.saveFileToViewer('اعياد-الميلاد.ics', blob);
-  }
-}
-
 function renderAll(){
   renderServantList();
   renderMeetingPicker();
