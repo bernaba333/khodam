@@ -602,6 +602,7 @@ table.hist th{color:var(--ink-soft);font-weight:700;}
   <button data-tab="servants">الخدام</button>
   <button data-tab="attendance">تسجيل الحضور</button>
   <button data-tab="afeqad">الافتقاد</button>
+  <button data-tab="moves">نقل الأسماء</button>
   <button data-tab="reports">التقارير</button>
   <button data-tab="settings">الإعدادات</button>
 </nav>
@@ -624,13 +625,46 @@ table.hist th{color:var(--ink-soft);font-weight:700;}
   </div>
 
   <div class="card">
-    <h2>أعياد ميلاد الشهر القادمين (٣٠ يوم)</h2>
+    <h2>🎂 أعياد الميلاد (الـ٣٠ يوم الجايين)</h2>
     <div id="dashboardBirthdays"></div>
   </div>
 
   <div class="card">
     <h2>محتاجين افتقاد</h2>
     <div id="dashboardAfeqad"></div>
+  </div>
+</section>
+
+<!-- MOVES TAB -->
+<section class="panel" id="panel-moves">
+  <div class="card" id="moveCard">
+    <h2>نقل اسم</h2>
+    <p style="font-size:.85rem;color:var(--ink-soft);margin-top:0;">الاسم اللي هيتنقل هيختفي من قوائم الحضور والتقارير وأعياد الميلاد، بس هيفضل محفوظ هنا ببياناته وتاريخ حضوره. وتقدر ترجّعه في أي وقت.</p>
+    <label style="display:block;margin-bottom:4px;">دوّر على الاسم</label>
+    <input type="text" id="moveSearch" placeholder="اكتب الاسم أو رقم التليفون" autocomplete="off">
+    <div id="moveSearchResults" style="margin-top:8px;"></div>
+    <div id="moveForm" style="display:none;margin-top:14px;padding:14px;border:1px solid var(--line, #d9cba3);border-radius:12px;background:#fffdf7;">
+      <div style="font-weight:700;margin-bottom:10px;">نقل: <span id="moveSelectedName"></span></div>
+      <label style="display:block;margin-bottom:4px;">السبب</label>
+      <select id="moveReason" style="margin-bottom:10px;">
+        <option value="departed">🕊️ انتقل (للسماء)</option>
+        <option value="emigrated">✈️ هاجر</option>
+        <option value="moved">🏠 انتقل لمكان آخر</option>
+      </select>
+      <label style="display:block;margin-bottom:4px;">التاريخ</label>
+      <input type="date" id="moveDate" style="margin-bottom:10px;">
+      <label style="display:block;margin-bottom:4px;">ملاحظة (اختياري)</label>
+      <input type="text" id="moveNote" placeholder="مثلًا: سافر كندا، أو اتنقل لكنيسة تانية" style="margin-bottom:12px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="primary" id="moveConfirmBtn">نقل</button>
+        <button class="ghost" id="moveCancelBtn">إلغاء</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>الأسماء المنقولة (<span id="movedCount">0</span>)</h2>
+    <input type="text" id="movedSearch" placeholder="بحث في الأسماء المنقولة" autocomplete="off" style="margin-bottom:10px;">
+    <div id="movedList"></div>
   </div>
 </section>
 
@@ -1261,10 +1295,18 @@ window.addEventListener('error', function(e){
 })();
 
 const GROUPS = [
-  {id:'anba-boula', name:'الانبا بولا والعائلة المقدسة'},
-  {id:'makhdomeen-gomaa', name:'المخدومين - الجمعة'},
-  {id:'makhdomeen-had', name:'المخدومين - الأحد'}
+  {id:'anba-boula', name:'خدام الاجتماع', oldName:'الانبا بولا والعائلة المقدسة'},
+  {id:'makhdomeen-had', name:'مخدومين الأحد', oldName:'المخدومين - الأحد'},
+  {id:'makhdomeen-gomaa', name:'مخدومين الجمعة', oldName:'المخدومين - الجمعة'}
 ];
+// people moved out (departed / emigrated / moved elsewhere) stay saved but
+// drop out of every working list
+const activeServants = () => DATA.servants.filter(s=>!s.status);
+const MOVE_REASONS = {
+  departed:  { label:'انتقل (للسماء)',     title:'المنتقلين',            icon:'🕊️' },
+  emigrated: { label:'هاجر',               title:'المهاجرين',            icon:'✈️' },
+  moved:     { label:'انتقل لمكان آخر',     title:'انتقلوا لمكان آخر',    icon:'🏠' }
+};
 const groupName = id => GROUPS.find(g=>g.id===id)?.name || id;
 
 const STORAGE_KEY = 'khodam_attendance_data';
@@ -1549,6 +1591,8 @@ function refreshAfterRemoteChange(oldRemote, newRemote){
   if(editing){ pendingServantRerender = true; }
   else { try{ renderServantList(); }catch(e){} }
   try{ if(currentGroupId){ renderAttendList(); renderHistory(); } }catch(e){}
+  try{ if(document.getElementById('panel-moves').classList.contains('active') && !moveSelectedId) renderMovesPanel(); }catch(e){}
+  try{ if(document.getElementById('panel-dashboard').classList.contains('active')) renderDashboard(); }catch(e){}
 }
 async function pullRemoteData(){
   if(dataSaving || !window.storage.getWithRev) return;
@@ -1623,6 +1667,7 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
     if(btn.dataset.tab === 'reports') renderReports();
     if(btn.dataset.tab === 'dashboard') renderDashboard();
     if(btn.dataset.tab === 'afeqad') renderAfeqadList();
+    if(btn.dataset.tab === 'moves') renderMovesPanel();
   });
 });
 
@@ -1710,7 +1755,7 @@ function renderAfeqadList(){
   refreshAreaChurchDatalists();
   const list = document.getElementById('afeqadList');
   const visible = visibleGroupIds();
-  let people = DATA.servants.filter(s=>s.groups.some(g=>visible.includes(g)));
+  let people = activeServants().filter(s=>s.groups.some(g=>visible.includes(g)));
   if(afeqadSearchTerm){
     people = people.filter(s=>s.name.includes(afeqadSearchTerm));
   }
@@ -1891,7 +1936,7 @@ function renderServantList(){
   refreshAreaChurchDatalists();
   const list = document.getElementById('servantList');
   const visible = visibleGroupIds();
-  const visibleServants = DATA.servants.filter(s=>s.groups.some(g=>visible.includes(g)));
+  const visibleServants = activeServants().filter(s=>s.groups.some(g=>visible.includes(g)));
   document.getElementById('servantCount').textContent = visibleServants.length;
   if(visibleServants.length === 0){
     list.innerHTML = '<div class="empty-note">لا يوجد خدام مسجّلون بعد في الاجتماعات اللي تقدر تشوفها</div>';
@@ -1936,7 +1981,7 @@ function renderServantList(){
       </div>
       <div class="row-actions">
         ${can('editServant') ? `<button class="ghost edit-servant">تعديل البيانات</button>` : ''}
-        ${isSupervisorOrAdmin() ? `<button class="ghost ${s.cancelled?'':'danger'} toggle-cancel-servant">${s.cancelled?'إعادة تفعيل':'إلغاء'}</button>` : ''}
+        ${isSupervisorOrAdmin() ? `<button class="ghost move-servant">نقل</button>` : ''}
         ${isSupervisorOrAdmin() ? `<button class="ghost danger del-servant">حذف</button>` : ''}
       </div>
     </div>
@@ -1946,15 +1991,13 @@ function renderServantList(){
   list.querySelectorAll('.del-servant').forEach(btn=>{
     btn.addEventListener('click', async (e)=>{
       const id = e.target.closest('.servant-row').dataset.id;
-      if(!confirm('هل تريد حذف هذا الخادم؟ سيتم حذفه من كل سجلات الحضور أيضًا.')) return;
-      DATA.servants = DATA.servants.filter(s=>s.id!==id);
-      Object.keys(DATA.sessions).forEach(gid=>{
-        DATA.sessions[gid].forEach(sess=>{
-          sess.present = sess.present.filter(pid=>pid!==id);
-        });
-      });
-      await saveData();
-      renderServantList(); renderMeetingPicker();
+      if(!confirm('هل تريد حذف هذا الخادم؟ سيتم حذفه من كل سجلات الحضور أيضًا.\n\nلو الشخص سافر أو انتقل، الأفضل تستخدم زرار "نقل" عشان بياناته تفضل محفوظة.')) return;
+      await deletePersonById(id);
+    });
+  });
+  list.querySelectorAll('.move-servant').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      openMoveFor(e.target.closest('.servant-row').dataset.id);
     });
   });
 
@@ -2084,7 +2127,7 @@ function renderMeetingPicker(){
     return;
   }
   picker.innerHTML = groups.map(g=>{
-    const memberCount = DATA.servants.filter(s=>s.groups.includes(g.id)).length;
+    const memberCount = activeServants().filter(s=>s.groups.includes(g.id)).length;
     return `<button class="meeting-btn ${g.id===currentGroupId?'selected':''}" data-gid="${g.id}">${g.name}<br><span style="font-weight:400;font-size:.72rem;opacity:.75;">${memberCount} خادم</span></button>`;
   }).join('');
   picker.querySelectorAll('.meeting-btn').forEach(btn=>{
@@ -2118,7 +2161,7 @@ function renderAttendPanel(){
 }
 
 function renderAttendList(){
-  const members = sortByName(DATA.servants.filter(s=>s.groups.includes(currentGroupId)));
+  const members = sortByName(activeServants().filter(s=>s.groups.includes(currentGroupId)));
   const list = document.getElementById('attendList');
   if(members.length===0){
     list.innerHTML = '<div class="empty-note">لا يوجد خدام أو مخدومين مسجّلين في هذا الاجتماع بعد — أضفهم من تبويب "الخدام"</div>';
@@ -2187,7 +2230,7 @@ function renderHistory(){
     return;
   }
   emptyNote.style.display='none';
-  const totalMembers = DATA.servants.filter(s=>s.groups.includes(currentGroupId)).length;
+  const totalMembers = activeServants().filter(s=>s.groups.includes(currentGroupId)).length;
   body.innerHTML = sessions.map(s=>`
     <tr>
       <td>${s.date}</td>
@@ -2220,7 +2263,7 @@ function renderHistory(){
 function renderDashboard(){
   const visible = visibleGroupIds();
   const visibleGroups = GROUPS.filter(g=>visible.includes(g.id));
-  const visibleServants = DATA.servants.filter(s=>s.groups.some(g=>visible.includes(g)));
+  const visibleServants = activeServants().filter(s=>s.groups.some(g=>visible.includes(g)));
 
   // ---- stat cards ----
   // A meeting recorded on the same date in more than one section counts as ONE meeting.
@@ -2229,7 +2272,7 @@ function renderDashboard(){
   const totalSessions = allDatesSet.size;
   let overallPctSum = 0, overallPctCount = 0;
   visibleGroups.forEach(g=>{
-    const members = DATA.servants.filter(s=>s.groups.includes(g.id));
+    const members = activeServants().filter(s=>s.groups.includes(g.id));
     const sessions = DATA.sessions[g.id]||[];
     if(sessions.length>0 && members.length>0){
       const avg = sessions.reduce((sum,s)=>sum+s.present.length,0)/sessions.length;
@@ -2243,7 +2286,7 @@ function renderDashboard(){
   const statsEl = document.getElementById('dashboardStats');
   const cards = [
     { num: visibleServants.length, label: 'إجمالي الأفراد' },
-    ...visibleGroups.map(g=>({ num: DATA.servants.filter(s=>s.groups.includes(g.id)).length, label: g.name })),
+    ...visibleGroups.map(g=>({ num: activeServants().filter(s=>s.groups.includes(g.id)).length, label: g.name })),
     { num: totalSessions, label: 'إجمالي الاجتماعات المسجّلة' },
     { num: overallPct + '%', label: 'متوسط نسبة الحضور العام' },
     { num: neverVisitedCount, label: 'لسه ما اتافتقدوش' }
@@ -2262,7 +2305,7 @@ function renderDashboard(){
   } else {
     const labels = [], data = [];
     visibleGroups.forEach(g=>{
-      const members = DATA.servants.filter(s=>s.groups.includes(g.id));
+      const members = activeServants().filter(s=>s.groups.includes(g.id));
       const sessions = DATA.sessions[g.id]||[];
       let pct = 0;
       if(sessions.length>0 && members.length>0){
@@ -2299,31 +2342,7 @@ function renderDashboard(){
   }
 
   // ---- upcoming birthdays (next 30 days) ----
-  const today = new Date(); today.setHours(0,0,0,0);
-  const upcoming = [];
-  visibleServants.forEach(s=>{
-    if(!s.birthDate) return;
-    const parts = s.birthDate.split('/').map(p=>parseInt(p,10));
-    const day = parts[0], month = parts[1];
-    if(!day || !month) return;
-    let next = new Date(today.getFullYear(), month-1, day);
-    if(next < today) next = new Date(today.getFullYear()+1, month-1, day);
-    const diffDays = Math.round((next - today) / (1000*60*60*24));
-    if(diffDays <= 30) upcoming.push({ name: s.name, date: next, diffDays });
-  });
-  upcoming.sort((a,b)=>a.diffDays-b.diffDays);
-  const bdayEl = document.getElementById('dashboardBirthdays');
-  if(upcoming.length === 0){
-    bdayEl.innerHTML = '<div class="empty-note">مفيش أعياد ميلاد في الـ٣٠ يوم الجايين (أو تاريخ الميلاد مش متسجّل)</div>';
-  } else {
-    const monthNames = ['','يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
-    bdayEl.innerHTML = upcoming.slice(0,10).map(u=>`
-      <div class="dash-list-row">
-        <div>${u.name}</div>
-        <div class="meta">${u.date.getDate()} ${monthNames[u.date.getMonth()+1]}${u.diffDays===0?' (النهاردة!)':''}</div>
-      </div>
-    `).join('');
-  }
+  renderDashboardBirthdays();
 
   // ---- people most in need of a visit ----
   const afeqadEl = document.getElementById('dashboardAfeqad');
@@ -2357,7 +2376,7 @@ function renderReports(){
   const visible = visibleGroupIds();
   const visibleGroups = GROUPS.filter(g=>visible.includes(g.id));
   halos.innerHTML = visibleGroups.map(g=>{
-    const members = DATA.servants.filter(s=>s.groups.includes(g.id));
+    const members = activeServants().filter(s=>s.groups.includes(g.id));
     const sessions = DATA.sessions[g.id]||[];
     let pct = 0;
     if(sessions.length>0 && members.length>0){
@@ -2382,7 +2401,7 @@ function renderReports(){
 
   const body = document.getElementById('servantReportBody');
   const emptyNote = document.getElementById('servantReportEmpty');
-  const visibleServants = DATA.servants.filter(s=>s.groups.some(g=>visible.includes(g)));
+  const visibleServants = activeServants().filter(s=>s.groups.some(g=>visible.includes(g)));
   if(visibleServants.length===0){
     body.innerHTML=''; emptyNote.style.display='block';
     return;
@@ -2812,6 +2831,8 @@ function applyUserUI(){
   if(document.getElementById('panel-reports').classList.contains('active')) renderReports();
   if(document.getElementById('panel-dashboard').classList.contains('active')) renderDashboard();
   if(document.getElementById('panel-afeqad').classList.contains('active')) renderAfeqadList();
+  if(document.getElementById('panel-moves').classList.contains('active')) renderMovesPanel();
+  setTimeout(maybeShowBirthdayPopup, 600);
 }
 
 function greetingByTime(){
@@ -3139,10 +3160,10 @@ document.getElementById('exportExcelBtn').addEventListener('click', async ()=>{
   const wb = XLSX.utils.book_new();
   const visible = visibleGroupIds();
   const visibleGroups = GROUPS.filter(g=>visible.includes(g.id));
-  const visibleServants = DATA.servants.filter(s=>s.groups.some(g=>visible.includes(g)));
+  const visibleServants = activeServants().filter(s=>s.groups.some(g=>visible.includes(g)));
 
   const summaryRows = visibleGroups.map(g=>{
-    const members = DATA.servants.filter(s=>s.groups.includes(g.id));
+    const members = activeServants().filter(s=>s.groups.includes(g.id));
     const sessions = DATA.sessions[g.id] || [];
     let pct = 0;
     if(sessions.length > 0 && members.length > 0){
@@ -3405,7 +3426,7 @@ document.getElementById('importAllDataFile').addEventListener('change', (e)=>{
         if(!name) return;
         const groups = [];
         GROUPS.forEach(g=>{
-          const val = String(row[g.name]||'').trim();
+          const val = String(row[g.name]||row[g.oldName]||'').trim();
           if(val) groups.push(g.id);
         });
         const fields = {
@@ -3513,7 +3534,7 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
     const rows = [];
     const chartLabels = [], attendPct = [], absentPct = [];
     selectedGroups.forEach(gid=>{
-      const members = DATA.servants.filter(s=>s.groups.includes(gid));
+      const members = activeServants().filter(s=>s.groups.includes(gid));
       const sessions = (DATA.sessions[gid]||[]).filter(s=>inRange(s.date, from, to));
       let pct = 0;
       if(sessions.length>0 && members.length>0){
@@ -3559,7 +3580,7 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
     title = 'كشف الأفراد';
     const columns = ['الاسم','التليفون','حضر بالفترة','من إجمالي اجتماعات الفترة','النسبة %'];
     const rows = [];
-    const members = sortByName(DATA.servants.filter(s=>s.groups.some(g=>selectedGroups.includes(g))));
+    const members = sortByName(activeServants().filter(s=>s.groups.some(g=>selectedGroups.includes(g))));
     members.forEach(s=>{
       let attended = 0, possible = 0;
       selectedGroups.forEach(gid=>{
@@ -3579,7 +3600,7 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
     const columns = ['اليوم','الاسم','التليفون'];
     // separate section per selected group, so each meeting's birthdays are listed on their own
     selectedGroups.forEach(gid=>{
-      const members = DATA.servants.filter(s=>s.groups.includes(gid) && s.birthDate);
+      const members = activeServants().filter(s=>s.groups.includes(gid) && s.birthDate);
       const withDay = members.map(s=>{
         const parts = s.birthDate.split('/').map(p=>parseInt(p,10));
         return { s, day: parts[0], month: parts[1] };
@@ -3591,7 +3612,7 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
   } else if(type === 'area'){
     title = 'تجميع حسب المنطقة';
     const columns = ['الاسم','التليفون','العنوان','الاجتماعات'];
-    const members = sortByName(DATA.servants.filter(s=>s.groups.some(g=>selectedGroups.includes(g))));
+    const members = sortByName(activeServants().filter(s=>s.groups.some(g=>selectedGroups.includes(g))));
     const byArea = {};
     members.forEach(s=>{
       const area = s.area || 'غير محدد';
@@ -3605,7 +3626,7 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
   } else if(type === 'editlog'){
     title = 'سجل الإضافة والتعديل';
     const columns = ['الاسم','أضافه','آخر من عدّل','تاريخ آخر تعديل'];
-    const members = DATA.servants.filter(s=>s.groups.some(g=>selectedGroups.includes(g)) && (s.addedBy || s.lastEditedBy));
+    const members = activeServants().filter(s=>s.groups.some(g=>selectedGroups.includes(g)) && (s.addedBy || s.lastEditedBy));
     members.sort((a,b)=>{
       const aKey = a.lastEditedAt || '';
       const bKey = b.lastEditedAt || '';
@@ -3616,7 +3637,7 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
   } else if(type === 'confessionfather'){
     title = 'أب الاعتراف';
     const columns = ['الاسم','التليفون','المنطقة'];
-    const members = DATA.servants.filter(s=>s.groups.some(g=>selectedGroups.includes(g)) && s.confessionFather);
+    const members = activeServants().filter(s=>s.groups.some(g=>selectedGroups.includes(g)) && s.confessionFather);
     const byFather = {};
     members.forEach(s=>{
       byFather[s.confessionFather] = byFather[s.confessionFather] || [];
@@ -3696,6 +3717,248 @@ document.getElementById('exportCustomReportBtn').addEventListener('click', ()=>{
 });
 
 /* ---------- INIT ---------- */
+/* ---------- MOVES (departed / emigrated / moved elsewhere) ---------- */
+let moveSelectedId = null;
+async function deletePersonById(id){
+  DATA.servants = DATA.servants.filter(s=>s.id!==id);
+  Object.keys(DATA.sessions).forEach(gid=>{
+    DATA.sessions[gid].forEach(sess=>{ sess.present = sess.present.filter(pid=>pid!==id); });
+  });
+  await saveData();
+  renderServantList(); renderMeetingPicker();
+  if(document.getElementById('panel-moves').classList.contains('active')) renderMovesPanel();
+}
+function escHtml(t){ return String(t==null?'':t).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function personVisible(s){
+  const visible = visibleGroupIds();
+  return !s.groups || s.groups.length === 0 || s.groups.some(g=>visible.includes(g));
+}
+function renderMoveSearch(){
+  const box = document.getElementById('moveSearchResults');
+  const term = (document.getElementById('moveSearch').value||'').trim();
+  if(!term){ box.innerHTML = ''; return; }
+  const found = sortByName(activeServants().filter(s=>personVisible(s) && (s.name.includes(term) || (s.phone||'').includes(term)))).slice(0,10);
+  if(found.length === 0){ box.innerHTML = '<div class="empty-note">مفيش اسم مطابق</div>'; return; }
+  box.innerHTML = found.map(s=>`
+    <div class="dash-list-row" style="cursor:pointer;" data-pick="${s.id}">
+      <div>${escHtml(s.name)}</div>
+      <div class="meta">${(s.groups||[]).map(groupName).join(' + ')} — اختار ←</div>
+    </div>`).join('');
+  box.querySelectorAll('[data-pick]').forEach(row=>row.addEventListener('click', ()=>selectMovePerson(row.dataset.pick)));
+}
+function selectMovePerson(id){
+  const s = DATA.servants.find(x=>x.id===id);
+  if(!s) return;
+  moveSelectedId = id;
+  document.getElementById('moveSelectedName').textContent = s.name;
+  document.getElementById('moveReason').value = 'emigrated';
+  document.getElementById('moveDate').value = todayStr();
+  document.getElementById('moveNote').value = '';
+  document.getElementById('moveForm').style.display = 'block';
+  document.getElementById('moveSearchResults').innerHTML = '';
+  document.getElementById('moveSearch').value = '';
+  document.getElementById('moveForm').scrollIntoView({behavior:'smooth', block:'center'});
+}
+function closeMoveForm(){
+  moveSelectedId = null;
+  document.getElementById('moveForm').style.display = 'none';
+}
+function openMoveFor(id){
+  const tabBtn = document.querySelector('nav.tabs button[data-tab="moves"]');
+  if(tabBtn) tabBtn.click();
+  selectMovePerson(id);
+}
+function renderMovesPanel(){
+  document.getElementById('moveCard').style.display = isSupervisorOrAdmin() ? 'block' : 'none';
+  const term = (document.getElementById('movedSearch').value||'').trim();
+  const moved = DATA.servants.filter(s=>s.status && personVisible(s));
+  document.getElementById('movedCount').textContent = moved.length;
+  const listEl = document.getElementById('movedList');
+  const shown = term ? moved.filter(s=>s.name.includes(term) || (s.phone||'').includes(term) || (s.statusNote||'').includes(term)) : moved;
+  if(moved.length === 0){ listEl.innerHTML = '<div class="empty-note">مفيش أسماء منقولة لسه</div>'; return; }
+  if(shown.length === 0){ listEl.innerHTML = '<div class="empty-note">مفيش نتايج مطابقة للبحث</div>'; return; }
+  const canAct = isSupervisorOrAdmin();
+  listEl.innerHTML = Object.keys(MOVE_REASONS).map(reason=>{
+    const r = MOVE_REASONS[reason];
+    const people = sortByName(shown.filter(s=>s.status===reason));
+    if(people.length === 0) return '';
+    return `
+      <h3 style="margin:16px 0 6px;font-size:1rem;">${r.icon} ${r.title} (${people.length})</h3>
+      ${people.map(s=>`
+        <div class="servant-row" data-moved-id="${s.id}">
+          <div style="flex:1;">
+            <div class="servant-name">${escHtml(s.name)}</div>
+            <div style="font-size:.78rem;color:#8a7d55;margin-top:2px;">${r.icon} ${r.label}${s.statusDate ? ' — ' + escHtml(s.statusDate) : ''}</div>
+            ${s.statusNote ? `<div style="font-size:.78rem;color:#8a7d55;">📝 ${escHtml(s.statusNote)}</div>` : ''}
+            ${(s.phone && can('phones')) ? `<div style="font-size:.78rem;color:#8a7d55;">📞 ${escHtml(s.phone)}</div>` : ''}
+            <div class="chips">${(s.groups||[]).map(gid=>`<span class="chip">${groupName(gid)}</span>`).join('')}</div>
+            ${(s.statusBy && can('addedBy')) ? `<div class="added-by">نقله: ${escHtml(s.statusBy)}</div>` : ''}
+          </div>
+          ${canAct ? `<div class="row-actions">
+            <button class="ghost restore-moved">رجوع للقائمة</button>
+            <button class="ghost danger delete-moved">حذف نهائي</button>
+          </div>` : ''}
+        </div>`).join('')}`;
+  }).join('');
+  listEl.querySelectorAll('.restore-moved').forEach(btn=>btn.addEventListener('click', async e=>{
+    const id = e.target.closest('[data-moved-id]').dataset.movedId;
+    const s = DATA.servants.find(x=>x.id===id);
+    if(!s || !confirm(`ترجّع "${s.name}" لقوائم الاجتماع تاني؟`)) return;
+    delete s.status; delete s.statusDate; delete s.statusNote; delete s.statusBy;
+    s.lastEditedBy = currentUser ? currentUser.name : s.lastEditedBy;
+    await saveData();
+    renderMovesPanel(); renderServantList(); renderMeetingPicker();
+  }));
+  listEl.querySelectorAll('.delete-moved').forEach(btn=>btn.addEventListener('click', async e=>{
+    const id = e.target.closest('[data-moved-id]').dataset.movedId;
+    const s = DATA.servants.find(x=>x.id===id);
+    if(!s || !confirm(`حذف "${s.name}" نهائيًا؟ هيتمسح هو وكل سجلات حضوره ومش هينفع يرجع.`)) return;
+    await deletePersonById(id);
+  }));
+}
+document.getElementById('moveSearch').addEventListener('input', renderMoveSearch);
+document.getElementById('movedSearch').addEventListener('input', renderMovesPanel);
+document.getElementById('moveCancelBtn').addEventListener('click', closeMoveForm);
+document.getElementById('moveConfirmBtn').addEventListener('click', async ()=>{
+  if(!isSupervisorOrAdmin() || !moveSelectedId) return;
+  const s = DATA.servants.find(x=>x.id===moveSelectedId);
+  if(!s) return;
+  const reason = document.getElementById('moveReason').value;
+  s.status = reason;
+  s.statusDate = document.getElementById('moveDate').value || todayStr();
+  const note = document.getElementById('moveNote').value.trim();
+  if(note) s.statusNote = note; else delete s.statusNote;
+  s.statusBy = currentUser ? currentUser.name : '';
+  closeMoveForm();
+  await saveData();
+  renderMovesPanel(); renderServantList(); renderMeetingPicker();
+});
+
+/* ---------- BIRTHDAYS: reminders, WhatsApp, phone calendar ---------- */
+const AR_MONTHS = ['','يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+function parseDM(dm){
+  const parts = String(dm||'').split('/').map(p=>parseInt(p,10));
+  return (parts[0] && parts[1]) ? { day: parts[0], month: parts[1] } : null;
+}
+function upcomingBirthdays(days){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const out = [];
+  activeServants().filter(personVisible).forEach(s=>{
+    const dm = parseDM(s.birthDate); if(!dm) return;
+    let next = new Date(today.getFullYear(), dm.month-1, dm.day);
+    if(next < today) next = new Date(today.getFullYear()+1, dm.month-1, dm.day);
+    const diffDays = Math.round((next - today) / 86400000);
+    if(diffDays <= days) out.push({ s, date: next, diffDays });
+  });
+  return out.sort((a,b)=>a.diffDays-b.diffDays || a.s.name.localeCompare(b.s.name,'ar'));
+}
+function waNumber(phone){
+  let d = String(phone||'').replace(/\D/g,'');
+  if(d.startsWith('00')) d = d.slice(2);
+  if(d.length === 11 && d.startsWith('01')) d = '2' + d;      // 01xxxxxxxxx -> 201xxxxxxxxx
+  else if(d.length === 10 && d.startsWith('1')) d = '20' + d;
+  return d.length >= 10 ? d : '';
+}
+function waBirthdayLink(s){
+  const num = waNumber(s.phone); if(!num) return '';
+  const first = (s.name||'').trim().split(/\s+/)[0];
+  const text = `كل سنة وانت طيب يا ${first} 🎂\nربنا يفرّح قلبك ويبارك سنتك الجديدة 🙏\nاجتماع الأنبا بولا والعائلة المقدسة`;
+  return `https://wa.me/${num}?text=${encodeURIComponent(text)}`;
+}
+function birthdayRowHtml(u){
+  const link = can('phones') ? waBirthdayLink(u.s) : '';
+  const when = u.diffDays === 0 ? '🎉 النهارده' : (u.diffDays === 1 ? 'بكرة' : `${u.date.getDate()} ${AR_MONTHS[u.date.getMonth()+1]}`);
+  return `
+    <div class="dash-list-row" style="align-items:center;gap:8px;">
+      <div>${escHtml(u.s.name)}<div class="meta">${(u.s.groups||[]).map(groupName).join(' + ')}</div></div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="meta">${when}</span>
+        ${link ? `<a href="${link}" target="_blank" rel="noopener" class="ghost" style="text-decoration:none;padding:5px 10px;border-radius:8px;border:1px solid #25D366;color:#128C7E;font-size:.8rem;white-space:nowrap;">واتساب</a>` : ''}
+      </div>
+    </div>`;
+}
+function renderDashboardBirthdays(){
+  const el = document.getElementById('dashboardBirthdays');
+  if(!el) return;
+  const list = upcomingBirthdays(30);
+  const calBtn = `<div style="margin-top:12px;"><button class="ghost" id="dashBdayCalBtn">📅 أضف أعياد الميلاد لتقويم موبايلك</button></div>`;
+  if(list.length === 0){
+    el.innerHTML = '<div class="empty-note">مفيش أعياد ميلاد في الـ٣٠ يوم الجايين (أو تاريخ الميلاد مش متسجّل)</div>' + calBtn;
+  } else {
+    el.innerHTML = list.slice(0,15).map(birthdayRowHtml).join('') + calBtn;
+  }
+  const b = document.getElementById('dashBdayCalBtn');
+  if(b) b.addEventListener('click', exportBirthdaysICS);
+}
+function maybeShowBirthdayPopup(){
+  if(!currentUser) return;
+  const list = upcomingBirthdays(7);
+  if(list.length === 0) return;
+  const key = 'khodam_bday_popup_' + currentUser.name;
+  let seen = null; try{ seen = localStorage.getItem(key); }catch(e){}
+  if(seen === todayStr()) return;
+  try{ localStorage.setItem(key, todayStr()); }catch(e){}
+  const today = list.filter(u=>u.diffDays===0), week = list.filter(u=>u.diffDays>0);
+  const wrap = document.createElement('div');
+  wrap.id = 'bdayPopup';
+  wrap.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(27,42,74,.55);display:flex;align-items:center;justify-content:center;padding:16px;direction:rtl;';
+  wrap.innerHTML = `
+    <div style="background:#fffdf7;border-radius:16px;max-width:460px;width:100%;max-height:85vh;overflow:auto;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.25);">
+      <h2 style="margin:0 0 6px;font-family:'Amiri',serif;color:#1B2A4A;">🎂 أعياد ميلاد</h2>
+      ${today.length ? `<h3 style="margin:12px 0 4px;font-size:1rem;color:#7A2E2E;">النهارده</h3>${today.map(birthdayRowHtml).join('')}` : ''}
+      ${week.length ? `<h3 style="margin:14px 0 4px;font-size:1rem;color:#1B2A4A;">الأسبوع ده</h3>${week.map(birthdayRowHtml).join('')}` : ''}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;">
+        <button class="primary" id="bdayPopupClose">تمام</button>
+        <button class="ghost" id="bdayPopupCal">📅 أضفهم لتقويم موبايلك</button>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap);
+  const close = ()=>wrap.remove();
+  wrap.addEventListener('click', e=>{ if(e.target === wrap) close(); });
+  document.getElementById('bdayPopupClose').addEventListener('click', close);
+  document.getElementById('bdayPopupCal').addEventListener('click', exportBirthdaysICS);
+}
+function icsEscape(t){ return String(t||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n'); }
+function icsFold(line){
+  // lines longer than 75 bytes are folded (Arabic letters take 2 bytes each)
+  const enc = new TextEncoder();
+  let out = '', cur = '', bytes = 0;
+  for(const ch of line){
+    const b = enc.encode(ch).length;
+    if(bytes + b > 73){ out += cur + '\r\n '; cur = ''; bytes = 1; }
+    cur += ch; bytes += b;
+  }
+  return out + cur;
+}
+function exportBirthdaysICS(){
+  const people = activeServants().filter(s=>personVisible(s) && parseDM(s.birthDate));
+  if(people.length === 0){ alert('مفيش أعياد ميلاد متسجّلة.'); return; }
+  const pad = n=>String(n).padStart(2,'0');
+  const now = new Date();
+  const stamp = now.getUTCFullYear()+pad(now.getUTCMonth()+1)+pad(now.getUTCDate())+'T'+pad(now.getUTCHours())+pad(now.getUTCMinutes())+pad(now.getUTCSeconds())+'Z';
+  const lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//khodam//birthdays//AR','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:أعياد ميلاد الاجتماع'];
+  people.forEach(s=>{
+    const dm = parseDM(s.birthDate);
+    let y = now.getFullYear();
+    while(new Date(y, dm.month-1, dm.day).getMonth() !== dm.month-1) y++; // 29 Feb
+    const start = y + pad(dm.month) + pad(dm.day);
+    const desc = [(s.groups||[]).map(groupName).join(' + '), (can('phones') && s.phone) ? ('تليفون: ' + s.phone) : ''].filter(Boolean).join('\n');
+    lines.push('BEGIN:VEVENT','UID:bday-'+s.id+'@khodam','DTSTAMP:'+stamp,'DTSTART;VALUE=DATE:'+start,'RRULE:FREQ=YEARLY',
+      'SUMMARY:'+icsEscape('🎂 عيد ميلاد '+s.name), 'DESCRIPTION:'+icsEscape(desc), 'TRANSP:TRANSPARENT',
+      'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+icsEscape('عيد ميلاد '+s.name),'TRIGGER:PT9H','END:VALARM','END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  const blob = new Blob([lines.map(icsFold).join('\r\n') + '\r\n'], { type: 'text/calendar;charset=utf-8' });
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if(isIOS){
+    const url = URL.createObjectURL(blob);
+    window.location.href = url;
+    setTimeout(()=>URL.revokeObjectURL(url), 60000);
+  } else {
+    window.saveFileToViewer('اعياد-الميلاد.ics', blob);
+  }
+}
+
 function renderAll(){
   renderServantList();
   renderMeetingPicker();
