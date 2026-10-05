@@ -1793,7 +1793,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '5 أكتوبر 2026 (ز)';
+const APP_VERSION = '5 أكتوبر 2026 (ح)';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -4655,18 +4655,26 @@ document.getElementById('progImportFile').addEventListener('change', e=>{
       // the service year is the one most rows fall in; rows with a wrong year are placed by day + month
       const counts = {}; parsed.forEach(p=>{ const y = serviceYearOf(p.d); counts[y] = (counts[y]||0) + 1; });
       const year = +Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0];
+      // the file goes into the tab that is open (الجمعة or الأحد)
+      const day = progDay;
       const dayDow = parsed.map(p=>p.d.getDay());
       const fridays = dayDow.filter(x=>x===5).length, sundays = dayDow.filter(x=>x===0).length;
-      const day = sundays > fridays ? 'sunday' : 'friday';
+      const fileLooksLike = fridays > sundays ? 'friday' : (sundays > fridays ? 'sunday' : null);
+      const mismatch = fileLooksLike && fileLooksLike !== day;
       let fixed = 0;
       const dow = PROG_DAYS[day].dow;
       parsed.forEach(p=>{
-        if(serviceYearOf(p.d) !== year){ p.d = new Date(p.d.getMonth() >= 9 ? year : year+1, p.d.getMonth(), p.d.getDate()); fixed++; }
+        if(serviceYearOf(p.d) !== year){ p.d = new Date(p.d.getMonth() >= 9 ? year : year+1, p.d.getMonth(), p.d.getDate()); fixed++; p._yearFixed = true; }
         // a date a day or two off the meeting day goes to the nearest meeting day
         let diff = (dow - p.d.getDay() + 7) % 7; if(diff > 3) diff -= 7;
         if(diff !== 0){ p.d = new Date(p.d.getFullYear(), p.d.getMonth(), p.d.getDate() + diff); fixed++; }
       });
-      if(!confirm(`هيتم استيراد ${parsed.length} اجتماع في برنامج ${PROG_DAYS[day].meeting} لسنة ${copticYear(year)} ش (${year}-${year+1}).${fixed ? `\n\nملحوظة: ${fixed} تاريخ كان مكتوب بسنة غلط في الملف واتصلّح تلقائيًا.` : ''}\n\nالأيام الموجودة في الملف هتستبدل اللي في البرنامج لنفس التاريخ. تكمّل؟`)) return;
+      const yearFixed = parsed.filter(p=>p._yearFixed).length;
+      const msg = `هيتم استيراد ${parsed.length} اجتماع في برنامج ${PROG_DAYS[day].meeting} لسنة ${copticYear(year)} ش (${year}-${year+1}).`
+        + (mismatch ? `\n\n⚠️ التواريخ اللي في الملف أغلبها أيام ${PROG_DAYS[fileLooksLike].label}، وانت فاتح برنامج ${PROG_DAYS[day].label}. كل اجتماع هيتحط على أقرب ${PROG_DAYS[day].label} لتاريخه.\nلو الملف ده بتاع ${PROG_DAYS[fileLooksLike].label}، دوس Cancel وافتح تبويب ${PROG_DAYS[fileLooksLike].meeting} الأول.` : '')
+        + (yearFixed ? `\n\nملحوظة: ${yearFixed} تاريخ كان مكتوب بسنة غلط في الملف واتصلّح تلقائيًا.` : '')
+        + `\n\nالأيام الموجودة في الملف هتستبدل اللي في برنامج ${PROG_DAYS[day].label} لنفس التاريخ. تكمّل؟`;
+      if(!confirm(msg)) return;
       const ok = await saveProgramChange(obj=>{
         const s2 = progSection(obj, year, day, true);
         // drop entries an earlier import saved on the wrong weekday (they never showed)
