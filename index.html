@@ -604,12 +604,18 @@ table.hist th{color:var(--ink-soft);font-weight:700;}
   <button data-tab="attendance">تسجيل الحضور</button>
   <button data-tab="afeqad">الافتقاد</button>
   <button data-tab="moves">نقل الأسماء</button>
+  <button data-tab="program">برنامج الخدمة</button>
   <button data-tab="reports">التقارير</button>
   <button data-tab="settings">الإعدادات</button>
 </nav>
 
 <!-- DASHBOARD TAB -->
 <section class="panel active" id="panel-dashboard">
+  <div class="card" id="dashboardNextCard" style="display:none;">
+    <h2>📖 الاجتماع الجاي</h2>
+    <div id="dashboardNext"></div>
+  </div>
+
   <div class="card" id="dashboardStatsCard">
     <h2>نظرة عامة</h2>
     <div class="dash-stats-grid" id="dashboardStats"></div>
@@ -634,6 +640,32 @@ table.hist th{color:var(--ink-soft);font-weight:700;}
     <h2>محتاجين افتقاد</h2>
     <div id="dashboardAfeqad"></div>
   </div>
+</section>
+
+<!-- SERVICE PROGRAM TAB -->
+<section class="panel" id="panel-program">
+  <div class="card">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
+      <div class="prog-tabs" style="display:flex;gap:6px;">
+        <button class="primary prog-day" data-day="friday">اجتماع الجمعة</button>
+        <button class="ghost prog-day" data-day="sunday">اجتماع الأحد</button>
+      </div>
+      <select id="progYear" style="max-width:220px;"></select>
+    </div>
+    <div id="progHeader" style="margin-top:14px;"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center;">
+      <select id="progFilter" style="max-width:220px;">
+        <option value="all">كل السنة</option>
+        <option value="upcoming">من النهارده وجاي</option>
+        <option value="nospeaker">ناقص متكلم</option>
+      </select>
+      <button class="ghost" id="progPrintBtn">🖨️ طباعة</button>
+      <button class="ghost" id="progExportBtn">⬇️ تصدير Excel</button>
+      <label class="ghost" id="progImportLabel" for="progImportFile" style="cursor:pointer;display:none;padding:8px 14px;border-radius:10px;">⬆️ استيراد من Excel</label>
+      <input type="file" id="progImportFile" accept=".xlsx,.xls" style="display:none;">
+    </div>
+  </div>
+  <div id="progList"></div>
 </section>
 
 <!-- MOVES TAB -->
@@ -1763,7 +1795,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '4 أكتوبر 2026 (د)';
+const APP_VERSION = '4 أكتوبر 2026 (هـ)';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -1867,6 +1899,7 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
     if(btn.dataset.tab === 'dashboard') renderDashboard();
     if(btn.dataset.tab === 'afeqad') renderAfeqadList();
     if(btn.dataset.tab === 'moves') renderMovesPanel();
+    if(btn.dataset.tab === 'program') renderProgramPanel();
   });
 });
 
@@ -2571,6 +2604,9 @@ function renderDashboard(){
       </div>
     `).join('');
   }
+
+  // ---- next meetings from the service program ----
+  renderDashboardNext();
 
   // ---- upcoming birthdays (next 30 days) ----
   renderDashboardBirthdays();
@@ -4150,6 +4186,328 @@ function maybeShowBirthdayPopup(){
   wrap.addEventListener('click', e=>{ if(e.target === wrap) close(); });
   document.getElementById('bdayPopupClose').addEventListener('click', close);
 }
+/* ---------- SERVICE PROGRAM (Friday / Sunday, October → September) ----------
+   Stored in its own key: { years: { "2026": { friday: {title, vision, items:{ "2026-10-02": {title, goal, speaker, church} }}, sunday: {...} } } }
+   Each change re-reads the latest copy and applies just that change, so two
+   people editing different days never overwrite each other. */
+const PROGRAM_KEY = 'khodam_service_program';
+const PROG_DAYS = { friday: { label:'الجمعة', meeting:'اجتماع الجمعة', dow:5 }, sunday: { label:'الأحد', meeting:'اجتماع الأحد', dow:0 } };
+const PROG_MONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+let PROGRAM = { years: {} };
+let PROGRAM_REV = 0, programLoaded = false, programWatchStarted = false;
+let progDay = 'friday', progYear = null, progEditDate = null;
+
+function serviceYearOf(d){ return d.getMonth() >= 9 ? d.getFullYear() : d.getFullYear() - 1; }
+function copticYear(startYear){ return startYear - 283; }
+function isoDate(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function programDates(startYear, day){
+  const out = [];
+  const d = new Date(startYear, 9, 1);
+  while(d.getDay() !== PROG_DAYS[day].dow) d.setDate(d.getDate()+1);
+  const end = new Date(startYear+1, 8, 30);
+  while(d <= end){ out.push(new Date(d)); d.setDate(d.getDate()+7); }
+  return out;
+}
+function progSection(obj, year, day, create){
+  if(!obj.years) obj.years = {};
+  if(!obj.years[year]){ if(!create) return null; obj.years[year] = {}; }
+  if(!obj.years[year][day]){ if(!create) return null; obj.years[year][day] = { title:'', vision:'', items:{} }; }
+  if(!obj.years[year][day].items) obj.years[year][day].items = {};
+  return obj.years[year][day];
+}
+async function loadProgram(){
+  try{
+    const res = await storageGetWithRetry(PROGRAM_KEY, true);
+    PROGRAM = res.value ? JSON.parse(res.value) : { years: {} };
+    if(!PROGRAM.years) PROGRAM.years = {};
+    if(window.storage.lastRev) PROGRAM_REV = window.storage.lastRev(PROGRAM_KEY);
+    programLoaded = true;
+  }catch(e){ console.error('program load failed', e); }
+  if(!programWatchStarted && window.storage.watch){
+    programWatchStarted = true;
+    window.storage.watch(PROGRAM_KEY, rev=>{ if(rev !== PROGRAM_REV) loadProgram(); });
+  }
+  if(document.getElementById('panel-program').classList.contains('active') && !progEditDate) renderProgramPanel();
+  try{ renderDashboardNext(); }catch(e){}
+}
+async function saveProgramChange(mutate){
+  setSaveStatus('saving');
+  try{
+    if(!window.storage.setIfRev){
+      mutate(PROGRAM);
+      await window.storage.set(PROGRAM_KEY, JSON.stringify(PROGRAM), true);
+      setSaveStatus('saved'); return true;
+    }
+    for(let attempt=0; attempt<5; attempt++){
+      const r = await window.storage.getWithRev(PROGRAM_KEY);
+      const latest = r.exists ? JSON.parse(r.value) : { years: {} };
+      if(!latest.years) latest.years = {};
+      mutate(latest);
+      const res = await window.storage.setIfRev(PROGRAM_KEY, JSON.stringify(latest), r.rev || 0);
+      if(res.ok){ PROGRAM = latest; PROGRAM_REV = res.rev; setSaveStatus('saved'); return true; }
+      await new Promise(x=>setTimeout(x, 150 + Math.random()*300));
+    }
+  }catch(e){ console.error('program save failed', e); }
+  setSaveStatus('error');
+  alert('مقدرناش نحفظ برنامج الخدمة. اتأكد إن النت شغال وجرّب تاني.');
+  return false;
+}
+function fillProgYears(){
+  const sel = document.getElementById('progYear');
+  const cur = serviceYearOf(new Date());
+  const years = new Set([cur-1, cur, cur+1, ...Object.keys(PROGRAM.years||{}).map(Number)]);
+  const sorted = Array.from(years).filter(y=>!isNaN(y)).sort((a,b)=>b-a);
+  if(progYear === null) progYear = cur;
+  sel.innerHTML = sorted.map(y=>`<option value="${y}" ${y===progYear?'selected':''}>${copticYear(y)} ش  (${y} - ${y+1})</option>`).join('');
+}
+function renderProgramPanel(){
+  if(!programLoaded){ document.getElementById('progList').innerHTML = '<div class="card"><div class="empty-note">جاري تحميل البرنامج…</div></div>'; return; }
+  fillProgYears();
+  const canEdit = isSupervisorOrAdmin();
+  document.getElementById('progImportLabel').style.display = canEdit ? 'inline-block' : 'none';
+  document.querySelectorAll('.prog-day').forEach(b=>{ b.className = (b.dataset.day===progDay ? 'primary' : 'ghost') + ' prog-day'; });
+  const sec = progSection(PROGRAM, progYear, progDay, false) || { title:'', vision:'', items:{} };
+  const head = document.getElementById('progHeader');
+  const defaultTitle = `برنامج ${PROG_DAYS[progDay].meeting} السنوي (${copticYear(progYear)} ش / ${progYear}-${progYear+1} م)`;
+  head.innerHTML = `
+    <h2 style="margin:0 0 4px;font-family:'Amiri',serif;">${escHtml(sec.title || defaultTitle)}</h2>
+    ${sec.vision ? `<div style="color:#7A2E2E;font-weight:700;font-size:.92rem;">🎯 ${escHtml(sec.vision)}</div>` : ''}
+    ${canEdit ? `<button class="ghost" id="progHeadEditBtn" style="margin-top:8px;font-size:.8rem;">✏️ تعديل العنوان والرؤية</button>
+    <div id="progHeadEdit" style="display:none;margin-top:10px;">
+      <label style="display:block;margin-bottom:4px;">عنوان البرنامج</label>
+      <input type="text" id="progTitleInput" value="${escHtml(sec.title)}" placeholder="${escHtml(defaultTitle)}" style="margin-bottom:8px;">
+      <label style="display:block;margin-bottom:4px;">الرؤية المركزية</label>
+      <input type="text" id="progVisionInput" value="${escHtml(sec.vision)}" placeholder="مثلًا: علاقة الزوجين وتأثيرها على الأسرة" style="margin-bottom:8px;">
+      <button class="primary" id="progHeadSaveBtn">حفظ</button>
+    </div>` : ''}`;
+  if(canEdit){
+    document.getElementById('progHeadEditBtn').addEventListener('click', ()=>{ const el = document.getElementById('progHeadEdit'); el.style.display = el.style.display==='none' ? 'block' : 'none'; });
+    document.getElementById('progHeadSaveBtn').addEventListener('click', async ()=>{
+      const title = document.getElementById('progTitleInput').value.trim();
+      const vision = document.getElementById('progVisionInput').value.trim();
+      const y = progYear, d = progDay;
+      if(await saveProgramChange(obj=>{ const s2 = progSection(obj, y, d, true); s2.title = title; s2.vision = vision; })) renderProgramPanel();
+    });
+  }
+  const filter = document.getElementById('progFilter').value;
+  const todayIso = todayStr();
+  const dates = programDates(progYear, progDay);
+  const nextIso = (dates.find(d=>isoDate(d) >= todayIso) ? isoDate(dates.find(d=>isoDate(d) >= todayIso)) : null);
+  let html = '', curMonth = -1, idx = 0, shownAny = false;
+  dates.forEach(d=>{
+    const iso = isoDate(d);
+    const it = sec.items[iso] || {};
+    if(filter === 'upcoming' && iso < todayIso) return;
+    if(filter === 'nospeaker' && (it.speaker || '').trim()) return;
+    if(d.getMonth() !== curMonth){
+      if(curMonth !== -1) html += '</div>';
+      curMonth = d.getMonth(); idx = 0;
+      html += `<div class="card"><h3 style="margin:0 0 8px;color:#7A2E2E;">ــ شهر ${PROG_MONTHS[curMonth]} ــ</h3>`;
+    }
+    idx++; shownAny = true;
+    const isNext = iso === nextIso, isPast = iso < todayIso;
+    html += `
+      <div class="prog-row" data-date="${iso}" style="padding:10px 12px;margin:6px 0;border-radius:12px;border:${isNext?'2px solid #C9A227':'1px solid #e8dcc0'};background:${isNext?'#fff8e1':'#fffdf7'};${isPast?'opacity:.6;':''}">
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">
+          <div style="font-size:.8rem;color:#8a7d55;white-space:nowrap;">${idx}. ${PROG_DAYS[progDay].label} ${d.getDate()} ${PROG_MONTHS[d.getMonth()]}</div>
+          ${isNext ? '<span style="font-size:.72rem;background:#C9A227;color:#fff;padding:2px 8px;border-radius:10px;white-space:nowrap;">الاجتماع الجاي</span>' : ''}
+        </div>
+        <div style="font-weight:700;margin-top:4px;">${it.title ? escHtml(it.title) : '<span style="color:#b5a77e;font-weight:400;">لسه مفيش موضوع</span>'}</div>
+        ${it.goal ? `<div style="font-size:.82rem;color:#5a5140;margin-top:2px;">${escHtml(it.goal)}</div>` : ''}
+        <div style="font-size:.82rem;margin-top:6px;color:#1B2A4A;">
+          ${it.speaker ? `🎤 ${escHtml(it.speaker)}` : '<span style="color:#b5a77e;">🎤 لسه محدش اتحدد</span>'}
+          ${it.church ? ` &nbsp;—&nbsp; ⛪ ${escHtml(it.church)}` : ''}
+        </div>
+        ${canEdit ? `<div style="margin-top:8px;"><button class="ghost prog-edit-btn" style="font-size:.8rem;padding:4px 12px;">✏️ تعديل</button></div>
+        <div class="prog-edit" style="display:none;margin-top:10px;"></div>` : ''}
+      </div>`;
+  });
+  if(curMonth !== -1) html += '</div>';
+  const listEl = document.getElementById('progList');
+  listEl.innerHTML = shownAny ? html : '<div class="card"><div class="empty-note">مفيش اجتماعات مطابقة للاختيار ده</div></div>';
+  if(canEdit){
+    listEl.querySelectorAll('.prog-edit-btn').forEach(btn=>btn.addEventListener('click', e=>{
+      const row = e.target.closest('.prog-row');
+      openProgEdit(row, sec.items[row.dataset.date] || {});
+    }));
+  }
+  if(nextIso && filter === 'all'){
+    const nr = listEl.querySelector(`.prog-row[data-date="${nextIso}"]`);
+    if(nr && !renderProgramPanel._scrolled){ renderProgramPanel._scrolled = true; setTimeout(()=>nr.scrollIntoView({block:'center'}), 50); }
+  }
+}
+function openProgEdit(row, it){
+  document.querySelectorAll('.prog-edit').forEach(el=>{ el.style.display='none'; el.innerHTML=''; });
+  const box = row.querySelector('.prog-edit');
+  progEditDate = row.dataset.date;
+  box.style.display = 'block';
+  box.innerHTML = `
+    <label style="display:block;margin-bottom:4px;">العنوان (الكلمة)</label>
+    <input type="text" class="pe-title" value="${escHtml(it.title||'')}" style="margin-bottom:8px;">
+    <label style="display:block;margin-bottom:4px;">الهدف والمحتوى</label>
+    <textarea class="pe-goal" rows="2" style="margin-bottom:8px;width:100%;">${escHtml(it.goal||'')}</textarea>
+    <label style="display:block;margin-bottom:4px;">المتكلم</label>
+    <input type="text" class="pe-speaker" value="${escHtml(it.speaker||'')}" placeholder="مثلًا: القس / انطونيوس فوزي" style="margin-bottom:8px;">
+    <label style="display:block;margin-bottom:4px;">كنيسته</label>
+    <input type="text" class="pe-church" value="${escHtml(it.church||'')}" style="margin-bottom:10px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="primary pe-save">حفظ</button>
+      <button class="ghost pe-cancel">إلغاء</button>
+    </div>`;
+  box.querySelector('.pe-cancel').addEventListener('click', ()=>{ progEditDate = null; box.style.display='none'; box.innerHTML=''; });
+  box.querySelector('.pe-save').addEventListener('click', async ()=>{
+    const v = {
+      title: box.querySelector('.pe-title').value.trim(),
+      goal: box.querySelector('.pe-goal').value.trim(),
+      speaker: box.querySelector('.pe-speaker').value.trim(),
+      church: box.querySelector('.pe-church').value.trim()
+    };
+    const iso = row.dataset.date, y = progYear, d = progDay;
+    const ok = await saveProgramChange(obj=>{
+      const s2 = progSection(obj, y, d, true);
+      if(!v.title && !v.goal && !v.speaker && !v.church) delete s2.items[iso];
+      else s2.items[iso] = Object.assign(v, { by: currentUser ? currentUser.name : '' });
+    });
+    if(ok){ progEditDate = null; renderProgramPanel(); }
+  });
+  box.querySelector('.pe-title').focus();
+}
+function renderDashboardNext(){
+  const card = document.getElementById('dashboardNextCard'), el = document.getElementById('dashboardNext');
+  if(!card || !el || !programLoaded) return;
+  const todayIso = todayStr();
+  const rows = [];
+  ['friday','sunday'].forEach(day=>{
+    const y0 = serviceYearOf(new Date());
+    for(const y of [y0, y0+1]){
+      const sec = progSection(PROGRAM, y, day, false); if(!sec) continue;
+      const next = programDates(y, day).map(isoDate).find(iso=>iso >= todayIso && sec.items[iso] && (sec.items[iso].title || sec.items[iso].speaker));
+      if(next){ rows.push({ day, iso: next, it: sec.items[next] }); break; }
+    }
+  });
+  if(rows.length === 0){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  el.innerHTML = rows.map(r=>{
+    const d = new Date(r.iso + 'T00:00:00');
+    return `<div class="dash-list-row" style="display:block;">
+      <div style="font-size:.8rem;color:#8a7d55;">${PROG_DAYS[r.day].meeting} — ${d.getDate()} ${PROG_MONTHS[d.getMonth()]}</div>
+      <div style="font-weight:700;margin-top:2px;">${escHtml(r.it.title || '—')}</div>
+      <div class="meta" style="margin-top:2px;">${r.it.speaker ? '🎤 ' + escHtml(r.it.speaker) : '🎤 لسه محدش اتحدد'}${r.it.church ? ' — ⛪ ' + escHtml(r.it.church) : ''}</div>
+    </div>`;
+  }).join('');
+}
+function progExcelDate(v){
+  if(v instanceof Date && !isNaN(v)) return new Date(v.getFullYear(), v.getMonth(), v.getDate());
+  if(typeof v === 'number'){ const d = new Date(Math.round((v - 25569) * 86400000)); return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()); }
+  const m = String(v||'').trim().match(/^(\d{1,4})[\/\-.](\d{1,2})[\/\-.](\d{1,4})$/);
+  if(!m) return null;
+  let a = +m[1], b = +m[2], c = +m[3];
+  if(a > 31) return new Date(a, b-1, c);          // yyyy-mm-dd
+  return new Date(c < 100 ? 2000 + c : c, b-1, a); // dd-mm-yyyy
+}
+document.querySelectorAll('.prog-day').forEach(b=>b.addEventListener('click', ()=>{ progDay = b.dataset.day; progEditDate = null; renderProgramPanel._scrolled = false; renderProgramPanel(); }));
+document.getElementById('progYear').addEventListener('change', e=>{ progYear = +e.target.value; progEditDate = null; renderProgramPanel._scrolled = false; renderProgramPanel(); });
+document.getElementById('progFilter').addEventListener('change', ()=>{ progEditDate = null; renderProgramPanel(); });
+document.getElementById('progImportFile').addEventListener('change', e=>{
+  const file = e.target.files[0]; e.target.value = '';
+  if(!file || !isSupervisorOrAdmin()) return;
+  if(typeof XLSX === 'undefined'){ alert('مكتبة Excel مش متحمّلة. اتأكد من النت.'); return; }
+  const reader = new FileReader();
+  reader.onload = async ev=>{
+    try{
+      const wb = XLSX.read(new Uint8Array(ev.target.result), { type:'array', cellDates:true });
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header:1, raw:true, defval:null });
+      // find header row (has a date column and a speaker column)
+      let hi = rows.findIndex(r=>r && r.some(c=>String(c||'').includes('التاريخ')) && r.some(c=>String(c||'').includes('المتكلم')));
+      if(hi < 0){ alert('مش لاقي صف العناوين في الملف (لازم يكون فيه عمود "التاريخ" وعمود "المتكلم").'); return; }
+      const H = rows[hi].map(c=>String(c||'').trim());
+      const col = names=>H.findIndex(h=>names.some(n=>h.includes(n)));
+      const cDate = col(['التاريخ']), cTitle = col(['العنوان','الموضوع','الكلمة']), cGoal = col(['الهدف','المحتوى']), cSpeaker = col(['المتكلم']), cChurch = col(['كنيسته','الكنيسة','كنيسة']);
+      const title = (rows.slice(0, hi).find(r=>r && r[0]) || [])[0] || '';
+      const visionRow = rows.slice(0, hi).filter(r=>r && r[0]).slice(1)[0];
+      const vision = visionRow ? String(visionRow[0]).replace(/^الرؤية المركزية\s*[:：]\s*/, '') : '';
+      const parsed = [];
+      rows.slice(hi+1).forEach(r=>{
+        if(!r) return;
+        const d = progExcelDate(r[cDate]); if(!d || isNaN(d)) return;
+        const clean = v=>String(v==null?'':v).replace(/\s+/g,' ').trim();
+        parsed.push({ d, title: clean(r[cTitle]), goal: cGoal>=0 ? clean(r[cGoal]) : '', speaker: cSpeaker>=0 ? clean(r[cSpeaker]) : '', church: cChurch>=0 ? clean(r[cChurch]) : '' });
+      });
+      if(parsed.length === 0){ alert('مش لاقي أي تواريخ في الملف.'); return; }
+      // the service year is the one most rows fall in; rows with a wrong year are placed by day + month
+      const counts = {}; parsed.forEach(p=>{ const y = serviceYearOf(p.d); counts[y] = (counts[y]||0) + 1; });
+      const year = +Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0];
+      const dayDow = parsed.map(p=>p.d.getDay());
+      const fridays = dayDow.filter(x=>x===5).length, sundays = dayDow.filter(x=>x===0).length;
+      const day = sundays > fridays ? 'sunday' : 'friday';
+      let fixed = 0;
+      parsed.forEach(p=>{
+        if(serviceYearOf(p.d) !== year){ p.d = new Date(p.d.getMonth() >= 9 ? year : year+1, p.d.getMonth(), p.d.getDate()); fixed++; }
+      });
+      if(!confirm(`هيتم استيراد ${parsed.length} اجتماع في برنامج ${PROG_DAYS[day].meeting} لسنة ${copticYear(year)} ش (${year}-${year+1}).${fixed ? `\n\nملحوظة: ${fixed} تاريخ كان مكتوب بسنة غلط في الملف واتصلّح تلقائيًا.` : ''}\n\nالأيام الموجودة في الملف هتستبدل اللي في البرنامج لنفس التاريخ. تكمّل؟`)) return;
+      const ok = await saveProgramChange(obj=>{
+        const s2 = progSection(obj, year, day, true);
+        if(title) s2.title = String(title).trim();
+        if(vision) s2.vision = vision.trim();
+        parsed.forEach(p=>{
+          const v = { title:p.title, goal:p.goal, speaker:p.speaker, church:p.church, by: currentUser ? currentUser.name : '' };
+          if(v.title || v.goal || v.speaker || v.church) s2.items[isoDate(p.d)] = v;
+        });
+      });
+      if(ok){ progYear = year; progDay = day; renderProgramPanel._scrolled = false; renderProgramPanel(); alert('تم الاستيراد ✓'); }
+    }catch(err){ console.error(err); alert('مقدرناش نقرا الملف: ' + err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+});
+function progRowsForOutput(){
+  const sec = progSection(PROGRAM, progYear, progDay, false) || { title:'', vision:'', items:{} };
+  const title = sec.title || `برنامج ${PROG_DAYS[progDay].meeting} السنوي (${copticYear(progYear)} ش / ${progYear}-${progYear+1} م)`;
+  const months = [];
+  programDates(progYear, progDay).forEach(d=>{
+    if(!months.length || months[months.length-1].m !== d.getMonth()) months.push({ m: d.getMonth(), rows: [] });
+    const it = sec.items[isoDate(d)] || {};
+    months[months.length-1].rows.push({ d, it });
+  });
+  return { title, vision: sec.vision, months };
+}
+document.getElementById('progExportBtn').addEventListener('click', ()=>{
+  if(typeof XLSX === 'undefined'){ alert('مكتبة Excel مش متحمّلة. اتأكد من النت.'); return; }
+  const { title, vision, months } = progRowsForOutput();
+  const aoa = [[title], [vision ? 'الرؤية المركزية: ' + vision : ''], ['م','التاريخ','الشهر','العنوان','الهدف والمحتوى','المتكلم','كنيسته']];
+  const merges = [{ s:{r:0,c:0}, e:{r:0,c:6} }, { s:{r:1,c:0}, e:{r:1,c:6} }];
+  months.forEach(mo=>{
+    merges.push({ s:{r:aoa.length,c:0}, e:{r:aoa.length,c:6} });
+    aoa.push([`ــ شهر ${PROG_MONTHS[mo.m]} ــ`]);
+    mo.rows.forEach((r,i)=>aoa.push([i+1, `${String(r.d.getDate()).padStart(2,'0')}-${String(r.d.getMonth()+1).padStart(2,'0')}-${r.d.getFullYear()}`, PROG_MONTHS[mo.m], r.it.title||'', r.it.goal||'', r.it.speaker||'', r.it.church||'']));
+  });
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!merges'] = merges;
+  ws['!cols'] = [{wch:4},{wch:12},{wch:9},{wch:45},{wch:50},{wch:24},{wch:28}];
+  ws['!views'] = [{ RTL: true }];
+  const wb = XLSX.utils.book_new();
+  wb.Workbook = { Views: [{ RTL: true }] };
+  XLSX.utils.book_append_sheet(wb, ws, 'البرنامج');
+  window.saveWorkbookToViewer(wb, `برنامج-${PROG_DAYS[progDay].label}-${copticYear(progYear)}.xlsx`);
+});
+document.getElementById('progPrintBtn').addEventListener('click', ()=>{
+  const { title, vision, months } = progRowsForOutput();
+  const logo = (document.querySelector('.halo-mark') || {}).src || '';
+  const body = months.map(mo=>`
+    <tr class="month"><td colspan="6">ــ شهر ${PROG_MONTHS[mo.m]} ــ</td></tr>
+    ${mo.rows.map((r,i)=>`<tr><td>${i+1}</td><td style="white-space:nowrap;">${r.d.getDate()}/${r.d.getMonth()+1}</td><td><b>${escHtml(r.it.title||'')}</b>${r.it.goal?`<div class="g">${escHtml(r.it.goal)}</div>`:''}</td><td>${escHtml(r.it.speaker||'')}</td><td>${escHtml(r.it.church||'')}</td></tr>`).join('')}`).join('');
+  const w = window.open('', '_blank');
+  if(!w){ alert('المتصفح منع فتح صفحة الطباعة. اسمح بالنوافذ المنبثقة وجرّب تاني.'); return; }
+  w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${escHtml(title)}</title>
+    <style>body{font-family:Cairo,Arial,sans-serif;color:#1B2A4A;margin:24px;} h1{font-size:20px;text-align:center;margin:6px 0;} .v{text-align:center;color:#7A2E2E;font-weight:bold;margin-bottom:14px;}
+    table{width:100%;border-collapse:collapse;font-size:12px;} th,td{border:1px solid #c9b98a;padding:5px 7px;vertical-align:top;text-align:right;} th{background:#1B2A4A;color:#fff;}
+    tr.month td{background:#f3e9cf;font-weight:bold;text-align:center;color:#7A2E2E;} .g{color:#5a5140;font-size:11px;margin-top:2px;} .logo{display:block;margin:0 auto;width:70px;}
+    @media print{ tr{page-break-inside:avoid;} }</style></head><body>
+    ${logo ? `<img class="logo" src="${logo}">` : ''}<h1>${escHtml(title)}</h1>${vision ? `<div class="v">الرؤية المركزية: ${escHtml(vision)}</div>` : ''}
+    <table><thead><tr><th>م</th><th>التاريخ</th><th>العنوان والهدف</th><th>المتكلم</th><th>كنيسته</th></tr></thead><tbody>${body.replace(/colspan="6"/g,'colspan="5"')}</tbody></table>
+    <script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script></body></html>`);
+  w.document.close();
+});
+
 function renderAll(){
   renderServantList();
   renderMeetingPicker();
@@ -4208,6 +4566,7 @@ async function init(){
   await loadLastBackup();
   await loadBrandingAndApply();
   await loadVersesAndApply();
+  loadProgram();
 
   if(!dataResult.confirmed || !usersResult.confirmed){
     // couldn't confirm data/users after retries — refuse to guess, avoid wiping real records
