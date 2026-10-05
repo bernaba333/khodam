@@ -1795,7 +1795,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '4 أكتوبر 2026 (هـ)';
+const APP_VERSION = '5 أكتوبر 2026 (و)';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -4397,7 +4397,9 @@ function renderDashboardNext(){
   }).join('');
 }
 function progExcelDate(v){
-  if(v instanceof Date && !isNaN(v)) return new Date(v.getFullYear(), v.getMonth(), v.getDate());
+  // Excel date cells can come back a few seconds/hours before midnight because of
+  // time-zone handling, which used to push them to the previous day: go to midday first.
+  if(v instanceof Date && !isNaN(v)){ const m = new Date(v.getTime() + 12*3600000); return new Date(m.getFullYear(), m.getMonth(), m.getDate()); }
   if(typeof v === 'number'){ const d = new Date(Math.round((v - 25569) * 86400000)); return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()); }
   const m = String(v||'').trim().match(/^(\d{1,4})[\/\-.](\d{1,2})[\/\-.](\d{1,4})$/);
   if(!m) return null;
@@ -4415,7 +4417,7 @@ document.getElementById('progImportFile').addEventListener('change', e=>{
   const reader = new FileReader();
   reader.onload = async ev=>{
     try{
-      const wb = XLSX.read(new Uint8Array(ev.target.result), { type:'array', cellDates:true });
+      const wb = XLSX.read(new Uint8Array(ev.target.result), { type:'array' }); // date cells arrive as Excel day numbers (exact)
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header:1, raw:true, defval:null });
       // find header row (has a date column and a speaker column)
       let hi = rows.findIndex(r=>r && r.some(c=>String(c||'').includes('التاريخ')) && r.some(c=>String(c||'').includes('المتكلم')));
@@ -4441,12 +4443,18 @@ document.getElementById('progImportFile').addEventListener('change', e=>{
       const fridays = dayDow.filter(x=>x===5).length, sundays = dayDow.filter(x=>x===0).length;
       const day = sundays > fridays ? 'sunday' : 'friday';
       let fixed = 0;
+      const dow = PROG_DAYS[day].dow;
       parsed.forEach(p=>{
         if(serviceYearOf(p.d) !== year){ p.d = new Date(p.d.getMonth() >= 9 ? year : year+1, p.d.getMonth(), p.d.getDate()); fixed++; }
+        // a date a day or two off the meeting day goes to the nearest meeting day
+        let diff = (dow - p.d.getDay() + 7) % 7; if(diff > 3) diff -= 7;
+        if(diff !== 0){ p.d = new Date(p.d.getFullYear(), p.d.getMonth(), p.d.getDate() + diff); fixed++; }
       });
       if(!confirm(`هيتم استيراد ${parsed.length} اجتماع في برنامج ${PROG_DAYS[day].meeting} لسنة ${copticYear(year)} ش (${year}-${year+1}).${fixed ? `\n\nملحوظة: ${fixed} تاريخ كان مكتوب بسنة غلط في الملف واتصلّح تلقائيًا.` : ''}\n\nالأيام الموجودة في الملف هتستبدل اللي في البرنامج لنفس التاريخ. تكمّل؟`)) return;
       const ok = await saveProgramChange(obj=>{
         const s2 = progSection(obj, year, day, true);
+        // drop entries an earlier import saved on the wrong weekday (they never showed)
+        Object.keys(s2.items).forEach(k=>{ if(new Date(k + 'T00:00:00').getDay() !== dow) delete s2.items[k]; });
         if(title) s2.title = String(title).trim();
         if(vision) s2.vision = vision.trim();
         parsed.forEach(p=>{
