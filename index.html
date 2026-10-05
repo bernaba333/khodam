@@ -1793,7 +1793,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '5 أكتوبر 2026 (ح)';
+const APP_VERSION = '5 أكتوبر 2026 (ط)';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -4635,46 +4635,76 @@ document.getElementById('progImportFile').addEventListener('change', e=>{
     try{
       const wb = XLSX.read(new Uint8Array(ev.target.result), { type:'array' }); // date cells arrive as Excel day numbers (exact)
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header:1, raw:true, defval:null });
-      // find header row (has a date column and a speaker column)
-      let hi = rows.findIndex(r=>r && r.some(c=>String(c||'').includes('التاريخ')) && r.some(c=>String(c||'').includes('المتكلم')));
-      if(hi < 0){ alert('مش لاقي صف العناوين في الملف (لازم يكون فيه عمود "التاريخ" وعمود "المتكلم").'); return; }
+      // header row: has a speaker or title column, plus a date or a month column
+      const hasCell = (r, names)=> r && r.some(c=>names.some(n=>String(c||'').includes(n)));
+      let hi = rows.findIndex(r=>hasCell(r, ['المتكلم','العنوان','الموضوع']) && hasCell(r, ['التاريخ','الشهر']));
+      if(hi < 0){ alert('مش لاقي صف العناوين في الملف. لازم يكون فيه عمود "التاريخ" أو "الشهر"، وعمود "العنوان" أو "المتكلم".'); return; }
       const H = rows[hi].map(c=>String(c||'').trim());
       const col = names=>H.findIndex(h=>names.some(n=>h.includes(n)));
-      const cDate = col(['التاريخ']), cTitle = col(['العنوان','الموضوع','الكلمة']), cGoal = col(['الهدف','المحتوى']), cSpeaker = col(['المتكلم']), cChurch = col(['كنيسته','الكنيسة','كنيسة']);
+      const cDate = col(['التاريخ']), cMonth = col(['الشهر']), cTitle = col(['العنوان','الموضوع','الكلمة']), cGoal = col(['الهدف','المحتوى']), cSpeaker = col(['المتكلم']), cChurch = col(['كنيسته','الكنيسة','كنيسة']);
       const title = (rows.slice(0, hi).find(r=>r && r[0]) || [])[0] || '';
       const visionRow = rows.slice(0, hi).filter(r=>r && r[0]).slice(1)[0];
       const vision = visionRow ? String(visionRow[0]).replace(/^الرؤية المركزية\s*[:：]\s*/, '') : '';
+      const clean = v=>String(v==null?'':v).replace(/\s+/g,' ').trim();
+      const MONTH_NAMES = { 'يناير':0,'فبراير':1,'مارس':2,'ابريل':3,'أبريل':3,'إبريل':3,'مايو':4,'يونيو':5,'يونيه':5,'يوليو':6,'يوليه':6,'اغسطس':7,'أغسطس':7,'سبتمبر':8,'اكتوبر':9,'أكتوبر':9,'نوفمبر':10,'ديسمبر':11 };
+      const monthOf = v=>{ const t = clean(v).replace(/^شهر\s*/, ''); return Object.prototype.hasOwnProperty.call(MONTH_NAMES, t) ? MONTH_NAMES[t] : null; };
+      const day = progDay; // the file goes into the tab that is open (الجمعة or الأحد)
+      const dow = PROG_DAYS[day].dow;
       const parsed = [];
+      let year, notes = [], mismatch = false, fileLooksLike = null;
       rows.slice(hi+1).forEach(r=>{
         if(!r) return;
-        const d = progExcelDate(r[cDate]); if(!d || isNaN(d)) return;
-        const clean = v=>String(v==null?'':v).replace(/\s+/g,' ').trim();
-        parsed.push({ d, title: clean(r[cTitle]), goal: cGoal>=0 ? clean(r[cGoal]) : '', speaker: cSpeaker>=0 ? clean(r[cSpeaker]) : '', church: cChurch>=0 ? clean(r[cChurch]) : '' });
+        const item = { title: clean(r[cTitle]), goal: cGoal>=0 ? clean(r[cGoal]) : '', speaker: cSpeaker>=0 ? clean(r[cSpeaker]) : '', church: cChurch>=0 ? clean(r[cChurch]) : '' };
+        if(!item.title && !item.speaker) return;
+        if(cDate >= 0){ const d = progExcelDate(r[cDate]); if(d && !isNaN(d)){ item.d = d; parsed.push(item); return; } }
+        if(cMonth >= 0){ const m = monthOf(r[cMonth]); if(m !== null){ item.m = m; parsed.push(item); } }
       });
-      if(parsed.length === 0){ alert('مش لاقي أي تواريخ في الملف.'); return; }
-      // the service year is the one most rows fall in; rows with a wrong year are placed by day + month
-      const counts = {}; parsed.forEach(p=>{ const y = serviceYearOf(p.d); counts[y] = (counts[y]||0) + 1; });
-      const year = +Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0];
-      // the file goes into the tab that is open (الجمعة or الأحد)
-      const day = progDay;
-      const dayDow = parsed.map(p=>p.d.getDay());
-      const fridays = dayDow.filter(x=>x===5).length, sundays = dayDow.filter(x=>x===0).length;
-      const fileLooksLike = fridays > sundays ? 'friday' : (sundays > fridays ? 'sunday' : null);
-      const mismatch = fileLooksLike && fileLooksLike !== day;
-      let fixed = 0;
-      const dow = PROG_DAYS[day].dow;
-      parsed.forEach(p=>{
-        if(serviceYearOf(p.d) !== year){ p.d = new Date(p.d.getMonth() >= 9 ? year : year+1, p.d.getMonth(), p.d.getDate()); fixed++; p._yearFixed = true; }
-        // a date a day or two off the meeting day goes to the nearest meeting day
-        let diff = (dow - p.d.getDay() + 7) % 7; if(diff > 3) diff -= 7;
-        if(diff !== 0){ p.d = new Date(p.d.getFullYear(), p.d.getMonth(), p.d.getDate() + diff); fixed++; }
-      });
-      const yearFixed = parsed.filter(p=>p._yearFixed).length;
+      if(parsed.length === 0){ alert('مش لاقي أي اجتماعات في الملف (لا تواريخ ولا شهور).'); return; }
+      const dated = parsed.filter(p=>p.d), byMonth = parsed.filter(p=>!p.d);
+      if(dated.length >= byMonth.length){
+        // ---- file with dates ----
+        parsed.splice(0, parsed.length, ...dated);
+        const counts = {}; parsed.forEach(p=>{ const y = serviceYearOf(p.d); counts[y] = (counts[y]||0) + 1; });
+        year = +Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0];
+        const dayDow = parsed.map(p=>p.d.getDay());
+        const fridays = dayDow.filter(x=>x===5).length, sundays = dayDow.filter(x=>x===0).length;
+        fileLooksLike = fridays > sundays ? 'friday' : (sundays > fridays ? 'sunday' : null);
+        mismatch = fileLooksLike && fileLooksLike !== day;
+        let yearFixed = 0;
+        parsed.forEach(p=>{
+          if(serviceYearOf(p.d) !== year){ p.d = new Date(p.d.getMonth() >= 9 ? year : year+1, p.d.getMonth(), p.d.getDate()); yearFixed++; }
+          // a date a day or two off the meeting day goes to the nearest meeting day
+          let diff = (dow - p.d.getDay() + 7) % 7; if(diff > 3) diff -= 7;
+          if(diff !== 0) p.d = new Date(p.d.getFullYear(), p.d.getMonth(), p.d.getDate() + diff);
+        });
+        if(mismatch) notes.push(`⚠️ التواريخ اللي في الملف أغلبها أيام ${PROG_DAYS[fileLooksLike].label}، وانت فاتح برنامج ${PROG_DAYS[day].label}. كل اجتماع هيتحط على أقرب ${PROG_DAYS[day].label} لتاريخه.\nلو الملف ده بتاع ${PROG_DAYS[fileLooksLike].label}، دوس Cancel وافتح تبويب ${PROG_DAYS[fileLooksLike].meeting} الأول.`);
+        if(yearFixed) notes.push(`ملحوظة: ${yearFixed} تاريخ كان مكتوب بسنة غلط في الملف واتصلّح تلقائيًا.`);
+      } else {
+        // ---- file with months only: meetings go in file order onto this year's meeting days,
+        // each one in its own month; if a month has more topics than meeting days the extra one
+        // moves to the first free day of the next month (and the following months catch up).
+        parsed.splice(0, parsed.length, ...byMonth);
+        const ym = String(title).match(/(20\d\d)\s*[-–]\s*20\d\d/);
+        year = ym ? +ym[1] : progYear;
+        const dates = programDates(year, day);
+        const order = m=> (m + 3) % 12; // October first
+        let ptr = 0; const moved = [], left = [];
+        parsed.forEach(p=>{
+          while(ptr < dates.length && order(dates[ptr].getMonth()) < order(p.m)) ptr++;
+          if(ptr >= dates.length){ left.push(p); return; }
+          p.d = dates[ptr++];
+          if(p.d.getMonth() !== p.m) moved.push(p);
+        });
+        left.forEach(p=>parsed.splice(parsed.indexOf(p), 1));
+        notes.push(`الملف ده مفيهوش تواريخ، فالمواضيع هتتوزع بالترتيب على أيام ${PROG_DAYS[day].label}، كل موضوع في شهره.`);
+        if(moved.length) notes.push(`${moved.length} موضوع اتنقل لأول ${PROG_DAYS[day].label} في الشهر اللي بعده، لأن شهره فيه مواضيع أكتر من أيام ${PROG_DAYS[day].label}:\n` + moved.map(p=>`• ${p.title} ← ${p.d.getDate()} ${PROG_MONTHS[p.d.getMonth()]}`).join('\n'));
+        if(left.length) notes.push(`⚠️ ${left.length} موضوع مش هيتحط لأن السنة خلصت: ${left.map(p=>p.title).join('، ')}`);
+      }
       const msg = `هيتم استيراد ${parsed.length} اجتماع في برنامج ${PROG_DAYS[day].meeting} لسنة ${copticYear(year)} ش (${year}-${year+1}).`
-        + (mismatch ? `\n\n⚠️ التواريخ اللي في الملف أغلبها أيام ${PROG_DAYS[fileLooksLike].label}، وانت فاتح برنامج ${PROG_DAYS[day].label}. كل اجتماع هيتحط على أقرب ${PROG_DAYS[day].label} لتاريخه.\nلو الملف ده بتاع ${PROG_DAYS[fileLooksLike].label}، دوس Cancel وافتح تبويب ${PROG_DAYS[fileLooksLike].meeting} الأول.` : '')
-        + (yearFixed ? `\n\nملحوظة: ${yearFixed} تاريخ كان مكتوب بسنة غلط في الملف واتصلّح تلقائيًا.` : '')
-        + `\n\nالأيام الموجودة في الملف هتستبدل اللي في برنامج ${PROG_DAYS[day].label} لنفس التاريخ. تكمّل؟`;
+        + notes.map(n=>'\n\n' + n).join('')
+        + `\n\nالأيام اللي في الملف هتستبدل اللي في برنامج ${PROG_DAYS[day].label} لنفس التاريخ. تكمّل؟`;
       if(!confirm(msg)) return;
+
       const ok = await saveProgramChange(obj=>{
         const s2 = progSection(obj, year, day, true);
         // drop entries an earlier import saved on the wrong weekday (they never showed)
