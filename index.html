@@ -916,6 +916,7 @@ table.hist th{color:var(--ink-soft);font-weight:700;}
       </div>
       <select id="newUserRole" style="padding:10px;border-radius:10px;border:1px solid var(--line);font-family:'Cairo',sans-serif;">
         <option value="user">مستخدم</option>
+        <option value="program">برنامج الخدمة بس</option>
         <option value="supervisor">مشرف</option>
         <option value="admin">مدير</option>
       </select>
@@ -954,28 +955,25 @@ table.hist th{color:var(--ink-soft);font-weight:700;}
 
   <div class="card" id="permissionsCard" style="display:none;">
     <h2>صلاحيات المستخدمين العاديين</h2>
-    <p style="font-size:.82rem;color:var(--ink-soft);margin-top:0;">دي بتتحكم في اللي "المستخدم" (مش المدير) يقدر يشوفه أو يعمله. المدير دايمًا شايف كل حاجة مهما كانت الإعدادات دي.</p>
+    <p style="font-size:.82rem;color:var(--ink-soft);margin-top:0;">دي الصلاحيات العامة لأي "مستخدم" عادي. تقدر تدّي أي مستخدم صلاحيات مختلفة من زرار "صلاحياته الخاصة" جنب اسمه. المدير والمشرف دايمًا شايفين ومعدّلين كل حاجة.</p>
 
-    <label style="display:block;margin:10px 0 6px;font-weight:700;color:var(--ink);">التبويبات</label>
-    <label class="group-chk"><input type="checkbox" id="permTabDashboard" checked> يشوف "لوحة المعلومات"</label>
-    <label class="group-chk" style="margin-top:6px;"><input type="checkbox" id="permTabServants" checked> يشوف تبويب "الخدام"</label>
-    <label class="group-chk" style="margin-top:6px;"><input type="checkbox" id="permTabAttendance" checked> يشوف تبويب "تسجيل الحضور"</label>
-    <label class="group-chk" style="margin-top:6px;"><input type="checkbox" id="permTabAfeqad" checked> يشوف تبويب "الافتقاد"</label>
-    <label class="group-chk" style="margin-top:6px;"><input type="checkbox" id="permTabReports" checked> يشوف تبويب "التقارير"</label>
-
-    <label style="display:block;margin:16px 0 6px;font-weight:700;color:var(--ink);">البيانات الشخصية</label>
-    <label class="group-chk"><input type="checkbox" id="permPhones" checked> يشوف أرقام التليفونات</label>
-    <label class="group-chk" style="margin-top:6px;"><input type="checkbox" id="permAddresses" checked> يشوف العنوان والمنطقة</label>
-    <label class="group-chk" style="margin-top:6px;"><input type="checkbox" id="permOtherDetails" checked> يشوف تاريخ الميلاد، أب الاعتراف، والكنيسة</label>
-    <label class="group-chk" style="margin-top:6px;"><input type="checkbox" id="permAddedBy" checked> يشوف "مين أضاف / سجّل" كل حاجة</label>
-
-    <label style="display:block;margin:16px 0 6px;font-weight:700;color:var(--ink);">الإجراءات</label>
-    <label class="group-chk"><input type="checkbox" id="permAddServant" checked> يقدر يضيف خدام/مخدومين جدد</label>
-    <label class="group-chk" style="margin-top:6px;"><input type="checkbox" id="permEditServant" checked> يقدر يعدّل بيانات خدام/مخدومين موجودين</label>
+    <div id="globalPermMatrix"></div>
     <p style="font-size:.78rem;color:var(--ink-soft);margin-top:8px;">🔒 حذف الأسماء (خدام ومخدومين) للمدير والمشرف بس. حذف الاجتماعات وتصفير البيانات للمدير بس. المستخدم العادي مش بيقدر يحذف أي حاجة.</p>
 
     <button class="primary" style="margin-top:16px;" id="savePermissionsBtn">حفظ الصلاحيات</button>
     <span class="saved-msg" id="permissionsSavedMsg">تم الحفظ ✓</span>
+  </div>
+
+  <div class="card" id="auditCard" style="display:none;">
+    <h2>📝 سجل التعديلات</h2>
+    <p style="font-size:.82rem;color:var(--ink-soft);margin-top:0;">كل تعديل بيتسجّل: مين عمله، وإمتى، وإيه اللي اتغيّر بالظبط (القيمة القديمة والجديدة). أي حاجة مش مكتوبة في التعديل يبقى ما اتغيّرتش.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+      <select id="auditUser" style="max-width:180px;"><option value="">كل المستخدمين</option></select>
+      <select id="auditArea" style="max-width:180px;"><option value="">كل الأقسام</option></select>
+      <input type="text" id="auditSearch" placeholder="بحث باسم أو كلمة" style="flex:1;min-width:140px;">
+      <button class="ghost" id="auditRefreshBtn">🔄 تحديث</button>
+    </div>
+    <div id="auditList"></div>
   </div>
 
   <div class="card" id="fullBackupCard" style="display:none;">
@@ -1795,7 +1793,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '5 أكتوبر 2026 (و)';
+const APP_VERSION = '5 أكتوبر 2026 (ز)';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -1840,6 +1838,106 @@ window.addEventListener('beforeunload', e=>{
 });
 
 // Saves and waits until it is really stored (used before reloading the page).
+/* ---------- AUDIT LOG: who changed what (and only what changed) ---------- */
+const AUDIT_KEY = 'khodam_audit_log';
+const AUDIT_MAX = 3000;
+let pendingAudit = [], auditFlushing = false;
+function auditPush(entry){
+  entry.t = new Date().toISOString();
+  entry.by = currentUser ? currentUser.name : (entry.target || '—'); // the very first admin sets themself up
+  pendingAudit.push(entry);
+  flushAudit();
+}
+async function flushAudit(){
+  if(auditFlushing || pendingAudit.length === 0) return;
+  auditFlushing = true;
+  const batch = pendingAudit.splice(0);
+  let ok = false;
+  try{
+    if(!window.storage.setIfRev){
+      let cur = { entries: [] };
+      try{ const r = await window.storage.get(AUDIT_KEY, true); if(r && r.value) cur = JSON.parse(r.value); }catch(e){}
+      cur.entries = (cur.entries||[]).concat(batch).slice(-AUDIT_MAX);
+      await window.storage.set(AUDIT_KEY, JSON.stringify(cur), true); ok = true;
+    } else {
+      for(let attempt=0; attempt<5 && !ok; attempt++){
+        const r = await window.storage.getWithRev(AUDIT_KEY);
+        const cur = r.exists ? JSON.parse(r.value) : { entries: [] };
+        cur.entries = (cur.entries||[]).concat(batch).slice(-AUDIT_MAX);
+        const res = await window.storage.setIfRev(AUDIT_KEY, JSON.stringify(cur), r.rev || 0);
+        ok = res.ok;
+        if(!ok) await new Promise(x=>setTimeout(x, 150 + Math.random()*300));
+      }
+    }
+  }catch(e){ console.error('audit save failed', e); }
+  auditFlushing = false;
+  if(!ok){ pendingAudit = batch.concat(pendingAudit); setTimeout(flushAudit, 8000); }
+  else if(pendingAudit.length) flushAudit();
+}
+const FIELD_LABELS = { name:'الاسم', phone:'التليفون', birthDate:'تاريخ الميلاد', area:'المنطقة', address:'العنوان', groups:'الاجتماعات',
+  church:'الكنيسة', confessionFather:'أب الاعتراف', occupation:'الوظيفة', workplace:'مكان العمل', spouseName:'اسم الزوج/الزوجة', children:'الأبناء',
+  status:'الحالة', statusDate:'تاريخ النقل', statusNote:'ملاحظة النقل', lastVisitDate:'تاريخ آخر افتقاد', lastVisitType:'نوع الافتقاد' };
+const AUDIT_IGNORE = new Set(['id','photo','photoVer','personCode','code','lastEditedBy','lastEditedAt','statusBy','addedBy','addedAt']);
+function auditVal(k, v){
+  if(v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0)) return '—';
+  if(k === 'groups') return v.map(groupName).join(' + ');
+  if(k === 'status') return (MOVE_REASONS[v] || {}).label || v;
+  if(typeof v === 'object') return JSON.stringify(v);
+  return String(v);
+}
+function personName(id, ...lists){ for(const l of lists){ const p = (l||[]).find(x=>x.id===id); if(p) return p.name; } return '(اسم محذوف)'; }
+function namesList(ids, ...lists){
+  const names = ids.map(id=>personName(id, ...lists));
+  return names.length > 15 ? names.slice(0,15).join('، ') + ` و${names.length-15} كمان` : names.join('، ');
+}
+function diffData(base, local){
+  const out = [];
+  const bm = new Map((base.servants||[]).map(x=>[x.id,x])), lm = new Map((local.servants||[]).map(x=>[x.id,x]));
+  lm.forEach((l,id)=>{
+    const b = bm.get(id);
+    if(!b){
+      const ch = Object.keys(l).filter(k=>!AUDIT_IGNORE.has(k) && auditVal(k,l[k]) !== '—').map(k=>({ f: FIELD_LABELS[k]||k, to: auditVal(k,l[k]) }));
+      out.push({ area:'الخدام', action:'إضافة', target:l.name, changes: ch });
+      return;
+    }
+    const keys = Array.from(new Set([...Object.keys(b), ...Object.keys(l)])).filter(k=>!AUDIT_IGNORE.has(k));
+    const changed = keys.filter(k=>JSON.stringify(b[k]) !== JSON.stringify(l[k]) && auditVal(k,b[k]) !== auditVal(k,l[k]));
+    if(!changed.length) return;
+    let area = 'الخدام', action = 'تعديل';
+    if(changed.includes('status')){ area = 'نقل الأسماء'; action = l.status ? 'نقل' : 'رجوع للقائمة'; }
+    else if(changed.every(k=>k==='lastVisitDate' || k==='lastVisitType')){ area = 'الافتقاد'; action = 'تسجيل افتقاد'; }
+    out.push({ area, action, target: l.name, changes: changed.map(k=>({ f: FIELD_LABELS[k]||k, from: auditVal(k,b[k]), to: auditVal(k,l[k]) })), rest: action === 'تعديل' });
+  });
+  bm.forEach((b,id)=>{ if(!lm.has(id)) out.push({ area: b.status ? 'نقل الأسماء' : 'الخدام', action:'حذف نهائي', target:b.name, changes: [] }); });
+  const gids = new Set([...Object.keys(base.sessions||{}), ...Object.keys(local.sessions||{})]);
+  gids.forEach(gid=>{
+    const bs = new Map(((base.sessions||{})[gid]||[]).map(x=>[x.date,x])), ls = new Map(((local.sessions||{})[gid]||[]).map(x=>[x.date,x]));
+    const lists = [local.servants, base.servants];
+    ls.forEach((l,date)=>{
+      const b = bs.get(date);
+      if(!b){ out.push({ area:'الحضور', action:'تسجيل حضور', target:`${groupName(gid)} — ${date}`, changes:[{ f:'الحاضرين ('+l.present.length+')', to: namesList(l.present, ...lists) || '—' }] }); return; }
+      const bset = new Set(b.present), lset = new Set(l.present);
+      const added = l.present.filter(x=>!bset.has(x)), removed = b.present.filter(x=>!lset.has(x));
+      if(!added.length && !removed.length) return;
+      const ch = [];
+      if(added.length) ch.push({ f:'اتعلّم حاضر', to: namesList(added, ...lists) });
+      if(removed.length) ch.push({ f:'اتشال من الحضور', to: namesList(removed, ...lists) });
+      out.push({ area:'الحضور', action:'تعديل حضور', target:`${groupName(gid)} — ${date}`, changes: ch, rest: true });
+    });
+    bs.forEach((b,date)=>{ if(!ls.has(date)) out.push({ area:'الحضور', action:'حذف اجتماع', target:`${groupName(gid)} — ${date}`, changes:[{ f:'كان فيه حاضرين', to: String(b.present.length) }] }); });
+  });
+  // big imports / restores become one summary line instead of hundreds
+  const people = out.filter(e=>e.area !== 'الحضور');
+  if(people.length > 30){
+    const cnt = a=>people.filter(e=>e.action===a).length;
+    const summary = { area:'الخدام', action:'تعديل جماعي', target:`${people.length} اسم`, changes:[
+      { f:'اتضاف', to: String(cnt('إضافة')) }, { f:'اتعدّل', to: String(people.length - cnt('إضافة') - cnt('حذف نهائي')) }, { f:'اتمسح', to: String(cnt('حذف نهائي')) },
+      { f:'أمثلة', to: people.slice(0,10).map(e=>e.target).join('، ') } ] };
+    return [summary].concat(out.filter(e=>e.area === 'الحضور').slice(0, 30));
+  }
+  return out;
+}
+
 async function saveDataNow(){
   if(!window.storage.setIfRev){
     try{ await window.storage.set(STORAGE_KEY, JSON.stringify(DATA), true); return true; }
@@ -1848,6 +1946,20 @@ async function saveDataNow(){
   while(dataSaving) await new Promise(r=>setTimeout(r, 50));
   dataSaving = true;
   try{
+    // this device's own changes since the last save (before anything else is merged in)
+    let myChanges = [];
+    try{
+      const photoEdits = DATA.servants.filter(x=>(isInlinePhoto(x.photo) && !(PHOTO_MEM.get(x.id) && PHOTO_MEM.get(x.id).v === x.photo)) || x.photo === '');
+      const baseIds = new Set(JSON.parse(DATA_BASE).servants.map(x=>x.id));
+      myChanges = diffData(JSON.parse(DATA_BASE), JSON.parse(serializeData()));
+      if(photoEdits.length && photoEdits.length <= 5){
+        photoEdits.filter(x=>baseIds.has(x.id)).forEach(x=>{
+          const e = myChanges.find(c=>c.target === x.name && c.area === 'الخدام' && c.action === 'تعديل');
+          const line = { f:'الصورة', from:'—', to: x.photo === '' ? 'اتشالت' : 'اتغيّرت' };
+          if(e) e.changes.push(line); else myChanges.push({ area:'الخدام', action:'تعديل', target:x.name, changes:[line], rest:true });
+        });
+      }
+    }catch(e){ console.error('audit diff failed', e); }
     await preparePhotos();
     for(let attempt=0; attempt<5; attempt++){
       let merged = false;
@@ -1868,6 +1980,7 @@ async function saveDataNow(){
       const res = await window.storage.setIfRev(STORAGE_KEY, str, DATA_REV);
       if(res.ok){
         DATA_BASE = str; DATA_REV = res.rev;
+        myChanges.forEach(auditPush);
         if(merged || pendingServantRerender){ pendingServantRerender = false; setTimeout(refreshScreensAfterRemoteChange, 0); }
         return true;
       }
@@ -1900,6 +2013,7 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
     if(btn.dataset.tab === 'afeqad') renderAfeqadList();
     if(btn.dataset.tab === 'moves') renderMovesPanel();
     if(btn.dataset.tab === 'program') renderProgramPanel();
+    if(btn.dataset.tab === 'settings' && isAdmin()) loadAuditLog();
   });
 });
 
@@ -2026,7 +2140,7 @@ function renderAfeqadList(){
         ${s.lastVisitDate ? `<div style="font-size:.78rem;color:#8a7d55;margin-top:2px;">🏠 آخر افتقاد: ${s.lastVisitDate}${s.lastVisitType?' — '+s.lastVisitType:''}</div>` : '<div class="meta" style="font-size:.78rem;color:var(--wine);margin-top:2px;">⚠️ لسه ما اتافتقدش</div>'}
       </div>
       <div class="row-actions">
-        ${can('editServant') ? `<button class="ghost record-visit">تسجيل افتقاد</button>` : ''}
+        ${can('editAfeqad') ? `<button class="ghost record-visit">تسجيل افتقاد</button>` : ''}
       </div>
     </div>
     <div class="edit-panel" data-visit-edit-for="${s.id}" style="display:none;padding:10px 0;"></div>
@@ -2239,7 +2353,7 @@ function renderServantList(){
       </div>
       <div class="row-actions">
         ${can('editServant') ? `<button class="ghost edit-servant">تعديل البيانات</button>` : ''}
-        ${isSupervisorOrAdmin() ? `<button class="ghost move-servant">نقل</button>` : ''}
+        ${can('editMoves') ? `<button class="ghost move-servant">نقل</button>` : ''}
         ${isSupervisorOrAdmin() ? `<button class="ghost danger del-servant">حذف</button>` : ''}
       </div>
     </div>
@@ -2432,13 +2546,15 @@ function renderAttendList(){
     list.innerHTML = '<div class="empty-note">مفيش نتايج مطابقة للبحث</div>';
     return;
   }
+  const canMark = can('editAttendance');
+  document.getElementById('saveAttendanceBtn').style.display = canMark ? '' : 'none';
   list.innerHTML = visible.map(m=>`
-    <label class="attend-item ${attendCheckedIds.has(m.id)?'checked':''}" data-id="${m.id}">
-      <input type="checkbox" ${attendCheckedIds.has(m.id)?'checked':''}>
+    <label class="attend-item ${attendCheckedIds.has(m.id)?'checked':''}" data-id="${m.id}" ${canMark?'':'style="cursor:default;"'}>
+      <input type="checkbox" ${attendCheckedIds.has(m.id)?'checked':''} ${canMark?'':'disabled'}>
       ${m.name}
     </label>
   `).join('');
-  list.querySelectorAll('.attend-item').forEach(item=>{
+  if(canMark) list.querySelectorAll('.attend-item').forEach(item=>{
     item.addEventListener('click', (e)=>{
       if(e.target.tagName !== 'INPUT'){
         const cb = item.querySelector('input');
@@ -2472,7 +2588,7 @@ document.getElementById('attendDate').addEventListener('change', (e)=>{
 });
 
 document.getElementById('saveAttendanceBtn').addEventListener('click', async ()=>{
-  if(!currentGroupId) return;
+  if(!currentGroupId || !can('editAttendance')) return;
   const date = document.getElementById('attendDate').value || todayStr();
   const present = Array.from(attendCheckedIds);
   DATA.sessions[currentGroupId] = DATA.sessions[currentGroupId] || [];
@@ -2718,7 +2834,10 @@ let DEFAULT_LOGO_SRC = '';
 let PERMISSIONS = {
   tabDashboard: true, tabServants: true, tabAttendance: true, tabAfeqad: true, tabReports: true,
   phones: true, addresses: true, otherDetails: true, addedBy: true,
-  addServant: true, editServant: true
+  addServant: true, editServant: true,
+  editAttendance: true, editAfeqad: true,
+  tabMoves: true, editMoves: false,
+  tabProgram: true, editProgram: false
 };
 
 async function storageGetWithRetry(key, shared, attempts=3, delayMs=350){
@@ -2752,17 +2871,42 @@ async function storageListWithRetry(prefix, shared, attempts=3, delayMs=350){
   return { confirmed:false, keys:[] };
 }
 
+let USERS_BASE = '[]';
 async function loadUsers(){
   const result = await storageGetWithRetry(USERS_KEY, true);
   if(result.confirmed){
     USERS = result.value ? JSON.parse(result.value) : [];
+    USERS_BASE = JSON.stringify(USERS);
     return { confirmed:true };
   }
   // couldn't confirm either way after retries — do NOT assume empty
   return { confirmed:false };
 }
+function diffUsers(before, after){
+  const out = [], bm = new Map(before.map(u=>[u.name,u])), am = new Map(after.map(u=>[u.name,u]));
+  const typeLabel = u=> isProgramOnly(u) ? 'برنامج الخدمة بس' : roleLabelFor(u.role);
+  am.forEach((a,name)=>{
+    const b = bm.get(name);
+    if(!b){ out.push({ area:'المستخدمين', action:'إضافة مستخدم', target:name, changes:[{ f:'النوع', to: typeLabel(a) }] }); return; }
+    const ch = [];
+    if(b.role !== a.role) ch.push({ f:'النوع', from: roleLabelFor(b.role), to: roleLabelFor(a.role) });
+    if(b.password !== a.password) ch.push({ f:'كلمة السر', from:'—', to:'اتغيّرت' });
+    if(JSON.stringify(allowedGroupsFor(b)) !== JSON.stringify(allowedGroupsFor(a))) ch.push({ f:'الاجتماعات المسموحة', from: allowedGroupsFor(b).map(groupName).join(' + '), to: allowedGroupsFor(a).map(groupName).join(' + ') });
+    ALL_PERM_KEYS.forEach(k=>{
+      const pb = effectivePerm(b,k), pa = effectivePerm(a,k);
+      if(pb !== pa) ch.push({ f: PERM_LABELS[k], from: pb ? 'مسموح' : 'ممنوع', to: pa ? 'مسموح' : 'ممنوع' });
+    });
+    if(ch.length) out.push({ area:'المستخدمين', action:'تعديل مستخدم', target:name, changes: ch, rest: true });
+  });
+  bm.forEach((b,name)=>{ if(!am.has(name)) out.push({ area:'المستخدمين', action:'حذف مستخدم', target:name, changes:[] }); });
+  return out;
+}
 async function saveUsers(){
-  try{ await window.storage.set(USERS_KEY, JSON.stringify(USERS), true); }
+  try{
+    await window.storage.set(USERS_KEY, JSON.stringify(USERS), true);
+    try{ diffUsers(JSON.parse(USERS_BASE), USERS).forEach(auditPush); }catch(e){ console.error('users audit failed', e); }
+    USERS_BASE = JSON.stringify(USERS);
+  }
   catch(e){ console.error('users save error', e); }
 }
 async function loadPermissions(){
@@ -2999,11 +3143,84 @@ function isAdmin(){ return currentUser && currentUser.role === 'admin'; }
 function isSupervisorOrAdmin(){ return currentUser && (currentUser.role === 'admin' || currentUser.role === 'supervisor'); }
 function can(permKey){
   if(isSupervisorOrAdmin()) return true;
+  return effectivePerm(currentUser, permKey);
+}
+function effectivePerm(user, permKey){
+  const has = (o,k)=> o && Object.prototype.hasOwnProperty.call(o, k);
+  const up = user && user.perms;
   // per-user override wins over the global default when explicitly set
-  if(currentUser && currentUser.perms && Object.prototype.hasOwnProperty.call(currentUser.perms, permKey)){
-    return !!currentUser.perms[permKey];
-  }
-  return !!PERMISSIONS[permKey];
+  if(has(up, permKey)) return !!up[permKey];
+  // settings saved before "الافتقاد" had its own switch followed "تعديل الخدام"
+  if(permKey === 'editAfeqad' && has(up, 'editServant')) return !!up.editServant;
+  if(has(PERMISSIONS, permKey)) return !!PERMISSIONS[permKey];
+  return false;
+}
+/* screens and what "يشوف" / "يعدّل" mean on each */
+const PERM_SCREENS = [
+  { label:'لوحة المعلومات',  view:'tabDashboard' },
+  { label:'الخدام',          view:'tabServants',   edit:['addServant','editServant'], editLabels:['يضيف','يعدّل'] },
+  { label:'تسجيل الحضور',    view:'tabAttendance', edit:['editAttendance'] },
+  { label:'الافتقاد',        view:'tabAfeqad',     edit:['editAfeqad'] },
+  { label:'التقارير',        view:'tabReports' },
+  { label:'نقل الأسماء',     view:'tabMoves',      edit:['editMoves'] },
+  { label:'برنامج الخدمة',   view:'tabProgram',    edit:['editProgram'] }
+];
+const PERM_DATA = [
+  ['phones','يشوف أرقام التليفونات'],
+  ['addresses','يشوف العنوان والمنطقة'],
+  ['otherDetails','يشوف تاريخ الميلاد، أب الاعتراف، والكنيسة'],
+  ['addedBy','يشوف "مين أضاف / سجّل"']
+];
+const PERM_LABELS = {};
+PERM_SCREENS.forEach(sc=>{
+  PERM_LABELS[sc.view] = 'يشوف ' + sc.label;
+  (sc.edit||[]).forEach((k,i)=>{ PERM_LABELS[k] = (sc.editLabels ? sc.editLabels[i] : 'يعدّل') + ' في ' + sc.label; });
+});
+PERM_DATA.forEach(([k,l])=>{ PERM_LABELS[k] = l; });
+const ALL_PERM_KEYS = Object.keys(PERM_LABELS);
+const PERM_PRESETS = {
+  all:     ()=>Object.fromEntries(ALL_PERM_KEYS.map(k=>[k,true])),
+  viewOnly:()=>Object.fromEntries(ALL_PERM_KEYS.map(k=>[k, !PERM_SCREENS.some(sc=>(sc.edit||[]).includes(k))])),
+  program: ()=>Object.fromEntries(ALL_PERM_KEYS.map(k=>[k, k==='tabProgram' || k==='editProgram']))
+};
+function isProgramOnly(user){
+  if(!user || user.role !== 'user' || !user.perms) return false;
+  return ALL_PERM_KEYS.every(k=>!!user.perms[k] === (k==='tabProgram' || k==='editProgram'));
+}
+function permMatrixHtml(values){
+  const v = k=>!!values[k];
+  return `
+    <div style="overflow-x:auto;">
+    <table class="perm-matrix" style="width:100%;border-collapse:collapse;font-size:.85rem;">
+      <thead><tr><th style="text-align:right;padding:6px;">الشاشة</th><th style="padding:6px;">يشوف</th><th style="padding:6px;">يعدّل</th></tr></thead>
+      <tbody>
+      ${PERM_SCREENS.map(sc=>`
+        <tr style="border-top:1px solid var(--line, #e8dcc0);">
+          <td style="padding:7px 6px;">${sc.label}</td>
+          <td style="text-align:center;"><input type="checkbox" data-perm="${sc.view}" data-role="view" ${v(sc.view)?'checked':''}></td>
+          <td style="text-align:center;white-space:nowrap;">${(sc.edit||[]).length ? sc.edit.map((k,i)=>`<label style="margin:0 4px;font-size:.78rem;"><input type="checkbox" data-perm="${k}" data-role="edit" data-view="${sc.view}" ${v(k)?'checked':''}>${sc.editLabels ? ' ' + sc.editLabels[i] : ''}</label>`).join('') : '<span style="color:#b5a77e;font-size:.75rem;">مشاهدة بس</span>'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    </div>
+    <label style="display:block;margin:14px 0 6px;font-weight:700;">البيانات الشخصية</label>
+    ${PERM_DATA.map(([k,l])=>`<label class="group-chk" style="margin-bottom:6px;"><input type="checkbox" data-perm="${k}" ${v(k)?'checked':''}> ${l}</label>`).join('')}`;
+}
+function wirePermMatrix(container){
+  container.querySelectorAll('input[data-role="edit"]').forEach(cb=>cb.addEventListener('change', ()=>{
+    if(cb.checked){ const vcb = container.querySelector(`input[data-perm="${cb.dataset.view}"]`); if(vcb) vcb.checked = true; }
+  }));
+  container.querySelectorAll('input[data-role="view"]').forEach(cb=>cb.addEventListener('change', ()=>{
+    if(!cb.checked) container.querySelectorAll(`input[data-view="${cb.dataset.perm}"]`).forEach(e=>{ e.checked = false; });
+  }));
+}
+function readPermMatrix(container){
+  const out = {};
+  container.querySelectorAll('input[data-perm]').forEach(cb=>{ out[cb.dataset.perm] = cb.checked; });
+  return out;
+}
+function setPermMatrix(container, values){
+  container.querySelectorAll('input[data-perm]').forEach(cb=>{ cb.checked = !!values[cb.dataset.perm]; });
 }
 function roleLabelFor(role){
   if(role === 'admin') return 'مدير';
@@ -3086,6 +3303,7 @@ function applyUserUI(){
   document.getElementById('brandingCard').style.display = isAdmin() ? 'block' : 'none';
   document.getElementById('bulkDataCard').style.display = isAdmin() ? 'block' : 'none';
   document.getElementById('fullBackupCard').style.display = isAdmin() ? 'block' : 'none';
+  document.getElementById('auditCard').style.display = isAdmin() ? 'block' : 'none';
   document.getElementById('resetCard').style.display = isAdmin() ? 'block' : 'none';
   document.getElementById('notAdminNote').style.display = isAdmin() ? 'none' : 'block';
   renderUsersList();
@@ -3134,7 +3352,7 @@ function startLiveClock(){
 }
 
 function applyTabGating(){
-  const tabMap = { dashboard: 'tabDashboard', servants: 'tabServants', attendance: 'tabAttendance', afeqad: 'tabAfeqad', reports: 'tabReports' };
+  const tabMap = { dashboard: 'tabDashboard', servants: 'tabServants', attendance: 'tabAttendance', afeqad: 'tabAfeqad', reports: 'tabReports', moves: 'tabMoves', program: 'tabProgram' };
   let activeHidden = false;
   document.querySelectorAll('nav.tabs button').forEach(btn=>{
     const permKey = tabMap[btn.dataset.tab];
@@ -3143,41 +3361,28 @@ function applyTabGating(){
     btn.style.display = allowed ? '' : 'none';
     if(!allowed && btn.classList.contains('active')) activeHidden = true;
   });
-  if(activeHidden){
-    const firstVisible = Array.from(document.querySelectorAll('nav.tabs button')).find(b=>b.style.display !== 'none');
+  const activeBtn = document.querySelector('nav.tabs button.active');
+  // someone without the dashboard (e.g. "برنامج الخدمة بس") lands on their first real screen, not settings
+  if(activeHidden || (activeBtn && activeBtn.dataset.tab === 'settings' && !can('tabDashboard'))){
+    const firstVisible = Array.from(document.querySelectorAll('nav.tabs button')).find(b=>b.style.display !== 'none' && b.dataset.tab !== 'settings')
+      || Array.from(document.querySelectorAll('nav.tabs button')).find(b=>b.style.display !== 'none');
     if(firstVisible) firstVisible.click();
   }
 }
 
 function loadPermissionsForm(){
-  document.getElementById('permTabDashboard').checked = PERMISSIONS.tabDashboard;
-  document.getElementById('permTabServants').checked = PERMISSIONS.tabServants;
-  document.getElementById('permTabAttendance').checked = PERMISSIONS.tabAttendance;
-  document.getElementById('permTabAfeqad').checked = PERMISSIONS.tabAfeqad;
-  document.getElementById('permTabReports').checked = PERMISSIONS.tabReports;
-  document.getElementById('permPhones').checked = PERMISSIONS.phones;
-  document.getElementById('permAddresses').checked = PERMISSIONS.addresses;
-  document.getElementById('permOtherDetails').checked = PERMISSIONS.otherDetails;
-  document.getElementById('permAddedBy').checked = PERMISSIONS.addedBy;
-  document.getElementById('permAddServant').checked = PERMISSIONS.addServant;
-  document.getElementById('permEditServant').checked = PERMISSIONS.editServant;
+  const box = document.getElementById('globalPermMatrix');
+  const vals = Object.fromEntries(ALL_PERM_KEYS.map(k=>[k, effectivePerm(null, k)]));
+  box.innerHTML = permMatrixHtml(vals);
+  wirePermMatrix(box);
 }
 
 document.getElementById('savePermissionsBtn').addEventListener('click', async ()=>{
   if(!isAdmin()) return;
-  PERMISSIONS = {
-    tabDashboard: document.getElementById('permTabDashboard').checked,
-    tabServants: document.getElementById('permTabServants').checked,
-    tabAttendance: document.getElementById('permTabAttendance').checked,
-    tabAfeqad: document.getElementById('permTabAfeqad').checked,
-    tabReports: document.getElementById('permTabReports').checked,
-    phones: document.getElementById('permPhones').checked,
-    addresses: document.getElementById('permAddresses').checked,
-    otherDetails: document.getElementById('permOtherDetails').checked,
-    addedBy: document.getElementById('permAddedBy').checked,
-    addServant: document.getElementById('permAddServant').checked,
-    editServant: document.getElementById('permEditServant').checked
-  };
+  const before = Object.assign({}, PERMISSIONS);
+  PERMISSIONS = Object.assign({}, PERMISSIONS, readPermMatrix(document.getElementById('globalPermMatrix')));
+  const changes = ALL_PERM_KEYS.filter(k=>!!before[k] !== !!PERMISSIONS[k]).map(k=>({ f: PERM_LABELS[k], from: before[k] ? 'مسموح' : 'ممنوع', to: PERMISSIONS[k] ? 'مسموح' : 'ممنوع' }));
+  if(changes.length) auditPush({ area:'الصلاحيات', action:'تعديل الصلاحيات العامة', target:'كل المستخدمين العاديين', changes });
   await savePermissions();
   flashSaved('permissionsSavedMsg');
   applyTabGating();
@@ -3241,7 +3446,7 @@ function renderUsersList(){
     <div class="user-row" data-name="${u.name}">
       <div>
         ${u.name}
-        <span class="role-tag ${u.role}">${roleLabelFor(u.role)}</span>
+        <span class="role-tag ${u.role}">${roleLabelFor(u.role)}</span>${isProgramOnly(u) ? ' <span class="chip" style="font-size:.72rem;">برنامج الخدمة بس</span>' : (u.role==='user' && u.perms ? ' <span class="chip" style="font-size:.72rem;">صلاحيات خاصة</span>' : '')}
         <div class="added-by">أضافه: ${u.addedBy || '—'}</div>
         ${u.role === 'user' ? `<div class="chips" style="margin-top:6px;">${allowedGroupsFor(u).map(gid=>`<span class="chip">${groupName(gid)}</span>`).join('')}</div>` : ''}
       </div>
@@ -3287,30 +3492,24 @@ function renderUsersList(){
       const u = USERS.find(x=>x.name === name);
       const editPanel = list.querySelector(`.edit-panel[data-user-edit-for="${name}"]`);
       if(editPanel.style.display === 'none'){
-        const permDefs = [
-          ['tabDashboard','يشوف "لوحة المعلومات"'],
-          ['tabServants','يشوف تبويب "الخدام"'],
-          ['tabAttendance','يشوف تبويب "تسجيل الحضور"'],
-          ['tabAfeqad','يشوف تبويب "الافتقاد"'],
-          ['tabReports','يشوف تبويب "التقارير"'],
-          ['phones','يشوف أرقام التليفونات'],
-          ['addresses','يشوف العنوان والمنطقة'],
-          ['otherDetails','يشوف باقي البيانات الشخصية'],
-          ['addedBy','يشوف "مين أضاف / سجّل"'],
-          ['addServant','يقدر يضيف خدام/مخدومين'],
-          ['editServant','يقدر يعدّل بيانات موجودة']
-        ];
-        const effective = (k)=> (u.perms && Object.prototype.hasOwnProperty.call(u.perms,k)) ? !!u.perms[k] : !!PERMISSIONS[k];
+        const vals = Object.fromEntries(ALL_PERM_KEYS.map(k=>[k, effectivePerm(u, k)]));
         editPanel.innerHTML = `
           <p style="font-size:.8rem;color:var(--ink-soft);margin:0 0 8px;">صلاحيات خاصة بـ "${name}" بس — بتتجاوز الإعدادات العامة.</p>
-          ${permDefs.map(([k,label])=>`<label class="group-chk" style="margin-bottom:6px;"><input type="checkbox" data-perm="${k}" ${effective(k)?'checked':''}> ${label}</label>`).join('')}
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+            <span style="font-size:.8rem;align-self:center;">اختيارات جاهزة:</span>
+            <button class="ghost" data-preset="all" style="font-size:.78rem;padding:4px 10px;">كل حاجة</button>
+            <button class="ghost" data-preset="viewOnly" style="font-size:.78rem;padding:4px 10px;">يشوف بس</button>
+            <button class="ghost" data-preset="program" style="font-size:.78rem;padding:4px 10px;">برنامج الخدمة بس</button>
+          </div>
+          <div class="perm-box">${permMatrixHtml(vals)}</div>
           <button class="primary" style="margin-top:8px;">حفظ صلاحياته</button>
           <button class="ghost" style="margin-top:8px;margin-inline-start:6px;" data-reset-perms>رجوع للإعدادات العامة</button>`;
+        const box = editPanel.querySelector('.perm-box');
+        wirePermMatrix(box);
+        editPanel.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click', ()=>setPermMatrix(box, PERM_PRESETS[b.dataset.preset]())));
         editPanel.style.display = 'block';
         editPanel.querySelector('button.primary').addEventListener('click', async ()=>{
-          const perms = {};
-          editPanel.querySelectorAll('[data-perm]').forEach(cb=>{ perms[cb.dataset.perm] = cb.checked; });
-          u.perms = perms;
+          u.perms = readPermMatrix(editPanel.querySelector('.perm-box'));
           await saveUsers();
           if(currentUser && currentUser.name === name){ currentUser = u; applyUserUI(); }
           renderUsersList();
@@ -3381,10 +3580,14 @@ document.getElementById('addUserBtn').addEventListener('click', async ()=>{
   const password = passInput.value;
   if(!name || !password){ alert('لازم تكتب الاسم وكلمة السر.'); return; }
   if(USERS.find(u=>u.name === name)){ alert('في مستخدم بنفس الاسم بالفعل'); return; }
-  const role = document.getElementById('newUserRole').value;
-  const allowedGroups = Array.from(document.querySelectorAll('#newUserGroups input:checked')).map(c=>c.value);
+  const picked = document.getElementById('newUserRole').value;
+  const role = picked === 'program' ? 'user' : picked;
+  let allowedGroups = Array.from(document.querySelectorAll('#newUserGroups input:checked')).map(c=>c.value);
+  if(picked === 'program') allowedGroups = GROUPS.map(g=>g.id);
   if(role === 'user' && allowedGroups.length === 0){ alert('اختار اجتماع واحد على الأقل يشوفه المستخدم ده.'); return; }
-  USERS.push({ name, role, password, allowedGroups, addedBy: currentUser ? currentUser.name : '—', addedAt: todayStr() });
+  const newUser = { name, role, password, allowedGroups, addedBy: currentUser ? currentUser.name : '—', addedAt: todayStr() };
+  if(picked === 'program') newUser.perms = PERM_PRESETS.program();
+  USERS.push(newUser);
   nameInput.value = '';
   passInput.value = '';
   buildGroupGrid(document.getElementById('newUserGroups'), GROUPS.map(g=>g.id));
@@ -4042,7 +4245,7 @@ function openMoveFor(id){
   selectMovePerson(id);
 }
 function renderMovesPanel(){
-  document.getElementById('moveCard').style.display = isSupervisorOrAdmin() ? 'block' : 'none';
+  document.getElementById('moveCard').style.display = can('editMoves') ? 'block' : 'none';
   const term = (document.getElementById('movedSearch').value||'').trim();
   const moved = DATA.servants.filter(s=>s.status && personVisible(s));
   document.getElementById('movedCount').textContent = moved.length;
@@ -4050,7 +4253,7 @@ function renderMovesPanel(){
   const shown = term ? moved.filter(s=>s.name.includes(term) || (s.phone||'').includes(term) || (s.statusNote||'').includes(term)) : moved;
   if(moved.length === 0){ listEl.innerHTML = '<div class="empty-note">مفيش أسماء منقولة لسه</div>'; return; }
   if(shown.length === 0){ listEl.innerHTML = '<div class="empty-note">مفيش نتايج مطابقة للبحث</div>'; return; }
-  const canAct = isSupervisorOrAdmin();
+  const canAct = can('editMoves'), canDelete = isSupervisorOrAdmin();
   listEl.innerHTML = Object.keys(MOVE_REASONS).map(reason=>{
     const r = MOVE_REASONS[reason];
     const people = sortByName(shown.filter(s=>s.status===reason));
@@ -4069,7 +4272,7 @@ function renderMovesPanel(){
           </div>
           ${canAct ? `<div class="row-actions">
             <button class="ghost restore-moved">رجوع للقائمة</button>
-            <button class="ghost danger delete-moved">حذف نهائي</button>
+            ${canDelete ? `<button class="ghost danger delete-moved">حذف نهائي</button>` : ''}
           </div>` : ''}
         </div>`).join('')}`;
   }).join('');
@@ -4093,7 +4296,7 @@ document.getElementById('moveSearch').addEventListener('input', renderMoveSearch
 document.getElementById('movedSearch').addEventListener('input', renderMovesPanel);
 document.getElementById('moveCancelBtn').addEventListener('click', closeMoveForm);
 document.getElementById('moveConfirmBtn').addEventListener('click', async ()=>{
-  if(!isSupervisorOrAdmin() || !moveSelectedId) return;
+  if(!can('editMoves') || !moveSelectedId) return;
   const s = DATA.servants.find(x=>x.id===moveSelectedId);
   if(!s) return;
   const reason = document.getElementById('moveReason').value;
@@ -4162,6 +4365,7 @@ function renderDashboardBirthdays(){
 }
 function maybeShowBirthdayPopup(){
   if(!currentUser) return;
+  if(!(can('tabDashboard') || can('tabServants'))) return;
   const list = upcomingBirthdays(7);
   if(list.length === 0) return;
   const key = 'khodam_bday_popup_' + currentUser.name;
@@ -4263,7 +4467,7 @@ function fillProgYears(){
 function renderProgramPanel(){
   if(!programLoaded){ document.getElementById('progList').innerHTML = '<div class="card"><div class="empty-note">جاري تحميل البرنامج…</div></div>'; return; }
   fillProgYears();
-  const canEdit = isSupervisorOrAdmin();
+  const canEdit = can('editProgram');
   document.getElementById('progImportLabel').style.display = canEdit ? 'inline-block' : 'none';
   document.querySelectorAll('.prog-day').forEach(b=>{ b.className = (b.dataset.day===progDay ? 'primary' : 'ghost') + ' prog-day'; });
   const sec = progSection(PROGRAM, progYear, progDay, false) || { title:'', vision:'', items:{} };
@@ -4286,7 +4490,13 @@ function renderProgramPanel(){
       const title = document.getElementById('progTitleInput').value.trim();
       const vision = document.getElementById('progVisionInput').value.trim();
       const y = progYear, d = progDay;
-      if(await saveProgramChange(obj=>{ const s2 = progSection(obj, y, d, true); s2.title = title; s2.vision = vision; })) renderProgramPanel();
+      const pch = [];
+      if((sec.title||'') !== title) pch.push({ f:'عنوان البرنامج', from: sec.title || '—', to: title || '—' });
+      if((sec.vision||'') !== vision) pch.push({ f:'الرؤية المركزية', from: sec.vision || '—', to: vision || '—' });
+      if(await saveProgramChange(obj=>{ const s2 = progSection(obj, y, d, true); s2.title = title; s2.vision = vision; })){
+        if(pch.length) auditPush({ area:'برنامج الخدمة', action:'تعديل', target:`${PROG_DAYS[d].meeting} — سنة ${copticYear(y)}`, changes: pch, rest: true });
+        renderProgramPanel();
+      }
     });
   }
   const filter = document.getElementById('progFilter').value;
@@ -4363,12 +4573,18 @@ function openProgEdit(row, it){
       church: box.querySelector('.pe-church').value.trim()
     };
     const iso = row.dataset.date, y = progYear, d = progDay;
+    const PF = { title:'العنوان', goal:'الهدف والمحتوى', speaker:'المتكلم', church:'كنيسته' };
+    const pch = Object.keys(PF).filter(k=>(it[k]||'') !== v[k]).map(k=>({ f: PF[k], from: it[k] || '—', to: v[k] || '—' }));
+    const dd = new Date(iso + 'T00:00:00');
     const ok = await saveProgramChange(obj=>{
       const s2 = progSection(obj, y, d, true);
       if(!v.title && !v.goal && !v.speaker && !v.church) delete s2.items[iso];
       else s2.items[iso] = Object.assign(v, { by: currentUser ? currentUser.name : '' });
     });
-    if(ok){ progEditDate = null; renderProgramPanel(); }
+    if(ok){
+      if(pch.length) auditPush({ area:'برنامج الخدمة', action: it.title || it.speaker ? 'تعديل' : 'إضافة', target:`${PROG_DAYS[d].meeting} — ${dd.getDate()} ${PROG_MONTHS[dd.getMonth()]} ${dd.getFullYear()}`, changes: pch, rest: true });
+      progEditDate = null; renderProgramPanel();
+    }
   });
   box.querySelector('.pe-title').focus();
 }
@@ -4412,7 +4628,7 @@ document.getElementById('progYear').addEventListener('change', e=>{ progYear = +
 document.getElementById('progFilter').addEventListener('change', ()=>{ progEditDate = null; renderProgramPanel(); });
 document.getElementById('progImportFile').addEventListener('change', e=>{
   const file = e.target.files[0]; e.target.value = '';
-  if(!file || !isSupervisorOrAdmin()) return;
+  if(!file || !can('editProgram')) return;
   if(typeof XLSX === 'undefined'){ alert('مكتبة Excel مش متحمّلة. اتأكد من النت.'); return; }
   const reader = new FileReader();
   reader.onload = async ev=>{
@@ -4462,7 +4678,10 @@ document.getElementById('progImportFile').addEventListener('change', e=>{
           if(v.title || v.goal || v.speaker || v.church) s2.items[isoDate(p.d)] = v;
         });
       });
-      if(ok){ progYear = year; progDay = day; renderProgramPanel._scrolled = false; renderProgramPanel(); alert('تم الاستيراد ✓'); }
+      if(ok){
+        auditPush({ area:'برنامج الخدمة', action:'استيراد من Excel', target:`${PROG_DAYS[day].meeting} — سنة ${copticYear(year)}`, changes:[{ f:'عدد الاجتماعات', to: String(parsed.length) }, { f:'الملف', to: file.name }] });
+        progYear = year; progDay = day; renderProgramPanel._scrolled = false; renderProgramPanel(); alert('تم الاستيراد ✓');
+      }
     }catch(err){ console.error(err); alert('مقدرناش نقرا الملف: ' + err.message); }
   };
   reader.readAsArrayBuffer(file);
@@ -4515,6 +4734,53 @@ document.getElementById('progPrintBtn').addEventListener('click', ()=>{
     <script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script></body></html>`);
   w.document.close();
 });
+
+let AUDIT_ENTRIES = [], auditLimit = 50;
+async function loadAuditLog(){
+  const listEl = document.getElementById('auditList');
+  listEl.innerHTML = '<div class="empty-note">جاري التحميل…</div>';
+  try{
+    const res = await storageGetWithRetry(AUDIT_KEY, true);
+    AUDIT_ENTRIES = res.value ? (JSON.parse(res.value).entries || []) : [];
+  }catch(e){ AUDIT_ENTRIES = []; }
+  AUDIT_ENTRIES = AUDIT_ENTRIES.concat(pendingAudit);
+  const users = Array.from(new Set(AUDIT_ENTRIES.map(e=>e.by))).sort((a,b)=>a.localeCompare(b,'ar'));
+  const areas = Array.from(new Set(AUDIT_ENTRIES.map(e=>e.area)));
+  const uSel = document.getElementById('auditUser'), aSel = document.getElementById('auditArea');
+  const uv = uSel.value, av = aSel.value;
+  uSel.innerHTML = '<option value="">كل المستخدمين</option>' + users.map(u=>`<option ${u===uv?'selected':''}>${escHtml(u)}</option>`).join('');
+  aSel.innerHTML = '<option value="">كل الأقسام</option>' + areas.map(a=>`<option ${a===av?'selected':''}>${escHtml(a)}</option>`).join('');
+  auditLimit = 50;
+  renderAuditList();
+}
+function renderAuditList(){
+  const listEl = document.getElementById('auditList');
+  const u = document.getElementById('auditUser').value, a = document.getElementById('auditArea').value;
+  const q = document.getElementById('auditSearch').value.trim();
+  let rows = AUDIT_ENTRIES.slice().reverse();
+  if(u) rows = rows.filter(e=>e.by === u);
+  if(a) rows = rows.filter(e=>e.area === a);
+  if(q) rows = rows.filter(e=>JSON.stringify(e).includes(q));
+  if(rows.length === 0){ listEl.innerHTML = '<div class="empty-note">مفيش تعديلات متسجّلة' + (u||a||q ? ' مطابقة للاختيار ده' : ' لسه') + '</div>'; return; }
+  const total = rows.length;
+  listEl.innerHTML = rows.slice(0, auditLimit).map(e=>{
+    const d = new Date(e.t);
+    const when = d.toLocaleDateString('ar-EG', { weekday:'long', day:'numeric', month:'long', year:'numeric' }) + ' — ' + d.toLocaleTimeString('ar-EG', { hour:'numeric', minute:'2-digit' });
+    return `<div style="padding:10px 12px;margin:6px 0;border:1px solid #e8dcc0;border-radius:12px;background:#fffdf7;">
+      <div style="font-size:.78rem;color:#8a7d55;">👤 <b style="color:#1B2A4A;">${escHtml(e.by)}</b> — ${when}</div>
+      <div style="margin-top:3px;"><span class="chip" style="font-size:.72rem;">${escHtml(e.area)}</span> <b>${escHtml(e.action)}</b>: ${escHtml(e.target)}</div>
+      ${(e.changes||[]).length ? `<ul style="margin:6px 0 0;padding-inline-start:18px;font-size:.82rem;">${e.changes.map(c=>`<li><b>${escHtml(c.f)}</b>: ${c.from !== undefined ? `<span style="color:#7A2E2E;text-decoration:line-through;">${escHtml(c.from)}</span> ← ` : ''}<span style="color:#2f6b3a;">${escHtml(c.to)}</span></li>`).join('')}</ul>` : ''}
+      ${e.rest ? '<div style="font-size:.72rem;color:#a39673;margin-top:4px;">باقي البيانات ما اتغيّرتش</div>' : ''}
+    </div>`;
+  }).join('') + (total > auditLimit ? `<div style="text-align:center;margin:12px 0;"><button class="ghost" id="auditMoreBtn">عرض ${Math.min(50,total-auditLimit)} كمان (باقي ${total-auditLimit})</button></div>` : '');
+  const more = document.getElementById('auditMoreBtn');
+  if(more) more.addEventListener('click', ()=>{ auditLimit += 50; renderAuditList(); });
+}
+document.getElementById('auditUser').addEventListener('change', ()=>{ auditLimit = 50; renderAuditList(); });
+document.getElementById('auditArea').addEventListener('change', ()=>{ auditLimit = 50; renderAuditList(); });
+let auditSearchTimer = null;
+document.getElementById('auditSearch').addEventListener('input', ()=>{ clearTimeout(auditSearchTimer); auditSearchTimer = setTimeout(()=>{ auditLimit = 50; renderAuditList(); }, 250); });
+document.getElementById('auditRefreshBtn').addEventListener('click', loadAuditLog);
 
 function renderAll(){
   renderServantList();
