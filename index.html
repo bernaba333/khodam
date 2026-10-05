@@ -8,6 +8,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1B2A4A">
 <meta name="apple-mobile-web-app-title" content="سجل الحضور">
+<script>try{var t=localStorage.getItem('khodam_theme');if(t==='dark'||(t!=='light'&&window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
 <title>سجل حضور اجتماع الانبا بولا والعائلة المقدسة</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -27,6 +28,23 @@
   --sage:#3f6152;
   --line:#d9cba3;
   --shadow: 0 8px 24px rgba(27,42,74,.12);
+  --brand:#1B2A4A; --brand-2:#33436a;
+  --card:#fffdf7; --input:#ffffff; --muted:#8a7d55; --faint:#b5a77e; --line-soft:#e8dcc0;
+  --text-2:#5a5140; --chip-ink:#5b4a12; --notice-bg:#fff7e0; --notice-ink:#6b5a12; --hi:#fff8e1;
+  --g-anba-boula:#A8781E; --g-anba-boula-soft:#f3e6c4;
+  --g-makhdomeen-had:#2F5D8A; --g-makhdomeen-had-soft:#dbe6f2;
+  --g-makhdomeen-gomaa:#3f6b55; --g-makhdomeen-gomaa-soft:#dcebe2;
+  color-scheme: light;
+}
+html[data-theme="dark"]{
+  --ink:#ece3cc; --ink-soft:#c8bea4; --cream:#111827; --cream-dark:#172033; --line:#34405a; --line-soft:#2a3549;
+  --card:#1a2334; --input:#121a29; --muted:#a59b80; --faint:#7f775f; --text-2:#c2b89d; --gold-soft:#4a3f1d; --chip-ink:#f0dfa8;
+  --notice-bg:#2a2414; --notice-ink:#e9d79a; --hi:#2b2614; --shadow:0 8px 24px rgba(0,0,0,.35);
+  --brand:#16223d; --brand-2:#26365a;
+  --g-anba-boula:#d8a64a; --g-anba-boula-soft:#3b2f15;
+  --g-makhdomeen-had:#7fb0e0; --g-makhdomeen-had-soft:#1c2c40;
+  --g-makhdomeen-gomaa:#86c4a2; --g-makhdomeen-gomaa-soft:#1b3127;
+  color-scheme: dark;
 }
 *{box-sizing:border-box;}
 :root{padding-bottom:env(safe-area-inset-bottom,0px);}
@@ -34,7 +52,7 @@ html{scroll-padding-top:env(safe-area-inset-top,0px);}
 body{
   margin:0;
   background:
-    radial-gradient(circle at 10% 0%, #fffaf0 0%, transparent 40%),
+    radial-gradient(circle at 10% 0%, var(--cream) 0%, transparent 40%),
     var(--cream);
   color:var(--ink);
   font-family:'Cairo',sans-serif;
@@ -58,7 +76,7 @@ body{
   .sticky-top-bar{ padding-top:12px; }
 }
 .verse-ticker{
-  background:linear-gradient(90deg, var(--ink) 0%, var(--ink-soft) 100%);
+  background:linear-gradient(90deg, var(--brand) 0%, var(--brand-2) 100%);
   color:#fdf8ec;
   padding:16px 18px;
   margin-bottom:10px;
@@ -88,7 +106,7 @@ header{
   gap:16px;
   flex-wrap:wrap;
   padding:18px 22px;
-  background:linear-gradient(135deg,var(--ink) 0%, var(--ink-soft) 100%);
+  background:linear-gradient(135deg,var(--brand) 0%, var(--brand-2) 100%);
   border-radius:18px;
   box-shadow:var(--shadow);
   color:#fdf8ec;
@@ -120,7 +138,7 @@ nav.tabs{
   display:flex;
   gap:6px;
   margin:22px 0 18px;
-  background:#fffdf7;
+  background:var(--card);
   border:1px solid var(--line);
   border-radius:14px;
   padding:6px;
@@ -152,7 +170,7 @@ section.panel.active{display:block;}
 @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 
 .card{
-  background:#fffdf7;
+  background:var(--card);
   border:1px solid var(--line);
   border-radius:16px;
   padding:20px;
@@ -175,7 +193,7 @@ input[type=text], input[type=date], input[type=password]{
   border-radius:10px;
   font-family:'Cairo',sans-serif;
   font-size:16px;
-  background:#fff;
+  background:var(--input);
   color:var(--ink);
 }
 input[type=text]:focus, input[type=date]:focus, input[type=password]:focus{outline:2px solid var(--gold);outline-offset:1px;}
@@ -238,7 +256,7 @@ button.danger{color:var(--wine);border-color:var(--wine);}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
 .chip{
   background:var(--gold-soft);
-  color:#5b4a12;
+  color:var(--chip-ink);
   font-size:.72rem;
   padding:3px 9px;
   border-radius:999px;
@@ -293,7 +311,7 @@ button.danger{color:var(--wine);border-color:var(--wine);}
 }
 .attend-item input{width:18px;height:18px;accent-color:var(--sage);}
 .attend-item.checked{background:#e7efe9;border-color:var(--sage);}
-.empty-note{color:#8a7d55;font-size:.85rem;padding:14px 0;text-align:center;}
+.empty-note{color:var(--muted);font-size:.85rem;padding:14px 0;text-align:center;}
 
 table.hist{width:100%;border-collapse:collapse;font-size:.85rem;margin-top:10px;}
 table.hist th, table.hist td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);}
@@ -336,7 +354,7 @@ table.hist th{color:var(--ink-soft);font-weight:700;}
   font-size:.85rem;
 }
 .dash-list-row:last-child{border-bottom:none;}
-.dash-list-row .meta{font-size:.72rem;color:#8a7d55;}
+.dash-list-row .meta{font-size:.72rem;color:var(--muted);}
 .halo-card{
   background:var(--cream);
   border:1px solid var(--line);
@@ -345,7 +363,7 @@ table.hist th{color:var(--ink-soft);font-weight:700;}
   text-align:center;
 }
 .halo-card h3{font-size:.82rem;margin:8px 0 2px;color:var(--ink);font-weight:700;min-height:34px;}
-.halo-card .sub{font-size:.72rem;color:#8a7d55;}
+.halo-card .sub{font-size:.72rem;color:var(--muted);}
 .halo-svg{margin:4px auto 0;display:block;}
 
 .report-table{width:100%;border-collapse:collapse;font-size:.85rem;}
@@ -369,9 +387,9 @@ table.hist th{color:var(--ink-soft);font-weight:700;}
 .saved-msg.show{opacity:1;}
 
 .notice{
-  background:#fff7e0;
+  background:var(--notice-bg);
   border:1px solid var(--gold-soft);
-  color:#6b5a12;
+  color:var(--notice-ink);
   font-size:.78rem;
   padding:8px 12px;
   border-radius:10px;
@@ -420,7 +438,7 @@ table.hist th{color:var(--ink-soft);font-weight:700;}
 .login-overlay{
   position:fixed;
   inset:0;
-  background:linear-gradient(135deg,var(--ink) 0%, var(--ink-soft) 100%);
+  background:linear-gradient(135deg,var(--brand) 0%, var(--brand-2) 100%);
   display:flex;
   align-items:center;
   justify-content:center;
@@ -429,7 +447,7 @@ table.hist th{color:var(--ink-soft);font-weight:700;}
   overflow-y:auto;
 }
 .login-card{
-  background:#fffdf7;
+  background:var(--card);
   border-radius:20px;
   padding:32px 28px;
   max-width:340px;
@@ -477,7 +495,7 @@ table.hist th{color:var(--ink-soft);font-weight:700;}
 }
 .role-tag.admin{background:var(--wine);color:#fff;}
 .role-tag.supervisor{background:var(--sage);color:#fff;}
-.role-tag.user{background:var(--gold-soft);color:#5b4a12;}
+.role-tag.user{background:var(--gold-soft);color:var(--chip-ink);}
 .added-by{font-size:.68rem;color:#9a8c5f;margin-top:3px;}
 
 .print-footer{
@@ -511,7 +529,7 @@ table.hist th{color:var(--ink-soft);font-weight:700;}
 .print-letterhead-title{font-family:'Amiri',serif;font-size:1.15rem;color:var(--ink);font-weight:700;}
 .print-letterhead-sub{font-size:.8rem;color:var(--ink-soft);}
 @media print{
-  body{background:#fff;}
+  body{background:var(--input);}
   header, nav.tabs, .notice, #reportsToolbar, #importCard,
   #panel-dashboard, #panel-servants, #panel-attendance, #panel-afeqad, #panel-settings,
   .user-box, .login-overlay, button{display:none !important;}
@@ -554,20 +572,104 @@ table.hist th{color:var(--ink-soft);font-weight:700;}
   header h1{font-size:1.2rem;}
   .row-actions{flex-direction:column;}
 }
+
+/* ===== refresh: sectors, avatars, navigation, compact top ===== */
+.chip.g-anba-boula{background:var(--g-anba-boula-soft);color:var(--g-anba-boula);}
+.chip.g-makhdomeen-had{background:var(--g-makhdomeen-had-soft);color:var(--g-makhdomeen-had);}
+.chip.g-makhdomeen-gomaa{background:var(--g-makhdomeen-gomaa-soft);color:var(--g-makhdomeen-gomaa);}
+.meeting-btn[data-gid]{border-inline-start-width:5px !important;border-inline-start-style:solid !important;}
+.meeting-btn[data-gid="anba-boula"]{border-inline-start-color:var(--g-anba-boula) !important;}
+.meeting-btn[data-gid="makhdomeen-had"]{border-inline-start-color:var(--g-makhdomeen-had) !important;}
+.meeting-btn[data-gid="makhdomeen-gomaa"]{border-inline-start-color:var(--g-makhdomeen-gomaa) !important;}
+.avatar{flex:none;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;color:#fff;background:var(--brand-2);user-select:none;line-height:1;}
+.avatar.g-anba-boula{background:var(--g-anba-boula);} .avatar.g-makhdomeen-had{background:var(--g-makhdomeen-had);} .avatar.g-makhdomeen-gomaa{background:var(--g-makhdomeen-gomaa);}
+html[data-theme="dark"] .avatar{color:#10182a;}
+.attend-item .avatar{width:28px;height:28px;}
+.sector-bars{display:flex;flex-direction:column;gap:16px;}
+.sector-bar .top{display:flex;justify-content:space-between;align-items:baseline;font-size:.9rem;margin-bottom:6px;font-weight:600;}
+.sector-bar .top b{font-size:1.2rem;}
+.sector-bar .track{height:12px;border-radius:99px;background:var(--cream-dark);overflow:hidden;}
+.sector-bar .fill{height:100%;border-radius:99px;transition:width .6s ease;}
+.sector-bar .sub{font-size:.74rem;color:var(--muted);margin-top:4px;}
+.dash-stat .ic{font-size:1.1rem;display:block;margin-bottom:2px;}
+.dash-stat.g-anba-boula{border-top:4px solid var(--g-anba-boula);} .dash-stat.g-makhdomeen-had{border-top:4px solid var(--g-makhdomeen-had);} .dash-stat.g-makhdomeen-gomaa{border-top:4px solid var(--g-makhdomeen-gomaa);}
+.show-all-toggle{display:block;margin:10px auto 0;}
+#backupReminderBanner{cursor:pointer;}
+.tab-ic{width:20px;height:20px;flex:none;}
+nav.tabs button{display:inline-flex;align-items:center;justify-content:center;gap:7px;}
+input, select, textarea{background:var(--input);color:var(--ink);}
+@media (min-width:761px){
+  /* only the tab bar stays pinned while scrolling; the header scrolls away */
+  .sticky-top-bar{position:static !important;}
+  nav.tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;position:sticky;top:8px;z-index:300;}
+  nav.tabs button{min-width:0;flex:1 1 auto;white-space:nowrap;padding:9px 8px;font-size:.84rem;gap:5px;}
+  nav.tabs .tab-ic{width:17px;height:17px;}
+  .verse-ticker{padding:10px 18px !important;}
+  .verse-current{font-size:1.05rem !important;}
+}
+.bottom-nav, .more-sheet{display:none;}
+@media (max-width:760px){
+  .sticky-top-bar{position:static !important;padding-top:calc(10px + env(safe-area-inset-top,0px)) !important;}
+  .verse-ticker{padding:7px 12px !important;min-height:0 !important;font-size:.82rem;margin-bottom:8px !important;}
+  .verse-current{font-size:.86rem !important;line-height:1.5 !important;}
+  header{padding:12px 14px !important;gap:10px !important;border-radius:14px !important;}
+  header h1{font-size:1.05rem !important;line-height:1.4 !important;}
+  header .halo-mark{width:46px !important;height:46px !important;}
+  .welcome-banner{padding:7px 12px !important;}
+  .welcome-banner *{font-size:.8rem !important;}
+  nav.tabs{display:none !important;}
+  .wrap{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px)) !important;}
+  .bottom-nav{display:grid;position:fixed;left:0;right:0;bottom:0;z-index:5000;background:var(--card);border-top:1px solid var(--line);
+    box-shadow:0 -6px 20px rgba(27,42,74,.10);padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px));grid-auto-flow:column;grid-auto-columns:1fr;}
+  .bottom-nav button{background:none;border:none;font-family:'Cairo',sans-serif;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;
+    font-size:.68rem;font-weight:600;padding:6px 2px;border-radius:12px;cursor:pointer;position:relative;}
+  .bottom-nav button.active{color:var(--wine);}
+  html[data-theme="dark"] .bottom-nav button.active{color:var(--gold);}
+  .bottom-nav button.active::before{content:'';position:absolute;top:-7px;width:28px;height:3px;border-radius:0 0 3px 3px;background:currentColor;}
+  .more-sheet.open{display:block;position:fixed;inset:0;z-index:5100;background:rgba(17,24,39,.45);}
+  .more-sheet .panel-in{position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:20px 20px 0 0;padding:10px 14px calc(18px + env(safe-area-inset-bottom,0px));
+    box-shadow:0 -10px 30px rgba(0,0,0,.2);animation:sheetUp .22s ease;}
+  .more-sheet .grip{width:40px;height:4px;border-radius:4px;background:var(--line);margin:0 auto 12px;}
+  .more-sheet .items{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  .more-sheet .items button{background:var(--cream);border:1px solid var(--line);border-radius:14px;padding:14px 6px;display:flex;flex-direction:column;align-items:center;gap:6px;
+    font-family:'Cairo',sans-serif;font-weight:600;font-size:.8rem;color:var(--ink);cursor:pointer;}
+  .more-sheet .items button.active{border-color:var(--wine);color:var(--wine);}
+  #saveStatus{bottom:calc(78px + env(safe-area-inset-bottom,0px)) !important;}
+}
+@keyframes sheetUp{from{transform:translateY(100%);}to{transform:none;}}
+@media (prefers-reduced-motion: reduce){ .more-sheet .panel-in{animation:none;} .sector-bar .fill{transition:none;} }
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+html[data-theme="dark"] .dash-stat .num{color:var(--gold);}
+html[data-theme="dark"] #liveClock{color:var(--gold) !important;}
+html[data-theme="dark"] .welcome-banner{background:linear-gradient(135deg,var(--card) 0%,var(--gold-soft) 160%) !important;border-color:var(--line) !important;}
+html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;border-color:#6b3a3e !important;color:#f2b8b5 !important;}
+@media (max-width:760px){
+  header{flex-wrap:nowrap !important;}
+  header h1{flex:1;min-width:0;}
+  #userBox{margin-inline-start:auto;text-align:center;flex:none;}
+  #userRoleLabel{display:none !important;}
+  #userNameLabel{font-size:.74rem !important;}
+  #logoutBtn{padding:3px 9px !important;font-size:.7rem !important;margin-top:3px !important;}
+  .row-actions{flex-direction:row !important;flex-wrap:wrap;gap:6px !important;justify-content:flex-start;}
+  .servant-row{flex-wrap:wrap;}
+  .servant-row > .row-actions{width:100%;padding-top:8px;}
+  .row-actions button{padding:5px 10px;font-size:.76rem;}
+}
+
 </style>
 </head>
 <body>
-<div id="serviceGate" style="position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;background:#F7F1E3;font-family:'Cairo',sans-serif;direction:rtl;">
-  <div style="width:100%;max-width:380px;background:#fffdf7;border:1px solid #d9cba3;border-radius:16px;padding:26px 22px;box-shadow:0 8px 24px rgba(27,42,74,.12);text-align:center;">
+<div id="serviceGate" style="position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--cream);font-family:'Cairo',sans-serif;direction:rtl;">
+  <div style="width:100%;max-width:380px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px 22px;box-shadow:0 8px 24px rgba(27,42,74,.12);text-align:center;">
     <div style="font-size:2.4rem;line-height:1;">⛪</div>
-    <h2 style="font-family:'Amiri',serif;color:#1B2A4A;margin:10px 0 4px;font-size:1.35rem;">سجل حضور الخدمة</h2>
-    <p id="gateSub" style="color:#33436a;font-size:.88rem;margin:0 0 18px;">اكتب باسورد الخدمة عشان تدخل</p>
+    <h2 style="font-family:'Amiri',serif;color:var(--ink);margin:10px 0 4px;font-size:1.35rem;">سجل حضور الخدمة</h2>
+    <p id="gateSub" style="color:var(--ink-soft);font-size:.88rem;margin:0 0 18px;">اكتب باسورد الخدمة عشان تدخل</p>
     <div id="gateForm">
-      <input id="gatePassword" type="password" autocomplete="current-password" placeholder="باسورد الخدمة" style="width:100%;padding:11px 12px;border:1px solid #d9cba3;border-radius:10px;font-family:'Cairo',sans-serif;font-size:16px;background:#fff;color:#1B2A4A;text-align:center;">
+      <input id="gatePassword" type="password" autocomplete="current-password" placeholder="باسورد الخدمة" style="width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;font-family:'Cairo',sans-serif;font-size:16px;background:var(--input);color:var(--ink);text-align:center;">
       <button id="gateBtn" style="margin-top:12px;width:100%;background:#7A2E2E;color:#fdf8ec;border:none;padding:11px 20px;border-radius:10px;font-family:'Cairo',sans-serif;font-weight:700;font-size:.95rem;cursor:pointer;">دخول</button>
     </div>
     <p id="gateMsg" style="color:#7A2E2E;font-size:.85rem;margin:12px 0 0;min-height:1.2em;"></p>
-    <p class="app-version" style="color:#a39673;font-size:.72rem;margin:10px 0 0;"></p>
+    <p class="app-version" style="color:var(--faint);font-size:.72rem;margin:10px 0 0;"></p>
   </div>
 </div>
 <div class="wrap">
@@ -632,7 +734,7 @@ table.hist th{color:var(--ink-soft);font-weight:700;}
   </div>
 
   <div class="card">
-    <h2>🎂 أعياد الميلاد (الـ٣٠ يوم الجايين)</h2>
+    <h2>🎂 أعياد الميلاد</h2>
     <div id="dashboardBirthdays"></div>
   </div>
 
@@ -676,7 +778,7 @@ table.hist th{color:var(--ink-soft);font-weight:700;}
     <label style="display:block;margin-bottom:4px;">دوّر على الاسم</label>
     <input type="text" id="moveSearch" placeholder="اكتب الاسم أو رقم التليفون" autocomplete="off">
     <div id="moveSearchResults" style="margin-top:8px;"></div>
-    <div id="moveForm" style="display:none;margin-top:14px;padding:14px;border:1px solid var(--line, #d9cba3);border-radius:12px;background:#fffdf7;">
+    <div id="moveForm" style="display:none;margin-top:14px;padding:14px;border:1px solid var(--line, #d9cba3);border-radius:12px;background:var(--card);">
       <div style="font-weight:700;margin-bottom:10px;">نقل: <span id="moveSelectedName"></span></div>
       <label style="display:block;margin-bottom:4px;">السبب</label>
       <select id="moveReason" style="margin-bottom:10px;">
@@ -772,7 +874,7 @@ table.hist th{color:var(--ink-soft);font-weight:700;}
       <div>
         <label style="display:block;margin-bottom:4px;">التاريخ</label>
         <input type="date" id="attendDate">
-        <div style="font-size:.7rem;color:#8a7d55;margin-top:3px;">الجمعة والأحد بس</div>
+        <div style="font-size:.7rem;color:var(--muted);margin-top:3px;">الجمعة والأحد بس</div>
       </div>
     </div>
     <input type="text" id="attendSearch" placeholder="🔍 دوّر على اسم..." style="margin-bottom:10px;">
@@ -899,7 +1001,16 @@ table.hist th{color:var(--ink-soft);font-weight:700;}
 
 <!-- SETTINGS TAB -->
 <section class="panel" id="panel-settings">
-  <p class="app-version" style="text-align:center;color:#a39673;font-size:.75rem;margin:0 0 10px;"></p>
+  <p class="app-version" style="text-align:center;color:var(--faint);font-size:.75rem;margin:0 0 10px;"></p>
+  <div class="card">
+    <h2>🎨 المظهر</h2>
+    <label style="display:block;margin-bottom:6px;">ألوان البرنامج</label>
+    <select id="themeSelect" style="max-width:260px;">
+      <option value="auto">تلقائي (زي إعدادات الجهاز)</option>
+      <option value="light">فاتح</option>
+      <option value="dark">غامق (الوضع الليلي)</option>
+    </select>
+  </div>
   <div class="card" id="notAdminNote" style="display:none;">
     <h2>الإعدادات</h2>
     <div class="empty-note">إدارة المستخدمين وتصفير البيانات متاحة للمدير فقط. لو محتاج صلاحية مدير كلّم اللي مسؤول عن البرنامج.</div>
@@ -1793,7 +1904,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '5 أكتوبر 2026 (ط)';
+const APP_VERSION = '5 أكتوبر 2026 (ل) — الشكل الجديد';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -2137,7 +2248,7 @@ function renderAfeqadList(){
     <div class="servant-row" data-id="${s.id}">
       <div>
         <div class="servant-name">${s.name}</div>
-        ${s.lastVisitDate ? `<div style="font-size:.78rem;color:#8a7d55;margin-top:2px;">🏠 آخر افتقاد: ${s.lastVisitDate}${s.lastVisitType?' — '+s.lastVisitType:''}</div>` : '<div class="meta" style="font-size:.78rem;color:var(--wine);margin-top:2px;">⚠️ لسه ما اتافتقدش</div>'}
+        ${s.lastVisitDate ? `<div style="font-size:.78rem;color:var(--muted);margin-top:2px;">🏠 آخر افتقاد: ${s.lastVisitDate}${s.lastVisitType?' — '+s.lastVisitType:''}</div>` : '<div class="meta" style="font-size:.78rem;color:var(--wine);margin-top:2px;">⚠️ لسه ما اتافتقدش</div>'}
       </div>
       <div class="row-actions">
         ${can('editAfeqad') ? `<button class="ghost record-visit">تسجيل افتقاد</button>` : ''}
@@ -2168,7 +2279,7 @@ function renderAfeqadList(){
           s.lastVisitDate = date;
           s.lastVisitType = type;
           s.lastEditedBy = currentUser ? currentUser.name : '—';
-          s.lastEditedAt = new Date().toLocaleString('ar-EG');
+          s.lastEditedAt = new Date().toLocaleString('ar-EG-u-nu-latn');
           await saveData();
           renderAfeqadList();
         });
@@ -2329,23 +2440,23 @@ function renderServantList(){
     return `
     <div class="servant-row" data-id="${s.id}">
       <div style="display:flex;gap:10px;flex:1;">
-        ${s.photo ? `<img src="${s.photo}" loading="lazy" decoding="async" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex:none;">` : ''}
+        ${avatarHtml(s, 44)}
         <div>
         <div class="servant-name">${s.name} ${s.personCode ? `<span class="chip" style="background:var(--ink);color:#fdf8ec;font-size:.65rem;">${s.personCode}</span>` : ''}</div>
-        ${(s.phone && can('phones')) ? `<div style="font-size:.78rem;color:#8a7d55;margin-top:2px;">📞 ${s.phone}</div>` : ''}
-        ${(s.birthDate && can('otherDetails')) ? `<div style="font-size:.78rem;color:#8a7d55;">🎂 ${s.birthDate}</div>` : ''}
-        ${(s.area && can('addresses')) ? `<div style="font-size:.78rem;color:#8a7d55;">🗺️ ${s.area}</div>` : ''}
-        ${(s.address && can('addresses')) ? `<div style="font-size:.78rem;color:#8a7d55;">📍 ${s.address}</div>` : ''}
-        ${(s.confessionFather && can('otherDetails')) ? `<div style="font-size:.78rem;color:#8a7d55;">✝️ أب الاعتراف: ${s.confessionFather}</div>` : ''}
-        ${(s.church && can('otherDetails')) ? `<div style="font-size:.78rem;color:#8a7d55;">⛪ ${s.church}</div>` : ''}
-        ${(s.occupation && can('otherDetails')) ? `<div style="font-size:.78rem;color:#8a7d55;">💼 ${s.occupation}${s.workplace?' — '+s.workplace:''}</div>` : ''}
-        ${((s.spouseName||spouse) && can('otherDetails')) ? `<div style="font-size:.78rem;color:#8a7d55;">💍 الزوج/الزوجة: ${s.spouseName||spouse.name}</div>` : ''}
-        ${(childrenList.length>0 && can('otherDetails')) ? `<div style="font-size:.78rem;color:#8a7d55;">🧒 الأبناء: ${childrenList.map(c=>{
+        ${(s.phone && can('phones')) ? `<div style="font-size:.78rem;color:var(--muted);margin-top:2px;">📞 ${s.phone}</div>` : ''}
+        ${(s.birthDate && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">🎂 ${s.birthDate}</div>` : ''}
+        ${(s.area && can('addresses')) ? `<div style="font-size:.78rem;color:var(--muted);">🗺️ ${s.area}</div>` : ''}
+        ${(s.address && can('addresses')) ? `<div style="font-size:.78rem;color:var(--muted);">📍 ${s.address}</div>` : ''}
+        ${(s.confessionFather && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">✝️ أب الاعتراف: ${s.confessionFather}</div>` : ''}
+        ${(s.church && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">⛪ ${s.church}</div>` : ''}
+        ${(s.occupation && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">💼 ${s.occupation}${s.workplace?' — '+s.workplace:''}</div>` : ''}
+        ${((s.spouseName||spouse) && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">💍 الزوج/الزوجة: ${s.spouseName||spouse.name}</div>` : ''}
+        ${(childrenList.length>0 && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">🧒 الأبناء: ${childrenList.map(c=>{
           const lvl = c.schoolLevelBase ? computedSchoolLevel(c.schoolLevelBase, c.schoolLevelBaseYear) : 0;
           return lvl ? `${c.name} (${schoolLevelLabel(lvl)})` : c.name;
         }).join('، ')}</div>` : ''}
         <div class="chips">
-          ${s.groups.filter(gid=>visible.includes(gid)).length? s.groups.filter(gid=>visible.includes(gid)).map(gid=>`<span class="chip">${groupName(gid)}</span>`).join('') : '<span class="chip" style="background:#eee;color:#999;">لم يُحدَّد اجتماع</span>'}
+          ${s.groups.filter(gid=>visible.includes(gid)).length? s.groups.filter(gid=>visible.includes(gid)).map(gid=>`<span class="chip g-${gid}">${groupName(gid)}</span>`).join('') : '<span class="chip" style="background:#eee;color:#999;">لم يُحدَّد اجتماع</span>'}
         </div>
         ${(s.addedBy && can('addedBy')) ? `<div class="added-by">أضافه: ${s.addedBy}</div>` : ''}
         ${(s.lastEditedBy && can('addedBy')) ? `<div class="added-by">آخر تعديل: ${s.lastEditedBy}</div>` : ''}
@@ -2479,7 +2590,7 @@ function renderServantList(){
           if(photoRemoved) s.photo = '';
           else if(pendingPhoto) s.photo = pendingPhoto;
           s.lastEditedBy = currentUser ? currentUser.name : '—';
-          s.lastEditedAt = new Date().toLocaleString('ar-EG');
+          s.lastEditedAt = new Date().toLocaleString('ar-EG-u-nu-latn');
           await saveData();
           refreshAreaChurchDatalists();
           renderServantList(); renderMeetingPicker();
@@ -2502,7 +2613,7 @@ function renderMeetingPicker(){
   }
   picker.innerHTML = groups.map(g=>{
     const memberCount = activeServants().filter(s=>s.groups.includes(g.id)).length;
-    return `<button class="meeting-btn ${g.id===currentGroupId?'selected':''}" data-gid="${g.id}">${g.name}<br><span style="font-weight:400;font-size:.72rem;opacity:.75;">${memberCount} خادم</span></button>`;
+    return `<button class="meeting-btn ${g.id===currentGroupId?'selected':''}" data-gid="${g.id}">${g.name}<br><span style="font-weight:400;font-size:.72rem;opacity:.75;">${memberCount} ${g.id==='anba-boula' ? 'خادم' : 'مخدوم'}</span></button>`;
   }).join('');
   picker.querySelectorAll('.meeting-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -2551,7 +2662,8 @@ function renderAttendList(){
   list.innerHTML = visible.map(m=>`
     <label class="attend-item ${attendCheckedIds.has(m.id)?'checked':''}" data-id="${m.id}" ${canMark?'':'style="cursor:default;"'}>
       <input type="checkbox" ${attendCheckedIds.has(m.id)?'checked':''} ${canMark?'':'disabled'}>
-      ${m.name}
+      ${avatarHtml({ name: m.name, groups: [currentGroupId] }, 28)}
+      <span>${m.name}</span>
     </label>
   `).join('');
   if(canMark) list.querySelectorAll('.attend-item').forEach(item=>{
@@ -2613,9 +2725,9 @@ function renderHistory(){
   const totalMembers = activeServants().filter(s=>s.groups.includes(currentGroupId)).length;
   body.innerHTML = sessions.map(s=>`
     <tr>
-      <td>${s.date}</td>
+      <td>${prettyDate(s.date)}</td>
       <td>${s.present.length} / ${totalMembers}</td>
-      <td style="font-size:.78rem;color:#8a7d55;">${can('addedBy') ? (s.recordedBy || '—') : ''}</td>
+      <td style="font-size:.78rem;color:var(--muted);">${can('addedBy') ? (s.recordedBy || '—') : ''}</td>
       <td>
         <button class="ghost" data-open="${s.date}">فتح</button>
         ${isAdmin() ? `<button class="ghost danger" data-del="${s.date}">حذف</button>` : ''}
@@ -2665,14 +2777,15 @@ function renderDashboard(){
 
   const statsEl = document.getElementById('dashboardStats');
   const cards = [
-    { num: visibleServants.length, label: 'إجمالي الأفراد' },
-    ...visibleGroups.map(g=>({ num: activeServants().filter(s=>s.groups.includes(g.id)).length, label: g.name })),
-    { num: totalSessions, label: 'إجمالي الاجتماعات المسجّلة' },
-    { num: overallPct + '%', label: 'متوسط نسبة الحضور العام' },
-    { num: neverVisitedCount, label: 'لسه ما اتافتقدوش' }
+    { num: visibleServants.length, label: 'إجمالي الأفراد', ic:'👥' },
+    ...visibleGroups.map(g=>({ num: activeServants().filter(s=>s.groups.includes(g.id)).length, label: g.name, cls:'g-'+g.id })),
+    { num: totalSessions, label: 'اجتماعات متسجّلة', ic:'📅' },
+    { num: overallPct + '%', label: 'متوسط الحضور', ic:'📈' },
+    { num: neverVisitedCount, label: 'لسه ما اتافتقدوش', ic:'🏠' }
   ];
   statsEl.innerHTML = cards.map(c=>`
-    <div class="dash-stat">
+    <div class="dash-stat ${c.cls||''}">
+      ${c.ic ? `<span class="ic" aria-hidden="true">${c.ic}</span>` : ''}
       <div class="num">${c.num}</div>
       <div class="label">${c.label}</div>
     </div>
@@ -2692,9 +2805,14 @@ function renderDashboard(){
         const avg = sessions.reduce((sum,s)=>sum+s.present.length,0)/sessions.length;
         pct = Math.round((avg/members.length)*100);
       }
-      labels.push(g.name); data.push(pct);
+      labels.push({ g, members: members.length, sessions: sessions.length }); data.push(pct);
     });
-    renderBarChartSVG(chartContainer, labels, [{ name:'نسبة الحضور %', data, color: colorForPercent }], { max:100, suffix:'%', showGrid:true });
+    chartContainer.innerHTML = '<div class="sector-bars">' + labels.map((l,i)=>`
+      <div class="sector-bar">
+        <div class="top"><span>${l.g.name}</span><b style="color:var(--g-${l.g.id});">${data[i]}%</b></div>
+        <div class="track"><div class="fill" style="width:${Math.min(100,data[i])}%;background:var(--g-${l.g.id});"></div></div>
+        <div class="sub">${l.sessions ? `متوسط ${l.sessions} اجتماع — ${l.members} فرد` : 'لسه مفيش اجتماعات متسجّلة'}</div>
+      </div>`).join('') + '</div>';
   }
 
   // ---- recent sessions across visible groups (same date across sections = one meeting) ----
@@ -2715,7 +2833,7 @@ function renderDashboard(){
   } else {
     recentEl.innerHTML = allSessions.slice(0,8).map(s=>`
       <div class="dash-list-row">
-        <div>${s.groups.join(' + ')} — ${s.date}</div>
+        <div>${prettyDate(s.date)}<div class="meta">${s.groups.join(' + ')}</div></div>
         <div class="meta">${s.count} حاضر${can('addedBy') && s.recordedBy.length ? ' · سجّله ' + Array.from(new Set(s.recordedBy)).join('، ') : ''}</div>
       </div>
     `).join('');
@@ -2778,7 +2896,7 @@ function renderReports(){
         <text x="45" y="50" text-anchor="middle" font-family="Cairo" font-weight="700" font-size="18" fill="#1B2A4A">${pct}%</text>
       </svg>
       <h3>${g.name}</h3>
-      <div class="sub">${members.length} خادم · ${sessions.length} اجتماع</div>
+      <div class="sub">${members.length} ${g.id==='anba-boula' ? 'خادم' : 'مخدوم'} · ${sessions.length} اجتماع</div>
     </div>`;
   }).join('');
 
@@ -3116,9 +3234,8 @@ function renderBackupStatus(){
   if(banner){
     if(isAdmin() && days > 7){
       banner.style.display = 'block';
-      banner.textContent = !lastBackupDate
-        ? '⚠️ لسه ماعملتش نسخة احتياطية من البيانات. روح "الإعدادات" ودوس "تنزيل نسخة احتياطية كاملة".'
-        : `⚠️ آخر نسخة احتياطية كانت من ${days} يوم. يُفضّل تعمل نسخة جديدة من "الإعدادات".`;
+      banner.textContent = !lastBackupDate ? '💾 مفيش نسخة احتياطية لسه — دوس هنا تعمل واحدة' : `💾 آخر نسخة احتياطية من ${days} يوم — دوس هنا تعمل واحدة`;
+      banner.onclick = ()=>{ const b = document.querySelector('nav.tabs button[data-tab="settings"]'); if(b) b.click(); setTimeout(()=>{ const c = document.getElementById('fullBackupCard'); if(c) c.scrollIntoView({behavior:'smooth'}); }, 150); };
     } else {
       banner.style.display = 'none';
     }
@@ -3195,10 +3312,10 @@ function permMatrixHtml(values){
       <thead><tr><th style="text-align:right;padding:6px;">الشاشة</th><th style="padding:6px;">يشوف</th><th style="padding:6px;">يعدّل</th></tr></thead>
       <tbody>
       ${PERM_SCREENS.map(sc=>`
-        <tr style="border-top:1px solid var(--line, #e8dcc0);">
+        <tr style="border-top:1px solid var(--line, var(--line-soft));">
           <td style="padding:7px 6px;">${sc.label}</td>
           <td style="text-align:center;"><input type="checkbox" data-perm="${sc.view}" data-role="view" ${v(sc.view)?'checked':''}></td>
-          <td style="text-align:center;white-space:nowrap;">${(sc.edit||[]).length ? sc.edit.map((k,i)=>`<label style="margin:0 4px;font-size:.78rem;"><input type="checkbox" data-perm="${k}" data-role="edit" data-view="${sc.view}" ${v(k)?'checked':''}>${sc.editLabels ? ' ' + sc.editLabels[i] : ''}</label>`).join('') : '<span style="color:#b5a77e;font-size:.75rem;">مشاهدة بس</span>'}</td>
+          <td style="text-align:center;white-space:nowrap;">${(sc.edit||[]).length ? sc.edit.map((k,i)=>`<label style="margin:0 4px;font-size:.78rem;"><input type="checkbox" data-perm="${k}" data-role="edit" data-view="${sc.view}" ${v(k)?'checked':''}>${sc.editLabels ? ' ' + sc.editLabels[i] : ''}</label>`).join('') : '<span style="color:var(--faint);font-size:.75rem;">مشاهدة بس</span>'}</td>
         </tr>`).join('')}
       </tbody>
     </table>
@@ -3343,8 +3460,8 @@ function startLiveClock(){
   if(liveClockInterval) return; // already running
   const update = ()=>{
     const now = new Date();
-    const time = now.toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true});
-    const date = now.toLocaleDateString('ar-EG', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+    const time = now.toLocaleTimeString('ar-EG-u-nu-latn', {hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true});
+    const date = now.toLocaleDateString('ar-EG-u-nu-latn', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
     document.getElementById('liveClock').textContent = `${date} — ${time}`;
   };
   update();
@@ -3363,6 +3480,7 @@ function applyTabGating(){
   });
   const activeBtn = document.querySelector('nav.tabs button.active');
   // someone without the dashboard (e.g. "برنامج الخدمة بس") lands on their first real screen, not settings
+  setTimeout(buildBottomNav, 0);
   if(activeHidden || (activeBtn && activeBtn.dataset.tab === 'settings' && !can('tabDashboard'))){
     const firstVisible = Array.from(document.querySelectorAll('nav.tabs button')).find(b=>b.style.display !== 'none' && b.dataset.tab !== 'settings')
       || Array.from(document.querySelectorAll('nav.tabs button')).find(b=>b.style.display !== 'none');
@@ -3409,6 +3527,7 @@ document.getElementById('loginPasswordInput').addEventListener('keydown', (e)=>{
 async function doLogout(reasonMsg){
   await clearPersonalLogin();
   currentUser = null;
+  { const bn = document.getElementById('bottomNav'); if(bn) bn.style.display = 'none'; }
   document.getElementById('welcomeBanner').style.display = 'none';
   if(liveClockInterval){ clearInterval(liveClockInterval); liveClockInterval = null; }
   if(inactivityTimer){ clearTimeout(inactivityTimer); inactivityTimer = null; }
@@ -3448,7 +3567,7 @@ function renderUsersList(){
         ${u.name}
         <span class="role-tag ${u.role}">${roleLabelFor(u.role)}</span>${isProgramOnly(u) ? ' <span class="chip" style="font-size:.72rem;">برنامج الخدمة بس</span>' : (u.role==='user' && u.perms ? ' <span class="chip" style="font-size:.72rem;">صلاحيات خاصة</span>' : '')}
         <div class="added-by">أضافه: ${u.addedBy || '—'}</div>
-        ${u.role === 'user' ? `<div class="chips" style="margin-top:6px;">${allowedGroupsFor(u).map(gid=>`<span class="chip">${groupName(gid)}</span>`).join('')}</div>` : ''}
+        ${u.role === 'user' ? `<div class="chips" style="margin-top:6px;">${allowedGroupsFor(u).map(gid=>`<span class="chip g-${gid}">${groupName(gid)}</span>`).join('')}</div>` : ''}
       </div>
       <div class="row-actions">
         ${u.role === 'user' ? `<button class="ghost edit-user-groups">تعديل الاجتماعات المسموحة</button>` : ''}
@@ -3845,7 +3964,7 @@ document.getElementById('restoreBackupFile').addEventListener('change', (e)=>{
         e.target.value = '';
         return;
       }
-      const when = parsed.exportedAt ? new Date(parsed.exportedAt).toLocaleString('ar-EG') : 'غير معروف';
+      const when = parsed.exportedAt ? new Date(parsed.exportedAt).toLocaleString('ar-EG-u-nu-latn') : 'غير معروف';
       const warn = `هيتم استبدال كل البيانات الحالية (الخدام، الحضور، المستخدمين، الصلاحيات) بالنسخة دي من تاريخ: ${when}. أي حاجة اتسجلت بعد التاريخ ده هتضيع. اكتب "استرجاع" بالظبط للتأكيد:`;
       const confirmText = prompt(warn);
       if(confirmText !== 'استرجاع'){ e.target.value = ''; return; }
@@ -4264,10 +4383,10 @@ function renderMovesPanel(){
         <div class="servant-row" data-moved-id="${s.id}">
           <div style="flex:1;">
             <div class="servant-name">${escHtml(s.name)}</div>
-            <div style="font-size:.78rem;color:#8a7d55;margin-top:2px;">${r.icon} ${r.label}${s.statusDate ? ' — ' + escHtml(s.statusDate) : ''}</div>
-            ${s.statusNote ? `<div style="font-size:.78rem;color:#8a7d55;">📝 ${escHtml(s.statusNote)}</div>` : ''}
-            ${(s.phone && can('phones')) ? `<div style="font-size:.78rem;color:#8a7d55;">📞 ${escHtml(s.phone)}</div>` : ''}
-            <div class="chips">${(s.groups||[]).map(gid=>`<span class="chip">${groupName(gid)}</span>`).join('')}</div>
+            <div style="font-size:.78rem;color:var(--muted);margin-top:2px;">${r.icon} ${r.label}${s.statusDate ? ' — ' + escHtml(prettyDate(s.statusDate)) : ''}</div>
+            ${s.statusNote ? `<div style="font-size:.78rem;color:var(--muted);">📝 ${escHtml(s.statusNote)}</div>` : ''}
+            ${(s.phone && can('phones')) ? `<div style="font-size:.78rem;color:var(--muted);">📞 ${escHtml(s.phone)}</div>` : ''}
+            <div class="chips">${(s.groups||[]).map(gid=>`<span class="chip g-${gid}">${groupName(gid)}</span>`).join('')}</div>
             ${(s.statusBy && can('addedBy')) ? `<div class="added-by">نقله: ${escHtml(s.statusBy)}</div>` : ''}
           </div>
           ${canAct ? `<div class="row-actions">
@@ -4346,10 +4465,10 @@ function birthdayRowHtml(u){
   const when = u.diffDays === 0 ? '🎉 النهارده' : (u.diffDays === 1 ? 'بكرة' : `${u.date.getDate()} ${AR_MONTHS[u.date.getMonth()+1]}`);
   return `
     <div class="dash-list-row" style="align-items:center;gap:8px;">
-      <div>${escHtml(u.s.name)}<div class="meta">${(u.s.groups||[]).map(groupName).join(' + ')}</div></div>
+      <div style="display:flex;align-items:center;gap:10px;">${avatarHtml(u.s, 36)}<div>${escHtml(u.s.name)}<div class="meta">${(u.s.groups||[]).map(groupName).join(' + ')}</div></div></div>
       <div style="display:flex;align-items:center;gap:8px;">
         <span class="meta">${when}</span>
-        ${link ? `<a href="${link}" target="_blank" rel="noopener" class="ghost" style="text-decoration:none;padding:5px 10px;border-radius:8px;border:1px solid #25D366;color:#128C7E;font-size:.8rem;white-space:nowrap;">واتساب</a>` : ''}
+        ${link ? `<a href="${link}" target="_blank" rel="noopener" title="تهنئة على واتساب" aria-label="تهنئة على واتساب" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:#25D366;font-size:1rem;box-shadow:0 2px 6px rgba(37,211,102,.35);flex-shrink:0;">💬</a>` : ''}
       </div>
     </div>`;
 }
@@ -4360,7 +4479,11 @@ function renderDashboardBirthdays(){
   if(list.length === 0){
     el.innerHTML = '<div class="empty-note">مفيش أعياد ميلاد في الـ٣٠ يوم الجايين (أو تاريخ الميلاد مش متسجّل)</div>';
   } else {
-    el.innerHTML = list.slice(0,15).map(birthdayRowHtml).join('');
+    const expanded = el.dataset.expanded === '1';
+    el.innerHTML = list.slice(0, expanded ? 30 : 5).map(birthdayRowHtml).join('')
+      + (list.length > 5 ? `<button class="ghost show-all-toggle" id="bdayToggle">${expanded ? 'عرض أقل' : `عرض الكل (${list.length})`}</button>` : '');
+    const t = document.getElementById('bdayToggle');
+    if(t) t.addEventListener('click', ()=>{ el.dataset.expanded = expanded ? '0' : '1'; renderDashboardBirthdays(); });
   }
 }
 function maybeShowBirthdayPopup(){
@@ -4377,10 +4500,10 @@ function maybeShowBirthdayPopup(){
   wrap.id = 'bdayPopup';
   wrap.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(27,42,74,.55);display:flex;align-items:center;justify-content:center;padding:16px;direction:rtl;';
   wrap.innerHTML = `
-    <div style="background:#fffdf7;border-radius:16px;max-width:460px;width:100%;max-height:85vh;overflow:auto;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.25);">
-      <h2 style="margin:0 0 6px;font-family:'Amiri',serif;color:#1B2A4A;">🎂 أعياد ميلاد</h2>
+    <div style="background:var(--card);border-radius:16px;max-width:460px;width:100%;max-height:85vh;overflow:auto;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.25);">
+      <h2 style="margin:0 0 6px;font-family:'Amiri',serif;color:var(--ink);">🎂 أعياد ميلاد</h2>
       ${today.length ? `<h3 style="margin:12px 0 4px;font-size:1rem;color:#7A2E2E;">النهارده</h3>${today.map(birthdayRowHtml).join('')}` : ''}
-      ${week.length ? `<h3 style="margin:14px 0 4px;font-size:1rem;color:#1B2A4A;">الأسبوع ده</h3>${week.map(birthdayRowHtml).join('')}` : ''}
+      ${week.length ? `<h3 style="margin:14px 0 4px;font-size:1rem;color:var(--ink);">الأسبوع ده</h3>${week.map(birthdayRowHtml).join('')}` : ''}
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;">
         <button class="primary" id="bdayPopupClose">تمام</button>
       </div>
@@ -4517,15 +4640,15 @@ function renderProgramPanel(){
     idx++; shownAny = true;
     const isNext = iso === nextIso, isPast = iso < todayIso;
     html += `
-      <div class="prog-row" data-date="${iso}" style="padding:10px 12px;margin:6px 0;border-radius:12px;border:${isNext?'2px solid #C9A227':'1px solid #e8dcc0'};background:${isNext?'#fff8e1':'#fffdf7'};${isPast?'opacity:.6;':''}">
+      <div class="prog-row" data-date="${iso}" style="padding:10px 12px;margin:6px 0;border-radius:12px;border:${isNext?'2px solid #C9A227':'1px solid var(--line-soft)'};background:${isNext?'var(--hi)':'var(--card)'};${isPast?'opacity:.6;':''}">
         <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">
-          <div style="font-size:.8rem;color:#8a7d55;white-space:nowrap;">${idx}. ${PROG_DAYS[progDay].label} ${d.getDate()} ${PROG_MONTHS[d.getMonth()]}</div>
+          <div style="font-size:.8rem;color:var(--muted);white-space:nowrap;">${idx}. ${PROG_DAYS[progDay].label} ${d.getDate()} ${PROG_MONTHS[d.getMonth()]}</div>
           ${isNext ? '<span style="font-size:.72rem;background:#C9A227;color:#fff;padding:2px 8px;border-radius:10px;white-space:nowrap;">الاجتماع الجاي</span>' : ''}
         </div>
-        <div style="font-weight:700;margin-top:4px;">${it.title ? escHtml(it.title) : '<span style="color:#b5a77e;font-weight:400;">لسه مفيش موضوع</span>'}</div>
-        ${it.goal ? `<div style="font-size:.82rem;color:#5a5140;margin-top:2px;">${escHtml(it.goal)}</div>` : ''}
-        <div style="font-size:.82rem;margin-top:6px;color:#1B2A4A;">
-          ${it.speaker ? `🎤 ${escHtml(it.speaker)}` : '<span style="color:#b5a77e;">🎤 لسه محدش اتحدد</span>'}
+        <div style="font-weight:700;margin-top:4px;">${it.title ? escHtml(it.title) : '<span style="color:var(--faint);font-weight:400;">لسه مفيش موضوع</span>'}</div>
+        ${it.goal ? `<div style="font-size:.82rem;color:var(--text-2);margin-top:2px;">${escHtml(it.goal)}</div>` : ''}
+        <div style="font-size:.82rem;margin-top:6px;color:var(--ink);">
+          ${it.speaker ? `🎤 ${escHtml(it.speaker)}` : '<span style="color:var(--faint);">🎤 لسه محدش اتحدد</span>'}
           ${it.church ? ` &nbsp;—&nbsp; ⛪ ${escHtml(it.church)}` : ''}
         </div>
         ${canEdit ? `<div style="margin-top:8px;"><button class="ghost prog-edit-btn" style="font-size:.8rem;padding:4px 12px;">✏️ تعديل</button></div>
@@ -4606,7 +4729,7 @@ function renderDashboardNext(){
   el.innerHTML = rows.map(r=>{
     const d = new Date(r.iso + 'T00:00:00');
     return `<div class="dash-list-row" style="display:block;">
-      <div style="font-size:.8rem;color:#8a7d55;">${PROG_DAYS[r.day].meeting} — ${d.getDate()} ${PROG_MONTHS[d.getMonth()]}</div>
+      <div style="font-size:.8rem;color:var(--muted);">${PROG_DAYS[r.day].meeting} — ${d.getDate()} ${PROG_MONTHS[d.getMonth()]}</div>
       <div style="font-weight:700;margin-top:2px;">${escHtml(r.it.title || '—')}</div>
       <div class="meta" style="margin-top:2px;">${r.it.speaker ? '🎤 ' + escHtml(r.it.speaker) : '🎤 لسه محدش اتحدد'}${r.it.church ? ' — ⛪ ' + escHtml(r.it.church) : ''}</div>
     </div>`;
@@ -4803,12 +4926,12 @@ function renderAuditList(){
   const total = rows.length;
   listEl.innerHTML = rows.slice(0, auditLimit).map(e=>{
     const d = new Date(e.t);
-    const when = d.toLocaleDateString('ar-EG', { weekday:'long', day:'numeric', month:'long', year:'numeric' }) + ' — ' + d.toLocaleTimeString('ar-EG', { hour:'numeric', minute:'2-digit' });
-    return `<div style="padding:10px 12px;margin:6px 0;border:1px solid #e8dcc0;border-radius:12px;background:#fffdf7;">
-      <div style="font-size:.78rem;color:#8a7d55;">👤 <b style="color:#1B2A4A;">${escHtml(e.by)}</b> — ${when}</div>
+    const when = d.toLocaleDateString('ar-EG-u-nu-latn', { weekday:'long', day:'numeric', month:'long', year:'numeric' }) + ' — ' + d.toLocaleTimeString('ar-EG-u-nu-latn', { hour:'numeric', minute:'2-digit' });
+    return `<div style="padding:10px 12px;margin:6px 0;border:1px solid var(--line-soft);border-radius:12px;background:var(--card);">
+      <div style="font-size:.78rem;color:var(--muted);">👤 <b style="color:var(--ink);">${escHtml(e.by)}</b> — ${when}</div>
       <div style="margin-top:3px;"><span class="chip" style="font-size:.72rem;">${escHtml(e.area)}</span> <b>${escHtml(e.action)}</b>: ${escHtml(e.target)}</div>
       ${(e.changes||[]).length ? `<ul style="margin:6px 0 0;padding-inline-start:18px;font-size:.82rem;">${e.changes.map(c=>`<li><b>${escHtml(c.f)}</b>: ${c.from !== undefined ? `<span style="color:#7A2E2E;text-decoration:line-through;">${escHtml(c.from)}</span> ← ` : ''}<span style="color:#2f6b3a;">${escHtml(c.to)}</span></li>`).join('')}</ul>` : ''}
-      ${e.rest ? '<div style="font-size:.72rem;color:#a39673;margin-top:4px;">باقي البيانات ما اتغيّرتش</div>' : ''}
+      ${e.rest ? '<div style="font-size:.72rem;color:var(--faint);margin-top:4px;">باقي البيانات ما اتغيّرتش</div>' : ''}
     </div>`;
   }).join('') + (total > auditLimit ? `<div style="text-align:center;margin:12px 0;"><button class="ghost" id="auditMoreBtn">عرض ${Math.min(50,total-auditLimit)} كمان (باقي ${total-auditLimit})</button></div>` : '');
   const more = document.getElementById('auditMoreBtn');
@@ -4819,6 +4942,83 @@ document.getElementById('auditArea').addEventListener('change', ()=>{ auditLimit
 let auditSearchTimer = null;
 document.getElementById('auditSearch').addEventListener('input', ()=>{ clearTimeout(auditSearchTimer); auditSearchTimer = setTimeout(()=>{ auditLimit = 50; renderAuditList(); }, 250); });
 document.getElementById('auditRefreshBtn').addEventListener('click', loadAuditLog);
+
+function initialsOf(name){
+  const parts = String(name||'').trim().replace(/^(القس|قس|أبونا|ابونا|م\/|د\/|أ\/|ا\/)\s*/,'').split(/\s+/).filter(Boolean);
+  if(!parts.length) return '؟';
+  return (parts[0][0] || '') + (parts[1] ? ' ' + parts[1][0] : '');
+}
+function avatarHtml(p, size){
+  size = size || 44;
+  if(p.photo) return `<img src="${p.photo}" alt="" loading="lazy" decoding="async" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;flex:none;">`;
+  const g = (p.groups||[])[0] || '';
+  return `<span class="avatar g-${g}" style="width:${size}px;height:${size}px;font-size:${Math.round(size*0.34)}px;" aria-hidden="true">${escHtml(initialsOf(p.name))}</span>`;
+}
+const AR_DAYS = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+function prettyDate(iso, withYear){
+  const m = String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m) return iso || '';
+  const d = new Date(+m[1], +m[2]-1, +m[3]);
+  return `${AR_DAYS[d.getDay()]} ${d.getDate()} ${AR_MONTHS[d.getMonth()+1]}` + (withYear === false ? '' : ` ${d.getFullYear()}`);
+}
+const TAB_ICONS = {
+  dashboard:'<path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
+  servants:'<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.9-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.2c2.4-.3 4.4 1.2 5 4.3"/>',
+  attendance:'<rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/>',
+  afeqad:'<path d="M3 11 12 4l9 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M12 17.5s-3-1.9-3-3.9a1.6 1.6 0 0 1 3-.8 1.6 1.6 0 0 1 3 .8c0 2-3 3.9-3 3.9z"/>',
+  reports:'<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M21 20H3"/>',
+  moves:'<path d="M4 8h13l-3-3"/><path d="M20 16H7l3 3"/>',
+  program:'<path d="M4 5.5C4 4.7 4.7 4 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M20 5.5c0-.8-.7-1.5-1.5-1.5H13v16h5.5c.8 0 1.5-.7 1.5-1.5z"/>',
+  settings:'<circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.2 7.5l2 1.2M17.8 15.3l2 1.2M4.2 16.5l2-1.2M17.8 8.7l2-1.2"/>',
+  more:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>'
+};
+const TAB_SHORT = { dashboard:'الرئيسية', servants:'الخدام', attendance:'الحضور', afeqad:'الافتقاد', reports:'التقارير', moves:'النقل', program:'البرنامج', settings:'الإعدادات' };
+const BOTTOM_PRIORITY = ['dashboard','attendance','servants','program','afeqad','reports','moves','settings'];
+const tabIcon = k=>`<svg class="tab-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TAB_ICONS[k]||''}</svg>`;
+function decorateTopTabs(){
+  document.querySelectorAll('nav.tabs button[data-tab]').forEach(b=>{
+    if(!b.querySelector('.tab-ic')) b.insertAdjacentHTML('afterbegin', tabIcon(b.dataset.tab));
+  });
+}
+function buildBottomNav(){
+  decorateTopTabs();
+  let bar = document.getElementById('bottomNav'), sheet = document.getElementById('moreSheet');
+  if(!bar){
+    bar = document.createElement('nav'); bar.id = 'bottomNav'; bar.className = 'bottom-nav'; bar.setAttribute('aria-label','التنقل');
+    document.body.appendChild(bar);
+    sheet = document.createElement('div'); sheet.id = 'moreSheet'; sheet.className = 'more-sheet';
+    sheet.innerHTML = '<div class="panel-in"><div class="grip"></div><div class="items"></div></div>';
+    sheet.addEventListener('click', e=>{ if(e.target === sheet) sheet.classList.remove('open'); });
+    document.body.appendChild(sheet);
+  }
+  if(!currentUser){ bar.style.display = 'none'; return; }
+  bar.style.display = '';
+  const visible = BOTTOM_PRIORITY.filter(k=>{ const b = document.querySelector(`nav.tabs button[data-tab="${k}"]`); return b && b.style.display !== 'none'; });
+  const main = visible.length <= 5 ? visible : visible.slice(0,4);
+  const rest = visible.length <= 5 ? [] : visible.slice(4);
+  const activeBtn = document.querySelector('nav.tabs button.active');
+  const activeTab = activeBtn ? activeBtn.dataset.tab : '';
+  bar.innerHTML = main.map(k=>`<button data-go="${k}" class="${k===activeTab?'active':''}">${tabIcon(k)}<span>${TAB_SHORT[k]}</span></button>`).join('')
+    + (rest.length ? `<button data-more class="${rest.includes(activeTab)?'active':''}">${tabIcon('more')}<span>المزيد</span></button>` : '');
+  sheet.querySelector('.items').innerHTML = rest.map(k=>`<button data-go="${k}" class="${k===activeTab?'active':''}">${tabIcon(k)}<span>${TAB_SHORT[k]}</span></button>`).join('');
+  const go = k=>{ sheet.classList.remove('open'); const b = document.querySelector(`nav.tabs button[data-tab="${k}"]`); if(b) b.click(); window.scrollTo({top:0}); };
+  bar.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click', ()=>go(b.dataset.go)));
+  sheet.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click', ()=>go(b.dataset.go)));
+  const more = bar.querySelector('[data-more]');
+  if(more) more.addEventListener('click', ()=>sheet.classList.add('open'));
+}
+document.querySelectorAll('nav.tabs button[data-tab]').forEach(b=>b.addEventListener('click', ()=>setTimeout(buildBottomNav, 0)));
+function applyTheme(pref){
+  const dark = pref === 'dark' || (pref !== 'light' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+  if(dark) document.documentElement.setAttribute('data-theme','dark'); else document.documentElement.removeAttribute('data-theme');
+}
+(function(){
+  let pref = 'auto'; try{ pref = localStorage.getItem('khodam_theme') || 'auto'; }catch(e){}
+  applyTheme(pref);
+  if(window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>{ let p='auto'; try{ p = localStorage.getItem('khodam_theme')||'auto'; }catch(e){} applyTheme(p); });
+  const sel = document.getElementById('themeSelect');
+  if(sel){ sel.value = pref; sel.addEventListener('change', ()=>{ try{ localStorage.setItem('khodam_theme', sel.value); }catch(e){} applyTheme(sel.value); }); }
+})();
 
 function renderAll(){
   renderServantList();
@@ -4861,7 +5061,7 @@ async function init(){
     modeNotice.style.borderColor = '#e3a3a3';
     modeNotice.style.color = '#7a2e2e';
   } else {
-    modeNotice.textContent = 'هذه البيانات مشتركة ويطّلع عليها كل من يفتح هذه الصفحة — مفيدة لو أكتر من مسؤول هيسجّل الحضور.';
+    modeNotice.style.display = 'none';
   }
   const halo = document.querySelector('.halo-mark');
   if(halo){
