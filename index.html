@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<link rel="icon" type="image/png" href="favicon.png?v=2">
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
-<link rel="manifest" href="manifest.json?v=2">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1B2A4A">
 <meta name="apple-mobile-web-app-title" content="سجل الحضور">
 <script>try{var t=localStorage.getItem('khodam_theme');if(t==='dark'||(t!=='light'&&window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
@@ -761,6 +761,7 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
         <option value="upcoming">من النهارده وجاي</option>
         <option value="nospeaker">ناقص متكلم</option>
       </select>
+      <button class="ghost" id="progPostBtn">🖼️ بوست الشهر</button>
       <button class="ghost" id="progPrintBtn">🖨️ طباعة</button>
       <button class="ghost" id="progExportBtn">⬇️ تصدير Excel</button>
       <label class="ghost" id="progImportLabel" for="progImportFile" style="cursor:pointer;display:none;padding:8px 14px;border-radius:10px;">⬆️ استيراد من Excel</label>
@@ -1904,7 +1905,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '5 أكتوبر 2026 (ل) — الشكل الجديد';
+const APP_VERSION = '6 أكتوبر 2026 (م) — بوست الشهر';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -4894,6 +4895,265 @@ document.getElementById('progPrintBtn').addEventListener('click', ()=>{
     <table><thead><tr><th>م</th><th>التاريخ</th><th>العنوان والهدف</th><th>المتكلم</th><th>كنيسته</th></tr></thead><tbody>${body.replace(/colspan="6"/g,'colspan="5"')}</tbody></table>
     <script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script></body></html>`);
   w.document.close();
+});
+
+/* ---------- MONTHLY POST (one month of Friday or Sunday as a shareable image) ----------
+   Drawn straight onto a canvas (no extra library), so the Arabic text and the
+   logo come out exactly as on screen, ready to save, share on WhatsApp or print. */
+const POST_W = 1080;
+const POST_C = { navy:'#1B2A4A', navy2:'#2b3d66', gold:'#C9A227', goldSoft:'#e8d8a3', cream:'#F7F1E3', card:'#fffdf7',
+  line:'#d9cba3', wine:'#7A2E2E', sage:'#3f6152', text2:'#5a5140', faint:'#9a8d68' };
+const POST_DAY_NAMES = { friday:'الجمعة', sunday:'الأحد' };
+let postDay = 'friday', postMonth = 9, postCanvas = null;
+
+function postFont(weight, size, family){ return `${weight} ${size}px ${family === 'amiri' ? "'Amiri', serif" : "'Cairo', sans-serif"}`; }
+function postWrap(ctx, text, maxW, maxLines){
+  const words = String(text || '').replace(/\s+/g,' ').trim().split(' ').filter(Boolean);
+  const lines = []; let cur = '';
+  words.forEach(w=>{
+    const t = cur ? cur + ' ' + w : w;
+    if(ctx.measureText(t).width <= maxW || !cur) cur = t; else { lines.push(cur); cur = w; }
+  });
+  if(cur) lines.push(cur);
+  if(maxLines && lines.length > maxLines){
+    const keep = lines.slice(0, maxLines);
+    let last = keep[maxLines-1];
+    while(last && ctx.measureText(last + '…').width > maxW) last = last.split(' ').slice(0,-1).join(' ');
+    keep[maxLines-1] = (last || keep[maxLines-1]) + '…';
+    return keep;
+  }
+  return lines;
+}
+function postRoundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y); ctx.closePath();
+}
+function postMonthRows(year, day, month){
+  const sec = progSection(PROGRAM, year, day, false) || { title:'', vision:'', items:{} };
+  const rows = programDates(year, day).filter(d=>d.getMonth() === month).map(d=>({ d, it: sec.items[isoDate(d)] || {} }));
+  return { sec, rows };
+}
+function postLoadImage(src){
+  return new Promise(res=>{ if(!src) return res(null); const im = new Image(); im.onload = ()=>res(im); im.onerror = ()=>res(null); im.src = src; });
+}
+async function postFontsReady(){
+  if(!document.fonts || !document.fonts.load) return;
+  const sample = 'برنامج الخدمة 2026';
+  try{
+    await Promise.all([
+      document.fonts.load("700 40px 'Cairo'", sample), document.fonts.load("600 40px 'Cairo'", sample),
+      document.fonts.load("400 40px 'Cairo'", sample), document.fonts.load("700 40px 'Amiri'", sample)
+    ]);
+  }catch(e){}
+}
+
+/* Lays the post out; with ctx === null it only measures and returns the height. */
+function postLayout(ctx, m, data, logo){
+  const W = POST_W, P = 56;
+  const { sec, rows } = data;
+  const calYear = month => month >= 9 ? progYear : progYear + 1;
+  const mctx = ctx || postMeasureCtx();
+  mctx.direction = 'rtl';
+
+  // ----- header -----
+  let y = 0;
+  const headTop = 44, logoD = 128;
+  let hy = headTop + (logo ? logoD + 22 : 0);
+  hy += 40;                 // church line
+  hy += 78;                 // big title
+  hy += 26 + 64;            // month pill
+  let visionLines = [];
+  if(sec.vision){ mctx.font = postFont(600, 27); visionLines = postWrap(mctx, '🎯 ' + sec.vision, W - 2*P - 40, 2); hy += 18 + visionLines.length * 42; }
+  const headH = hy + 40;
+
+  // ----- cards -----
+  const dateW = 176, gap = 22, innerP = 28;
+  const textW = W - 2*P - dateW - innerP*2 - gap;
+  const cards = rows.map(r=>{
+    const it = r.it;
+    mctx.font = postFont(700, 35); const tl = postWrap(mctx, it.title || 'الموضوع لسه هيتحدد', textW, 3);
+    mctx.font = postFont(400, 25); const gl = it.goal ? postWrap(mctx, it.goal, textW, 3) : [];
+    mctx.font = postFont(600, 28); const sp = postWrap(mctx, '🎤  ' + (it.speaker || 'المتكلم لسه هيتحدد'), textW, 2);
+    mctx.font = postFont(400, 25); const ch = it.church ? postWrap(mctx, '⛪  ' + it.church, textW, 2) : [];
+    const contentH = tl.length*52 + (gl.length ? 8 + gl.length*38 : 0) + 14 + sp.length*42 + ch.length*36;
+    return { r, tl, gl, sp, ch, h: Math.max(196, contentH + innerP*2) };
+  });
+  const cardsH = cards.length ? cards.reduce((s,c)=>s + c.h, 0) + (cards.length-1)*22 : 120;
+  const footH = 120;
+  const H = headH + 40 + cardsH + 30 + footH;
+  if(!ctx) return H;
+
+  // background
+  ctx.fillStyle = POST_C.cream; ctx.fillRect(0, 0, W, H);
+  const hg = ctx.createLinearGradient(0, 0, W, headH);
+  hg.addColorStop(0, POST_C.navy2); hg.addColorStop(1, POST_C.navy);
+  ctx.fillStyle = hg; ctx.fillRect(0, 0, W, headH);
+  const glow = ctx.createRadialGradient(W-120, 40, 10, W-120, 40, 420);
+  glow.addColorStop(0, 'rgba(201,162,39,.30)'); glow.addColorStop(1, 'rgba(201,162,39,0)');
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, headH);
+  ctx.fillStyle = POST_C.gold; ctx.fillRect(0, headH - 8, W, 8);
+
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  y = headTop;
+  if(logo){
+    const cx = W/2, cy = y + logoD/2;
+    ctx.beginPath(); ctx.arc(cx, cy, logoD/2 + 7, 0, Math.PI*2); ctx.fillStyle = POST_C.gold; ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, cy, logoD/2, 0, Math.PI*2); ctx.fillStyle = '#fdf8ec'; ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, logoD/2 - 4, 0, Math.PI*2); ctx.clip();
+    ctx.drawImage(logo, cx - logoD/2 + 4, cy - logoD/2 + 4, logoD - 8, logoD - 8); ctx.restore();
+    y += logoD + 22;
+  }
+  ctx.font = postFont(600, 27); ctx.fillStyle = POST_C.goldSoft;
+  ctx.fillText('اجتماع الأنبا بولا والعائلة المقدسة', W/2, y + 28); y += 40;
+  ctx.font = postFont(700, 62, 'amiri'); ctx.fillStyle = '#ffffff';
+  ctx.fillText('برنامج ' + PROG_DAYS[postDay].meeting, W/2, y + 60); y += 78;
+  y += 26;
+  const pill = `شهر ${PROG_MONTHS[m]} ${calYear(m)}`;
+  ctx.font = postFont(700, 36); const pw = ctx.measureText(pill).width + 80;
+  postRoundRect(ctx, W/2 - pw/2, y, pw, 64, 32); ctx.fillStyle = POST_C.gold; ctx.fill();
+  ctx.fillStyle = POST_C.navy; ctx.fillText(pill, W/2, y + 45); y += 64;
+  if(visionLines.length){
+    y += 18; ctx.font = postFont(600, 27); ctx.fillStyle = POST_C.goldSoft;
+    visionLines.forEach(l=>{ ctx.fillText(l, W/2, y + 32); y += 42; });
+  }
+
+  // cards
+  y = headH + 40;
+  if(!cards.length){
+    ctx.font = postFont(600, 30); ctx.fillStyle = POST_C.faint; ctx.fillText('مفيش اجتماعات في الشهر ده', W/2, y + 70);
+  }
+  cards.forEach(c=>{
+    const x = P, w = W - 2*P, h = c.h;
+    ctx.save(); ctx.shadowColor = 'rgba(27,42,74,.10)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 6;
+    postRoundRect(ctx, x, y, w, h, 24); ctx.fillStyle = POST_C.card; ctx.fill(); ctx.restore();
+    postRoundRect(ctx, x, y, w, h, 24); ctx.lineWidth = 2; ctx.strokeStyle = POST_C.line; ctx.stroke();
+
+    // date block on the right
+    const dx = x + w - dateW - 14, dy = y + 14, dh = h - 28;
+    postRoundRect(ctx, dx, dy, dateW, dh, 18);
+    const dg = ctx.createLinearGradient(dx, dy, dx, dy + dh); dg.addColorStop(0, POST_C.navy2); dg.addColorStop(1, POST_C.navy);
+    ctx.fillStyle = dg; ctx.fill();
+    const mid = dy + dh/2;
+    ctx.textAlign = 'center';
+    ctx.font = postFont(600, 26); ctx.fillStyle = POST_C.gold; ctx.fillText(POST_DAY_NAMES[postDay], dx + dateW/2, mid - 38);
+    ctx.font = postFont(700, 66); ctx.fillStyle = '#ffffff'; ctx.fillText(String(c.r.d.getDate()), dx + dateW/2, mid + 30);
+    ctx.font = postFont(500, 24); ctx.fillStyle = POST_C.goldSoft; ctx.fillText(PROG_MONTHS[c.r.d.getMonth()], dx + dateW/2, mid + 66);
+
+    // text, right-aligned next to the date block
+    ctx.textAlign = 'right';
+    const tx = dx - gap;
+    const contentH = c.tl.length*52 + (c.gl.length ? 8 + c.gl.length*38 : 0) + 14 + c.sp.length*42 + c.ch.length*36;
+    let ty = y + Math.max(innerP, (h - contentH)/2);
+    ctx.font = postFont(700, 35); ctx.fillStyle = c.r.it.title ? POST_C.navy : POST_C.faint;
+    c.tl.forEach(l=>{ ctx.fillText(l, tx, ty + 40); ty += 52; });
+    if(c.gl.length){ ty += 8; ctx.font = postFont(400, 25); ctx.fillStyle = POST_C.text2; c.gl.forEach(l=>{ ctx.fillText(l, tx, ty + 28); ty += 38; }); }
+    ty += 14;
+    ctx.font = postFont(600, 28); ctx.fillStyle = c.r.it.speaker ? POST_C.wine : POST_C.faint;
+    c.sp.forEach(l=>{ ctx.fillText(l, tx, ty + 32); ty += 42; });
+    ctx.font = postFont(400, 25); ctx.fillStyle = POST_C.sage;
+    c.ch.forEach(l=>{ ctx.fillText(l, tx, ty + 28); ty += 36; });
+    y += h + 22;
+  });
+
+  // footer
+  const fy = H - footH;
+  ctx.fillStyle = POST_C.navy; ctx.fillRect(0, fy, W, footH);
+  ctx.fillStyle = POST_C.gold; ctx.fillRect(0, fy, W, 6);
+  ctx.textAlign = 'center';
+  ctx.font = postFont(700, 30, 'amiri'); ctx.fillStyle = '#ffffff';
+  ctx.fillText('مستنيينكم كل ' + POST_DAY_NAMES[postDay] + ' 🙏', W/2, fy + 52);
+  ctx.font = postFont(400, 22); ctx.fillStyle = POST_C.goldSoft;
+  ctx.fillText(`سنة ${copticYear(progYear)} للشهداء  •  ${progYear} - ${progYear+1}`, W/2, fy + 92);
+  return H;
+}
+let _postMeasure = null;
+function postMeasureCtx(){ if(!_postMeasure) _postMeasure = document.createElement('canvas').getContext('2d'); return _postMeasure; }
+
+async function renderMonthPost(){
+  await postFontsReady();
+  const logo = await postLoadImage((document.querySelector('.halo-mark') || {}).src || '');
+  const data = postMonthRows(progYear, postDay, postMonth);
+  const H = postLayout(null, postMonth, data, logo);
+  const c = document.createElement('canvas');
+  c.width = POST_W; c.height = H;
+  const ctx = c.getContext('2d'); ctx.direction = 'rtl';
+  postLayout(ctx, postMonth, data, logo);
+  postCanvas = c;
+  const img = document.getElementById('postPreview');
+  if(img) img.src = c.toDataURL('image/png');
+}
+function postFileName(){ return `برنامج-${POST_DAY_NAMES[postDay]}-${PROG_MONTHS[postMonth]}-${postMonth >= 9 ? progYear : progYear+1}.png`; }
+function postBlob(){ return new Promise(res=>postCanvas.toBlob(res, 'image/png')); }
+
+function openMonthPost(){
+  const now = new Date();
+  postDay = progDay;
+  postMonth = serviceYearOf(now) === progYear ? now.getMonth() : 9;
+  const order = [9,10,11,0,1,2,3,4,5,6,7,8];
+  const wrap = document.createElement('div');
+  wrap.id = 'postModal';
+  wrap.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(27,42,74,.6);display:flex;align-items:center;justify-content:center;padding:12px;direction:rtl;';
+  wrap.innerHTML = `
+    <div style="background:var(--card);border-radius:16px;max-width:560px;width:100%;max-height:94vh;display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(0,0,0,.25);">
+      <div style="padding:16px 18px 10px;">
+        <h2 style="margin:0 0 10px;font-family:'Amiri',serif;color:var(--ink);">🖼️ بوست الشهر</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button class="post-day" data-day="friday">الجمعة</button>
+          <button class="post-day" data-day="sunday">الأحد</button>
+          <select id="postMonthSel" style="max-width:200px;">${order.map(mo=>`<option value="${mo}" ${mo===postMonth?'selected':''}>${PROG_MONTHS[mo]} ${mo >= 9 ? progYear : progYear+1}</option>`).join('')}</select>
+        </div>
+      </div>
+      <div style="flex:1;overflow:auto;padding:0 18px;background:var(--cream-dark);">
+        <img id="postPreview" alt="معاينة البوست" style="display:block;width:100%;max-width:420px;margin:12px auto;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.18);">
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;padding:12px 18px 16px;">
+        <button class="primary" id="postShareBtn" style="display:none;">📤 مشاركة</button>
+        <button class="primary" id="postSaveBtn">⬇️ حفظ الصورة</button>
+        <button class="ghost" id="postPrintBtn">🖨️ طباعة</button>
+        <button class="ghost" id="postCloseBtn">إغلاق</button>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap);
+  const paintDays = ()=>wrap.querySelectorAll('.post-day').forEach(b=>{ b.className = (b.dataset.day===postDay ? 'primary' : 'ghost') + ' post-day'; });
+  paintDays();
+  const close = ()=>wrap.remove();
+  wrap.addEventListener('click', e=>{ if(e.target === wrap) close(); });
+  document.getElementById('postCloseBtn').addEventListener('click', close);
+  wrap.querySelectorAll('.post-day').forEach(b=>b.addEventListener('click', ()=>{ postDay = b.dataset.day; paintDays(); renderMonthPost(); }));
+  document.getElementById('postMonthSel').addEventListener('change', e=>{ postMonth = Number(e.target.value); renderMonthPost(); });
+  try{
+    if(navigator.canShare && navigator.canShare({ files: [new File([new Blob(['x'])], 'x.png', { type:'image/png' })] }))
+      document.getElementById('postShareBtn').style.display = 'inline-block';
+  }catch(e){}
+  document.getElementById('postShareBtn').addEventListener('click', async ()=>{
+    if(!postCanvas) return;
+    const file = new File([await postBlob()], postFileName(), { type:'image/png' });
+    try{ await navigator.share({ files:[file] }); }catch(e){ if(e && e.name !== 'AbortError') alert('المشاركة مااشتغلتش. استخدم "حفظ الصورة" وابعتها من الصور.'); }
+  });
+  document.getElementById('postSaveBtn').addEventListener('click', async ()=>{
+    if(!postCanvas) return;
+    const url = URL.createObjectURL(await postBlob());
+    const a = document.createElement('a'); a.href = url; a.download = postFileName();
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+  });
+  document.getElementById('postPrintBtn').addEventListener('click', ()=>{
+    if(!postCanvas) return;
+    const w = window.open('', '_blank');
+    if(!w){ alert('المتصفح منع فتح صفحة الطباعة. اسمح بالنوافذ المنبثقة وجرّب تاني.'); return; }
+    w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${escHtml(postFileName())}</title>
+      <style>@page{margin:10mm;} body{margin:0;} img{display:block;width:100%;max-height:277mm;object-fit:contain;margin:0 auto;}</style></head>
+      <body><img src="${postCanvas.toDataURL('image/png')}"><script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script></body></html>`);
+    w.document.close();
+  });
+  renderMonthPost();
+}
+document.getElementById('progPostBtn').addEventListener('click', ()=>{
+  if(!programLoaded){ alert('البرنامج لسه بيتحمّل، استنى ثانية وجرّب تاني.'); return; }
+  openMonthPost();
 });
 
 let AUDIT_ENTRIES = [], auditLimit = 50;
