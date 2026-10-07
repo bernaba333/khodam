@@ -393,6 +393,19 @@ html[data-theme="dark"] .follow-row .why b{color:#f08a84;}
 .follow-acts a{display:inline-flex;align-items:center;justify-content:center;min-width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--card);text-decoration:none;font-size:1.05rem;}
 .follow-more{display:block;width:100%;margin-top:8px;}
 .follow-all{margin-top:16px;}
+.dc-top{display:flex;align-items:center;gap:14px;margin-bottom:12px;}
+.dc-ring{flex:none;width:84px;height:84px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.dc-ring span{width:66px;height:66px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.15rem;color:var(--ink);}
+.dc-sum{font-size:.85rem;color:var(--text-2);line-height:1.7;}
+.dc-sum b{color:var(--ink);}
+.dc-field{margin:7px 0;}
+.dc-field .lbl{display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:3px;}
+.dc-field .lbl .meta{color:var(--muted);font-size:.74rem;}
+.dc-bar{height:9px;border-radius:6px;background:var(--line);overflow:hidden;}
+.dc-bar i{display:block;height:100%;border-radius:6px;}
+.dc-miss{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;}
+.dc-miss span{font-size:.68rem;padding:1px 7px;border-radius:9px;background:rgba(178,59,59,.1);color:#b23b3b;}
+html[data-theme="dark"] .dc-miss span{color:#f08a84;}
 .follow-all summary{cursor:pointer;font-weight:700;color:var(--ink-soft);padding:8px 0;}
 @media (max-width:480px){ .follow-stat .label{font-size:.68rem;} }
 
@@ -749,6 +762,11 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
   <div class="card" id="dashboardStatsCard">
     <h2>نظرة عامة</h2>
     <div class="dash-stats-grid" id="dashboardStats"></div>
+  </div>
+
+  <div class="card" id="dataCompleteCard">
+    <h2>📋 اكتمال بيانات الأفراد</h2>
+    <div id="dataComplete"></div>
   </div>
 
   <div class="card">
@@ -1953,7 +1971,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '7 أكتوبر 2026 (و) — إصلاح قائمة المستخدمين على الموبايل';
+const APP_VERSION = '7 أكتوبر 2026 (ز) — إحصائية اكتمال بيانات الأفراد';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -2888,6 +2906,9 @@ function renderDashboard(){
     `).join('');
   }
 
+  // ---- how complete everyone's data is ----
+  renderDataCompleteness(visibleServants);
+
   // ---- next meetings from the service program ----
   renderDashboardNext();
 
@@ -2919,6 +2940,67 @@ function renderDashboard(){
       `).join('');
     }
   }
+}
+
+// Which personal-data fields are filled for each person (spouse/children are left out: not everyone has them).
+const DATA_FIELDS = [
+  { key:'photo',            label:'الصورة',        has:s=>!!(s.photo || s.photoVer) },
+  { key:'phone',            label:'التليفون' },
+  { key:'birthDate',        label:'تاريخ الميلاد' },
+  { key:'area',             label:'المنطقة' },
+  { key:'address',          label:'العنوان' },
+  { key:'confessionFather', label:'أب الاعتراف' },
+  { key:'church',           label:'الكنيسة' },
+  { key:'occupation',       label:'الوظيفة' },
+  { key:'workplace',        label:'مكان العمل' },
+];
+function fieldFilled(s, f){ return f.has ? f.has(s) : String(s[f.key]||'').trim() !== ''; }
+let dataCompleteField = '';
+function renderDataCompleteness(people){
+  const el = document.getElementById('dataComplete');
+  if(!el) return;
+  if(!people.length){ el.innerHTML = '<div class="empty-note">مفيش حد في الاجتماعات اللي تقدر تشوفها</div>'; return; }
+  const n = people.length, F = DATA_FIELDS.length;
+  const rows = people.map(s=>{
+    const missing = DATA_FIELDS.filter(f=>!fieldFilled(s, f));
+    return { s, missing, pct: Math.round((F - missing.length) / F * 100) };
+  });
+  const filledCells = rows.reduce((t,r)=>t + F - r.missing.length, 0);
+  const overall = Math.round(filledCells / (n * F) * 100);
+  const complete = rows.filter(r=>!r.missing.length).length;
+  const completePct = Math.round(complete / n * 100);
+  const ring = colorForPercent(overall);
+  const fieldsHtml = DATA_FIELDS.map(f=>{
+    const done = people.filter(s=>fieldFilled(s, f)).length;
+    const pct = Math.round(done / n * 100);
+    return `<div class="dc-field">
+      <div class="lbl"><span>${f.label}</span><span class="meta">${pct}% · ${done} من ${n}${done<n ? ` · ناقص ${n-done}` : ' ✓'}</span></div>
+      <div class="dc-bar"><i style="width:${pct}%;background:${colorForPercent(pct)};"></i></div>
+    </div>`;
+  }).join('');
+  const incomplete = rows.filter(r=>r.missing.length && (!dataCompleteField || r.missing.some(f=>f.key===dataCompleteField)))
+    .sort((a,b)=>a.pct-b.pct || a.s.name.localeCompare(b.s.name,'ar'));
+  const opts = ['<option value="">كل البيانات الناقصة</option>'].concat(DATA_FIELDS.map(f=>`<option value="${f.key}"${f.key===dataCompleteField?' selected':''}>ناقص: ${f.label}</option>`)).join('');
+  el.innerHTML = `
+    <div class="dc-top">
+      <div class="dc-ring" style="background:conic-gradient(${ring} ${overall*3.6}deg, var(--line) 0);"><span>${overall}%</span></div>
+      <div class="dc-sum">
+        البيانات المتسجّلة: <b>${overall}%</b> والناقصة <b>${100-overall}%</b><br>
+        بياناتهم كاملة: <b>${complete}</b> من ${n} (${completePct}%)<br>
+        لسه ناقصهم حاجة: <b>${n-complete}</b> (${100-completePct}%)
+      </div>
+    </div>
+    ${fieldsHtml}
+    ${(n-complete) ? `<details class="follow-all" id="dcDetails"${dataCompleteField?' open':''}>
+      <summary>مين لسه بياناته ناقصة (${n-complete})</summary>
+      <select id="dcFieldFilter" style="margin:6px 0 8px;">${opts}</select>
+      ${incomplete.length ? incomplete.map(r=>`<div class="dash-list-row">
+        <div>${escHtml(r.s.name)}<div class="dc-miss">${r.missing.map(f=>`<span>${f.label}</span>`).join('')}</div></div>
+        <div class="meta" style="color:${colorForPercent(r.pct)};font-weight:700;">${r.pct}%</div>
+      </div>`).join('') : '<div class="empty-note">مفيش حد ناقصه البيان ده 🎉</div>'}
+    </details>` : '<div class="empty-note">كل البيانات كاملة 🎉</div>'}`;
+  const sel = el.querySelector('#dcFieldFilter');
+  if(sel) sel.addEventListener('change', ()=>{ dataCompleteField = sel.value; renderDataCompleteness(people); });
 }
 
 // Per-person follow-up status, based on the latest recorded meetings of their groups.
