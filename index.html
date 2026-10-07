@@ -1450,6 +1450,34 @@ const GROUPS = [
 // people moved out (departed / emigrated / moved elsewhere) stay saved but
 // drop out of every working list
 const activeServants = () => DATA.servants.filter(s=>!s.status);
+// Date a person was added, read from the timestamp inside their id ('s_<ms>_xxxx'); '' if unknown.
+function personAddedDate(s){
+  const m = /^s_(\d{12,})_/.exec(s && s.id || '');
+  if(!m) return '';
+  const d = new Date(parseInt(m[1],10));
+  if(isNaN(d)) return '';
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+// Attendance of one person across groups. Meetings held before the person joined a group
+// are not counted against them: counting starts from the earlier of the day they were added
+// and the first meeting they attended in that group (covers data entered/imported later).
+function personAttendance(s, gids, sessFilter){
+  let attended = 0, possible = 0;
+  const added = personAddedDate(s);
+  gids.forEach(gid=>{
+    if(!s.groups.includes(gid)) return;
+    const all = DATA.sessions[gid] || [];
+    let sessions = sessFilter ? all.filter(sessFilter) : all;
+    const firstPresent = all.filter(sess=>sess.present.includes(s.id)).map(sess=>sess.date).sort()[0] || '';
+    let start = added;
+    if(firstPresent && (!start || firstPresent < start)) start = firstPresent;
+    if(start) sessions = sessions.filter(sess=>sess.date >= start);
+    possible += sessions.length;
+    attended += sessions.filter(sess=>sess.present.includes(s.id)).length;
+  });
+  const pct = possible>0 ? Math.round((attended/possible)*100) : 0;
+  return { attended, possible, pct };
+}
 const MOVE_REASONS = {
   departed:  { label:'انتقل (للسماء)',     title:'المنتقلين',            icon:'🕊️' },
   emigrated: { label:'هاجر',               title:'المهاجرين',            icon:'✈️' },
@@ -1905,7 +1933,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '6 أكتوبر 2026 (م) — بوست الشهر';
+const APP_VERSION = '7 أكتوبر 2026 (ن) — تصحيح نسبة حضور الخدام';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -2910,13 +2938,7 @@ function renderReports(){
   }
   emptyNote.style.display='none';
   const rows = visibleServants.map(s=>{
-    let attended=0, possible=0;
-    s.groups.filter(gid=>visible.includes(gid)).forEach(gid=>{
-      const sessions = DATA.sessions[gid]||[];
-      possible += sessions.length;
-      attended += sessions.filter(sess=>sess.present.includes(s.id)).length;
-    });
-    const pct = possible>0 ? Math.round((attended/possible)*100) : 0;
+    const { attended, possible, pct } = personAttendance(s, visible);
     return {name:s.name, attended, possible, pct};
   }).sort((a,b)=> b.pct-a.pct || b.possible-a.possible);
 
@@ -3769,13 +3791,7 @@ document.getElementById('exportExcelBtn').addEventListener('click', async ()=>{
   XLSX.utils.book_append_sheet(wb, ws1, 'ملخص الاجتماعات');
 
   const servantRows = sortByName(visibleServants).map(s=>{
-    let attended = 0, possible = 0;
-    s.groups.filter(gid=>visible.includes(gid)).forEach(gid=>{
-      const sessions = DATA.sessions[gid] || [];
-      possible += sessions.length;
-      attended += sessions.filter(sess=>sess.present.includes(s.id)).length;
-    });
-    const pct = possible > 0 ? Math.round((attended/possible)*100) : 0;
+    const { attended, possible, pct } = personAttendance(s, visible);
     return {
       'الاسم': s.name,
       'الكود': s.personCode || '',
@@ -4176,14 +4192,7 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
     const rows = [];
     const members = sortByName(activeServants().filter(s=>s.groups.some(g=>selectedGroups.includes(g))));
     members.forEach(s=>{
-      let attended = 0, possible = 0;
-      selectedGroups.forEach(gid=>{
-        if(!s.groups.includes(gid)) return;
-        const sessions = (DATA.sessions[gid]||[]).filter(sess=>inRange(sess.date, from, to));
-        possible += sessions.length;
-        attended += sessions.filter(sess=>sess.present.includes(s.id)).length;
-      });
-      const pct = possible>0 ? Math.round((attended/possible)*100) : 0;
+      const { attended, possible, pct } = personAttendance(s, selectedGroups, sess=>inRange(sess.date, from, to));
       rows.push([s.name, s.phone||'', attended, possible, possible>0?pct+'%':'—']);
     });
     sections.push({ heading: null, columns, rows });
