@@ -678,6 +678,10 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
   .servant-row{flex-wrap:wrap;}
   .servant-row > .row-actions{width:100%;padding-top:8px;}
   .row-actions button{padding:5px 10px;font-size:.76rem;}
+  .user-row{flex-wrap:wrap;align-items:flex-start;}
+  .user-row > div:first-child{flex:1 1 100%;min-width:0;}
+  .user-row > .row-actions{width:100%;padding-top:8px;}
+  .user-row .role-tag,.user-row .chip{white-space:nowrap;display:inline-block;}
 }
 
 </style>
@@ -1949,7 +1953,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '7 أكتوبر 2026 (هـ) — متابعة الحضور الذكية';
+const APP_VERSION = '7 أكتوبر 2026 (و) — إصلاح قائمة المستخدمين على الموبايل';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
