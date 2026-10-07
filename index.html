@@ -371,6 +371,30 @@ table.hist th{color:var(--ink-soft);font-weight:700;}
 .report-table th{color:var(--ink-soft);}
 .bar-bg{background:var(--cream-dark);border-radius:6px;height:8px;width:100%;overflow:hidden;}
 .bar-fill{background:var(--gold);height:100%;}
+.follow-hint{font-size:.78rem;color:var(--muted);margin:-4px 0 12px;}
+.follow-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
+.follow-stat{background:var(--cream);border:2px solid var(--line);border-radius:14px;padding:10px 6px;text-align:center;cursor:pointer;font-family:inherit;color:var(--ink);}
+.follow-stat .num{font-size:1.5rem;font-weight:700;line-height:1.2;}
+.follow-stat .label{font-size:.74rem;color:var(--ink-soft);}
+.follow-stat.active{border-color:var(--gold);box-shadow:var(--shadow);}
+.follow-stat.red .num{color:#b23b3b;} .follow-stat.amber .num{color:#b8860b;} .follow-stat.green .num{color:var(--sage);}
+html[data-theme="dark"] .follow-stat.red .num{color:#f08a84;} html[data-theme="dark"] .follow-stat.amber .num{color:#e8c25a;} html[data-theme="dark"] .follow-stat.green .num{color:#86c4a2;}
+.follow-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line);}
+.follow-row:last-child{border-bottom:none;}
+.follow-row .who{min-width:0;}
+.follow-row .nm{font-weight:700;color:var(--ink);}
+.follow-row .why{font-size:.78rem;color:var(--text-2);margin-top:2px;}
+.follow-row .why b{color:var(--wine);}
+html[data-theme="dark"] .follow-row .why b{color:#f08a84;}
+.follow-dots{display:flex;gap:3px;margin-top:5px;direction:ltr;justify-content:flex-end;}
+.follow-dots span{width:10px;height:10px;border-radius:50%;background:var(--sage);}
+.follow-dots span.off{background:transparent;border:2px solid #b23b3b;width:6px;height:6px;}
+.follow-acts{display:flex;gap:6px;flex:none;}
+.follow-acts a{display:inline-flex;align-items:center;justify-content:center;min-width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--card);text-decoration:none;font-size:1.05rem;}
+.follow-more{display:block;width:100%;margin-top:8px;}
+.follow-all{margin-top:16px;}
+.follow-all summary{cursor:pointer;font-weight:700;color:var(--ink-soft);padding:8px 0;}
+@media (max-width:480px){ .follow-stat .label{font-size:.68rem;} }
 
 .saved-msg{
   display:inline-block;
@@ -936,12 +960,18 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
     <h2>نسبة الحضور لكل اجتماع</h2>
     <div class="report-grid" id="reportHalos"></div>
   </div>
-  <div class="card">
-    <h2>نسبة حضور كل خادم (على مستوى كل اجتماعاته)</h2>
-    <table class="report-table" id="servantReportTable">
-      <thead><tr><th>الاسم</th><th>حضر</th><th>من إجمالي</th><th>النسبة</th></tr></thead>
-      <tbody id="servantReportBody"></tbody>
-    </table>
+  <div class="card" id="followCard">
+    <h2>متابعة الحضور</h2>
+    <div class="follow-hint">بيرتّب الناس حسب مين محتاج سؤال دلوقتي. النقط بتوري آخر ٦ اجتماعات (الأحدث على اليمين): ● حضر ○ غاب. دوس على أي مربع علشان تشوف أسماءه.</div>
+    <div class="follow-stats" id="followStats"></div>
+    <div id="followList"></div>
+    <details class="follow-all">
+      <summary>الجدول الكامل لنسبة حضور كل فرد</summary>
+      <table class="report-table" id="servantReportTable">
+        <thead><tr><th>الاسم</th><th>حضر</th><th>من إجمالي</th><th>النسبة</th></tr></thead>
+        <tbody id="servantReportBody"></tbody>
+      </table>
+    </details>
     <div class="empty-note" id="servantReportEmpty" style="display:none;">أضف خدامًا وسجّل اجتماعات ليظهر التقرير</div>
   </div>
 
@@ -1450,28 +1480,14 @@ const GROUPS = [
 // people moved out (departed / emigrated / moved elsewhere) stay saved but
 // drop out of every working list
 const activeServants = () => DATA.servants.filter(s=>!s.status);
-// Date a person was added, read from the timestamp inside their id ('s_<ms>_xxxx'); '' if unknown.
-function personAddedDate(s){
-  const m = /^s_(\d{12,})_/.exec(s && s.id || '');
-  if(!m) return '';
-  const d = new Date(parseInt(m[1],10));
-  if(isNaN(d)) return '';
-  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-}
-// Attendance of one person across groups. Meetings held before the person joined a group
-// are not counted against them: counting starts from the earlier of the day they were added
-// and the first meeting they attended in that group (covers data entered/imported later).
+// Attendance of one person across groups: meetings attended out of every meeting recorded
+// in the groups they belong to (optionally limited by sessFilter, e.g. a date range).
 function personAttendance(s, gids, sessFilter){
   let attended = 0, possible = 0;
-  const added = personAddedDate(s);
   gids.forEach(gid=>{
     if(!s.groups.includes(gid)) return;
-    const all = DATA.sessions[gid] || [];
-    let sessions = sessFilter ? all.filter(sessFilter) : all;
-    const firstPresent = all.filter(sess=>sess.present.includes(s.id)).map(sess=>sess.date).sort()[0] || '';
-    let start = added;
-    if(firstPresent && (!start || firstPresent < start)) start = firstPresent;
-    if(start) sessions = sessions.filter(sess=>sess.date >= start);
+    let sessions = DATA.sessions[gid] || [];
+    if(sessFilter) sessions = sessions.filter(sessFilter);
     possible += sessions.length;
     attended += sessions.filter(sess=>sess.present.includes(s.id)).length;
   });
@@ -1933,7 +1949,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '7 أكتوبر 2026 (ن) — تصحيح نسبة حضور الخدام';
+const APP_VERSION = '7 أكتوبر 2026 (هـ) — متابعة الحضور الذكية';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -2901,6 +2917,97 @@ function renderDashboard(){
   }
 }
 
+// Per-person follow-up status, based on the latest recorded meetings of their groups.
+// red   = missed the last 2+ meetings in a row (needs a call/visit now)
+// amber = missed the last meeting, or attended less than 3 of the last 4
+// green = regular
+let followFilter = 'red';
+let followShowAll = false;
+function personFollowInfo(s, gids){
+  let worst = null;
+  gids.forEach(gid=>{
+    if(!s.groups.includes(gid)) return;
+    const sess = (DATA.sessions[gid]||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
+    if(sess.length === 0) return;
+    const marks = sess.map(x=>x.present.includes(s.id));
+    let streak = 0;
+    for(let i=marks.length-1; i>=0 && !marks[i]; i--) streak++;
+    const last4 = marks.slice(-4);
+    const recent = last4.filter(Boolean).length;
+    const lastIdx = marks.lastIndexOf(true);
+    const lastSeen = lastIdx > -1 ? sess[lastIdx].date : '';
+    const firstMissed = streak > 0 ? sess[marks.length-streak].date : '';
+    let level = 'green';
+    if(streak >= 2) level = 'red';
+    else if(streak === 1 || (last4.length >= 4 && recent < 3)) level = 'amber';
+    const info = { gid, streak, recent, recentOf: last4.length, lastSeen, firstMissed, level, dots: marks.slice(-6) };
+    const rank = l => ({red:2, amber:1, green:0})[l];
+    if(!worst || rank(info.level) > rank(worst.level) || (info.level === worst.level && info.streak > worst.streak)) worst = info;
+  });
+  return worst;
+}
+function followWaLink(s){
+  const num = waNumber(s.phone); if(!num) return '';
+  const first = (s.name||'').trim().split(/\s+/)[0];
+  const text = `إزيك يا ${first} 🙏\nوحشتنا في الاجتماع، طمّنا عليك.\nاجتماع الأنبا بولا والعائلة المقدسة`;
+  return `https://wa.me/${num}?text=${encodeURIComponent(text)}`;
+}
+function renderFollowUp(people, visible){
+  const statsEl = document.getElementById('followStats');
+  const listEl = document.getElementById('followList');
+  if(!statsEl || !listEl) return;
+  const items = people.map(s=>({ s, f: personFollowInfo(s, visible) })).filter(x=>x.f);
+  const by = { red: [], amber: [], green: [] };
+  items.forEach(x=>by[x.f.level].push(x));
+  by.red.sort((a,b)=> b.f.streak - a.f.streak || a.s.name.localeCompare(b.s.name,'ar'));
+  by.amber.sort((a,b)=> (a.f.recent/a.f.recentOf) - (b.f.recent/b.f.recentOf) || a.s.name.localeCompare(b.s.name,'ar'));
+  by.green.sort((a,b)=> a.s.name.localeCompare(b.s.name,'ar'));
+  const labels = { red:'غايبين ورا بعض', amber:'تحت الملاحظة', green:'منتظمين' };
+  statsEl.innerHTML = ['red','amber','green'].map(k=>`
+    <button type="button" class="follow-stat ${k} ${followFilter===k?'active':''}" data-k="${k}">
+      <div class="num">${by[k].length}</div><div class="label">${labels[k]}</div>
+    </button>`).join('');
+  statsEl.querySelectorAll('.follow-stat').forEach(b=>b.addEventListener('click', ()=>{
+    followFilter = b.dataset.k; followShowAll = false; renderFollowUp(people, visible);
+  }));
+  const list = by[followFilter];
+  if(list.length === 0){
+    listEl.innerHTML = `<div class="empty-note">${followFilter==='red' ? 'الحمد لله، مفيش حد غايب اجتماعين ورا بعض 🙏' : 'مفيش حد هنا'}</div>`;
+    return;
+  }
+  const LIMIT = 15;
+  const shown = followShowAll ? list : list.slice(0, LIMIT);
+  const showPhones = can('phones');
+  listEl.innerHTML = shown.map(({s,f})=>{
+    let why;
+    if(f.level === 'red') why = `<b>غايب ${f.streak===2 ? 'آخر اجتماعين' : 'آخر '+f.streak+' اجتماعات'}</b> (من ${escHtml(prettyDate(f.firstMissed,false))})`;
+    else if(f.streak === 1) why = `<b>غاب آخر اجتماع</b>`;
+    else if(f.level === 'amber') why = `<b>حضر ${f.recent} من آخر ${f.recentOf}</b>`;
+    else why = `حضر ${f.recent} من آخر ${f.recentOf}`;
+    why += f.lastSeen ? ` · آخر حضور ${escHtml(prettyDate(f.lastSeen,false))}` : ' · ما حضرش ولا مرة' + (s.groups.filter(g=>visible.includes(g)).length>1 ? ' في الاجتماع ده' : '');
+    if(f.level !== 'green'){
+      const visitedSince = s.lastVisitDate && f.firstMissed && s.lastVisitDate >= f.firstMissed;
+      why += visitedSince ? ` · 🏠 اتافتقد ${escHtml(prettyDate(s.lastVisitDate,false))}` : (f.streak > 0 ? ' · ⚠️ لسه ما اتسألش عليه' : '');
+    }
+    const groupsCount = s.groups.filter(g=>visible.includes(g)).length;
+    const wa = showPhones ? followWaLink(s) : '';
+    const tel = showPhones && s.phone ? String(s.phone).replace(/[^\d+]/g,'') : '';
+    return `<div class="follow-row">
+      <div class="who">
+        <div class="nm">${escHtml(s.name)}${groupsCount>1 ? ` <span class="chip g-${f.gid}">${escHtml(groupName(f.gid))}</span>` : ''}</div>
+        <div class="why">${why}</div>
+        <div class="follow-dots" title="آخر الاجتماعات (الأحدث على اليمين)">${f.dots.map(d=>`<span class="${d?'':'off'}"></span>`).join('')}</div>
+      </div>
+      <div class="follow-acts">
+        ${tel ? `<a href="tel:${tel}" title="اتصال">📞</a>` : ''}
+        ${wa ? `<a href="${wa}" target="_blank" rel="noopener" title="رسالة واتساب">💬</a>` : ''}
+      </div>
+    </div>`;
+  }).join('') + (list.length > LIMIT && !followShowAll ? `<button type="button" class="ghost follow-more" id="followMoreBtn">اعرض الباقي (${list.length - LIMIT})</button>` : '');
+  const more = document.getElementById('followMoreBtn');
+  if(more) more.addEventListener('click', ()=>{ followShowAll = true; renderFollowUp(people, visible); });
+}
+
 function renderReports(){
   const halos = document.getElementById('reportHalos');
   const visible = visibleGroupIds();
@@ -2934,9 +3041,11 @@ function renderReports(){
   const visibleServants = activeServants().filter(s=>s.groups.some(g=>visible.includes(g)));
   if(visibleServants.length===0){
     body.innerHTML=''; emptyNote.style.display='block';
+    document.getElementById('followStats').innerHTML=''; document.getElementById('followList').innerHTML='';
     return;
   }
   emptyNote.style.display='none';
+  renderFollowUp(visibleServants, visible);
   const rows = visibleServants.map(s=>{
     const { attended, possible, pct } = personAttendance(s, visible);
     return {name:s.name, attended, possible, pct};
