@@ -407,6 +407,35 @@ html[data-theme="dark"] .follow-row .why b{color:#f08a84;}
 .dc-miss span{font-size:.68rem;padding:1px 7px;border-radius:9px;background:rgba(178,59,59,.1);color:#b23b3b;}
 html[data-theme="dark"] .dc-miss span{color:#f08a84;}
 .follow-all summary{cursor:pointer;font-weight:700;color:var(--ink-soft);padding:8px 0;}
+.dc-edit{flex:none;font-size:.78rem;padding:5px 10px;}
+.dc-banner{background:var(--notice-bg);color:var(--notice-ink);border:1px solid var(--gold);border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:.84rem;line-height:1.7;}
+.dc-banner .dc-miss span{font-size:.74rem;}
+.dc-need{outline:2px solid var(--gold) !important;outline-offset:1px;background:var(--hi) !important;}
+.dc-need-lbl::after{content:' ← ناقص';color:#b23b3b;font-size:.72rem;font-weight:700;}
+html[data-theme="dark"] .dc-need-lbl::after{color:#f08a84;}
+/* audit log */
+.au-periods{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+.au-periods button{font-size:.78rem;padding:5px 11px;}
+.au-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+.au-filters select{max-width:170px;}
+.au-sum{border:1px solid var(--line-soft);border-radius:12px;padding:10px 12px;margin-bottom:12px;background:var(--cream-dark);}
+.au-sum-head{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:.85rem;color:var(--text-2);margin-bottom:8px;}
+.au-sum-head b{color:var(--ink);}
+.au-table-wrap{overflow-x:auto;}
+.au-table{width:100%;border-collapse:collapse;font-size:.8rem;}
+.au-table th,.au-table td{padding:6px 8px;border-bottom:1px solid var(--line-soft);text-align:center;white-space:nowrap;}
+.au-table th{color:var(--muted);font-weight:700;font-size:.74rem;}
+.au-table td:first-child,.au-table th:first-child{text-align:start;}
+.au-table td .au-user{background:none;border:none;padding:0;color:var(--ink);font-weight:700;text-decoration:underline dotted;cursor:pointer;font-size:.82rem;}
+.au-table .zero{color:var(--faint);}
+.au-day{position:sticky;top:0;z-index:1;background:var(--card);font-weight:800;color:var(--ink);font-size:.86rem;padding:8px 2px 6px;margin-top:10px;border-bottom:2px solid var(--gold-soft);display:flex;justify-content:space-between;}
+.au-day span{color:var(--muted);font-weight:600;font-size:.76rem;}
+.au-row{display:flex;gap:10px;padding:8px 4px;border-bottom:1px solid var(--line-soft);}
+.au-time{flex:none;width:58px;font-size:.74rem;color:var(--muted);padding-top:2px;}
+.au-body{flex:1;min-width:0;font-size:.84rem;}
+.au-who{font-weight:700;color:var(--ink);}
+.au-body ul{margin:4px 0 0;padding-inline-start:18px;font-size:.8rem;}
+.au-body details summary{cursor:pointer;font-size:.76rem;color:var(--ink-soft);margin-top:3px;}
 @media (max-width:480px){ .follow-stat .label{font-size:.68rem;} }
 
 .saved-msg{
@@ -1150,13 +1179,31 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
 
   <div class="card" id="auditCard" style="display:none;">
     <h2>📝 سجل التعديلات</h2>
-    <p style="font-size:.82rem;color:var(--ink-soft);margin-top:0;">كل تعديل بيتسجّل: مين عمله، وإمتى، وإيه اللي اتغيّر بالظبط (القيمة القديمة والجديدة). أي حاجة مش مكتوبة في التعديل يبقى ما اتغيّرتش.</p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-      <select id="auditUser" style="max-width:180px;"><option value="">كل المستخدمين</option></select>
-      <select id="auditArea" style="max-width:180px;"><option value="">كل الأقسام</option></select>
-      <input type="text" id="auditSearch" placeholder="بحث باسم أو كلمة" style="flex:1;min-width:140px;">
-      <button class="ghost" id="auditRefreshBtn">🔄 تحديث</button>
+    <p style="font-size:.82rem;color:var(--ink-soft);margin-top:0;">كل تعديل بيتسجّل: مين عمله، وإمتى، وإيه اللي اتغيّر بالظبط (القيمة القديمة والجديدة). اختار الفترة والمستخدم والقسم، وهتلاقي الملخص فوق والتفاصيل متقسمة بالأيام تحت.</p>
+    <div class="au-periods" id="auditPeriods">
+      <button type="button" class="ghost" data-p="today">النهارده</button>
+      <button type="button" class="ghost" data-p="7">آخر 7 أيام</button>
+      <button type="button" class="ghost" data-p="month">الشهر ده</button>
+      <button type="button" class="ghost" data-p="lastmonth">الشهر اللي فات</button>
+      <button type="button" class="ghost" data-p="all">الكل</button>
+      <button type="button" class="ghost" data-p="custom">📅 فترة محددة</button>
     </div>
+    <div class="au-filters" id="auditCustomRange" style="display:none;">
+      <label style="font-size:.8rem;">من <input type="date" id="auditFrom" style="width:auto;"></label>
+      <label style="font-size:.8rem;">إلى <input type="date" id="auditTo" style="width:auto;"></label>
+    </div>
+    <div class="au-filters">
+      <select id="auditUser"><option value="">كل المستخدمين</option></select>
+      <select id="auditArea"><option value="">كل الأقسام</option></select>
+      <select id="auditAction"><option value="">كل العمليات</option></select>
+      <input type="text" id="auditSearch" placeholder="بحث باسم أو كلمة" style="flex:1;min-width:140px;">
+    </div>
+    <div class="au-filters">
+      <button class="ghost" id="auditRefreshBtn">🔄 تحديث</button>
+      <button class="ghost" id="auditExportBtn">⬇️ تصدير Excel</button>
+      <button class="ghost" id="auditClearBtn" style="display:none;">✖ مسح الفلاتر</button>
+    </div>
+    <div id="auditSummary"></div>
     <div id="auditList"></div>
   </div>
 
@@ -1991,7 +2038,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '8 أكتوبر 2026 (ب) — إطار فضي أوضح حول الشعار';
+const APP_VERSION = '9 أكتوبر 2026 (أ) — تكملة البيانات الناقصة من الإحصائية + سجل تعديلات منظم';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -2206,6 +2253,7 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
     document.querySelectorAll('section.panel').forEach(p=>p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab !== 'servants') dcReturnPending = false;
     if(btn.dataset.tab === 'reports') renderReports();
     if(btn.dataset.tab === 'dashboard') renderDashboard();
     if(btn.dataset.tab === 'afeqad') renderAfeqadList();
@@ -2681,6 +2729,7 @@ function renderServantList(){
           await saveData();
           refreshAreaChurchDatalists();
           renderServantList(); renderMeetingPicker();
+          if(dcReturnPending) returnToMissingList();
         });
       } else {
         editPanel.style.display = 'none';
@@ -3011,16 +3060,72 @@ function renderDataCompleteness(people){
       </div>
     </div>
     ${fieldsHtml}
-    ${(n-complete) ? `<details class="follow-all" id="dcDetails"${dataCompleteField?' open':''}>
+    ${(n-complete) ? `<details class="follow-all" id="dcDetails"${dataCompleteField||dataCompleteOpen?' open':''}>
       <summary>مين لسه بياناته ناقصة (${n-complete})</summary>
       <select id="dcFieldFilter" style="margin:6px 0 8px;">${opts}</select>
       ${incomplete.length ? incomplete.map(r=>`<div class="dash-list-row">
-        <div>${escHtml(r.s.name)}<div class="dc-miss">${r.missing.map(f=>`<span>${f.label}</span>`).join('')}</div></div>
-        <div class="meta" style="color:${colorForPercent(r.pct)};font-weight:700;">${r.pct}%</div>
+        <div style="flex:1;min-width:0;">${escHtml(r.s.name)}<div class="dc-miss">${r.missing.map(f=>`<span>${f.label}</span>`).join('')}</div></div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="meta" style="color:${colorForPercent(r.pct)};font-weight:700;">${r.pct}%</div>
+          ${can('editServant') ? `<button type="button" class="ghost dc-edit" data-id="${r.s.id}">✏️ كمّل</button>` : ''}
+        </div>
       </div>`).join('') : '<div class="empty-note">مفيش حد ناقصه البيان ده 🎉</div>'}
     </details>` : '<div class="empty-note">كل البيانات كاملة 🎉</div>'}`;
   const sel = el.querySelector('#dcFieldFilter');
   if(sel) sel.addEventListener('change', ()=>{ dataCompleteField = sel.value; renderDataCompleteness(people); });
+  const det = el.querySelector('#dcDetails');
+  if(det) det.addEventListener('toggle', ()=>{ dataCompleteOpen = det.open; });
+  el.querySelectorAll('.dc-edit').forEach(b=>b.addEventListener('click', ()=>openMissingDataEdit(b.dataset.id)));
+}
+
+// Jump from the completeness list straight into that person's edit form, with the missing fields marked.
+// After saving (or pressing back) you land again on the same list, so you can go through people one by one.
+const DC_INPUT = { phone:'.edit-phone', birthDate:'.edit-birth', area:'.edit-area', address:'.edit-address', confessionFather:'.edit-confession',
+  church:'.edit-church', occupation:'.edit-job', workplace:'.edit-workplace', photo:'.edit-photo-file' };
+let dataCompleteOpen = false, dcReturnPending = false;
+function openMissingDataEdit(id){
+  const s = DATA.servants.find(x=>x.id===id);
+  if(!s) return;
+  const missing = DATA_FIELDS.filter(f=>!fieldFilled(s, f));
+  document.querySelector('nav.tabs button[data-tab="servants"]').click();
+  const search = document.getElementById('servantSearch');
+  search.value = s.name; servantSearchTerm = s.name; servantListLimit = LIST_PAGE;
+  renderServantList();
+  const row = document.querySelector(`#servantList .servant-row[data-id="${id}"]`);
+  const btn = row && row.querySelector('.edit-servant');
+  if(!btn) return;
+  btn.click();
+  const panel = document.querySelector(`#servantList .edit-panel[data-edit-for="${id}"]`);
+  dcReturnPending = true;
+  const banner = document.createElement('div');
+  banner.className = 'dc-banner';
+  banner.innerHTML = `<b>بيانات ناقصة لـ ${escHtml(s.name)}:</b><div class="dc-miss">${missing.map(f=>`<span>${f.label}</span>`).join('')}</div>
+    <div style="margin-top:6px;">املا اللي تعرفه واضغط حفظ، وهترجع تاني لقائمة الناقصين عشان تكمّل اللي بعده.</div>
+    <button type="button" class="ghost dc-back" style="margin-top:8px;font-size:.78rem;">↩️ رجوع للقائمة من غير حفظ</button>`;
+  panel.prepend(banner);
+  banner.querySelector('.dc-back').addEventListener('click', returnToMissingList);
+  let first = null;
+  missing.forEach(f=>{
+    const inp = panel.querySelector(DC_INPUT[f.key]);
+    if(!inp) return;
+    const target = f.key === 'photo' ? inp.closest('label') : inp;
+    target.classList.add('dc-need');
+    const lbl = target.previousElementSibling && target.previousElementSibling.tagName === 'LABEL' ? target.previousElementSibling
+      : (f.key === 'photo' ? panel.querySelector('label') : null);
+    if(lbl) lbl.classList.add('dc-need-lbl');
+    if(!first && f.key !== 'photo') first = inp;
+  });
+  panel.scrollIntoView({ behavior:'smooth', block:'start' });
+  if(first) setTimeout(()=>{ try{ first.focus({ preventScroll:true }); }catch(e){} }, 350);
+}
+function returnToMissingList(){
+  dcReturnPending = false;
+  const search = document.getElementById('servantSearch');
+  search.value = ''; servantSearchTerm = '';
+  dataCompleteOpen = true;
+  document.querySelector('nav.tabs button[data-tab="dashboard"]').click();
+  const card = document.getElementById('dataCompleteCard');
+  if(card) setTimeout(()=>card.scrollIntoView({ behavior:'smooth', block:'start' }), 60);
 }
 
 // Per-person follow-up status, based on the latest recorded meetings of their groups.
@@ -5380,51 +5485,178 @@ document.getElementById('progPostBtn').addEventListener('click', ()=>{
   openMonthPost();
 });
 
-let AUDIT_ENTRIES = [], auditLimit = 50;
+let AUDIT_ENTRIES = [], auditLimit = 100, auditPeriod = '7';
 async function loadAuditLog(){
   const listEl = document.getElementById('auditList');
   listEl.innerHTML = '<div class="empty-note">جاري التحميل…</div>';
+  document.getElementById('auditSummary').innerHTML = '';
   try{
     const res = await storageGetWithRetry(AUDIT_KEY, true);
     AUDIT_ENTRIES = res.value ? (JSON.parse(res.value).entries || []) : [];
   }catch(e){ AUDIT_ENTRIES = []; }
   AUDIT_ENTRIES = AUDIT_ENTRIES.concat(pendingAudit);
-  const users = Array.from(new Set(AUDIT_ENTRIES.map(e=>e.by))).sort((a,b)=>a.localeCompare(b,'ar'));
-  const areas = Array.from(new Set(AUDIT_ENTRIES.map(e=>e.area)));
-  const uSel = document.getElementById('auditUser'), aSel = document.getElementById('auditArea');
-  const uv = uSel.value, av = aSel.value;
-  uSel.innerHTML = '<option value="">كل المستخدمين</option>' + users.map(u=>`<option ${u===uv?'selected':''}>${escHtml(u)}</option>`).join('');
-  aSel.innerHTML = '<option value="">كل الأقسام</option>' + areas.map(a=>`<option ${a===av?'selected':''}>${escHtml(a)}</option>`).join('');
-  auditLimit = 50;
+  const fill = (id, all, vals)=>{
+    const el = document.getElementById(id), v = el.value;
+    el.innerHTML = `<option value="">${all}</option>` + vals.map(x=>`<option ${x===v?'selected':''}>${escHtml(x)}</option>`).join('');
+  };
+  const uniq = k=>Array.from(new Set(AUDIT_ENTRIES.map(e=>e[k]).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'ar'));
+  fill('auditUser', 'كل المستخدمين', uniq('by'));
+  fill('auditArea', 'كل الأقسام', uniq('area'));
+  fill('auditAction', 'كل العمليات', uniq('action'));
+  auditLimit = 100;
   renderAuditList();
 }
-function renderAuditList(){
-  const listEl = document.getElementById('auditList');
+function auditDayKey(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function auditRange(){
+  const now = new Date(), start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if(auditPeriod === 'today') return [start, null];
+  if(auditPeriod === '7'){ start.setDate(start.getDate() - 6); return [start, null]; }
+  if(auditPeriod === 'month') return [new Date(now.getFullYear(), now.getMonth(), 1), null];
+  if(auditPeriod === 'lastmonth') return [new Date(now.getFullYear(), now.getMonth()-1, 1), new Date(now.getFullYear(), now.getMonth(), 1)];
+  if(auditPeriod === 'custom'){
+    const f = document.getElementById('auditFrom').value, t = document.getElementById('auditTo').value;
+    const to = t ? new Date(t + 'T00:00:00') : null; if(to) to.setDate(to.getDate() + 1);
+    return [f ? new Date(f + 'T00:00:00') : null, to];
+  }
+  return [null, null];
+}
+function auditFiltered(){
   const u = document.getElementById('auditUser').value, a = document.getElementById('auditArea').value;
-  const q = document.getElementById('auditSearch').value.trim();
-  let rows = AUDIT_ENTRIES.slice().reverse();
+  const ac = document.getElementById('auditAction').value, q = document.getElementById('auditSearch').value.trim();
+  const [from, to] = auditRange();
+  let rows = AUDIT_ENTRIES.slice().reverse().sort((x,y)=>String(y.t).localeCompare(String(x.t)));
+  if(from) rows = rows.filter(e=>new Date(e.t) >= from);
+  if(to) rows = rows.filter(e=>new Date(e.t) < to);
   if(u) rows = rows.filter(e=>e.by === u);
   if(a) rows = rows.filter(e=>e.area === a);
+  if(ac) rows = rows.filter(e=>e.action === ac);
   if(q) rows = rows.filter(e=>JSON.stringify(e).includes(q));
-  if(rows.length === 0){ listEl.innerHTML = '<div class="empty-note">مفيش تعديلات متسجّلة' + (u||a||q ? ' مطابقة للاختيار ده' : ' لسه') + '</div>'; return; }
-  const total = rows.length;
-  listEl.innerHTML = rows.slice(0, auditLimit).map(e=>{
-    const d = new Date(e.t);
-    const when = d.toLocaleDateString('ar-EG-u-nu-latn', { weekday:'long', day:'numeric', month:'long', year:'numeric' }) + ' — ' + d.toLocaleTimeString('ar-EG-u-nu-latn', { hour:'numeric', minute:'2-digit' });
-    return `<div style="padding:10px 12px;margin:6px 0;border:1px solid var(--line-soft);border-radius:12px;background:var(--card);">
-      <div style="font-size:.78rem;color:var(--muted);">👤 <b style="color:var(--ink);">${escHtml(e.by)}</b> — ${when}</div>
-      <div style="margin-top:3px;"><span class="chip" style="font-size:.72rem;">${escHtml(e.area)}</span> <b>${escHtml(e.action)}</b>: ${escHtml(e.target)}</div>
-      ${(e.changes||[]).length ? `<ul style="margin:6px 0 0;padding-inline-start:18px;font-size:.82rem;">${e.changes.map(c=>`<li><b>${escHtml(c.f)}</b>: ${c.from !== undefined ? `<span style="color:#7A2E2E;text-decoration:line-through;">${escHtml(c.from)}</span> ← ` : ''}<span style="color:#2f6b3a;">${escHtml(c.to)}</span></li>`).join('')}</ul>` : ''}
-      ${e.rest ? '<div style="font-size:.72rem;color:var(--faint);margin-top:4px;">باقي البيانات ما اتغيّرتش</div>' : ''}
-    </div>`;
-  }).join('') + (total > auditLimit ? `<div style="text-align:center;margin:12px 0;"><button class="ghost" id="auditMoreBtn">عرض ${Math.min(50,total-auditLimit)} كمان (باقي ${total-auditLimit})</button></div>` : '');
-  const more = document.getElementById('auditMoreBtn');
-  if(more) more.addEventListener('click', ()=>{ auditLimit += 50; renderAuditList(); });
+  return { rows, any: !!(u||a||ac||q) };
 }
-document.getElementById('auditUser').addEventListener('change', ()=>{ auditLimit = 50; renderAuditList(); });
-document.getElementById('auditArea').addEventListener('change', ()=>{ auditLimit = 50; renderAuditList(); });
+function auditPeriodLabel(){
+  const [from, to] = auditRange();
+  const fmt = d=>d.toLocaleDateString('ar-EG-u-nu-latn', { day:'numeric', month:'long', year:'numeric' });
+  if(auditPeriod === 'all' || (!from && !to)) return 'كل الفترات';
+  const last = to ? new Date(to.getTime() - 86400000) : new Date();
+  return from ? (auditDayKey(from) === auditDayKey(last) ? fmt(from) : `من ${fmt(from)} إلى ${fmt(last)}`) : `لحد ${fmt(last)}`;
+}
+function renderAuditSummary(rows){
+  const el = document.getElementById('auditSummary');
+  if(!rows.length){ el.innerHTML = ''; return; }
+  const areas = Array.from(new Set(rows.map(e=>e.area))).sort((a,b)=>a.localeCompare(b,'ar'));
+  const byUser = new Map();
+  rows.forEach(e=>{
+    if(!byUser.has(e.by)) byUser.set(e.by, { total:0, last:e.t, areas:{} });
+    const r = byUser.get(e.by); r.total++; r.areas[e.area] = (r.areas[e.area]||0) + 1;
+    if(e.t > r.last) r.last = e.t;
+  });
+  const users = Array.from(byUser.entries()).sort((a,b)=>b[1].total - a[1].total);
+  const days = new Set(rows.map(e=>auditDayKey(new Date(e.t)))).size;
+  const lastStr = t=>{ const d = new Date(t); return d.toLocaleDateString('ar-EG-u-nu-latn', { day:'numeric', month:'short' }) + ' ' + d.toLocaleTimeString('ar-EG-u-nu-latn', { hour:'numeric', minute:'2-digit' }); };
+  el.innerHTML = `<div class="au-sum">
+    <div class="au-sum-head">
+      <span>📅 <b>${auditPeriodLabel()}</b></span>
+      <span>عدد العمليات: <b>${rows.length}</b></span>
+      <span>المستخدمين: <b>${users.length}</b></span>
+      <span>أيام فيها شغل: <b>${days}</b></span>
+    </div>
+    <div class="au-table-wrap"><table class="au-table">
+      <thead><tr><th>المستخدم</th><th>الإجمالي</th>${areas.map(a=>`<th>${escHtml(a)}</th>`).join('')}<th>آخر نشاط</th></tr></thead>
+      <tbody>${users.map(([name, r])=>`<tr>
+        <td><button type="button" class="au-user" data-u="${escHtml(name)}">${escHtml(name)}</button></td>
+        <td><b>${r.total}</b></td>
+        ${areas.map(a=>`<td class="${r.areas[a]?'':'zero'}">${r.areas[a]||'—'}</td>`).join('')}
+        <td style="font-size:.74rem;color:var(--muted);">${lastStr(r.last)}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+    <div style="font-size:.72rem;color:var(--faint);margin-top:6px;">اضغط على اسم المستخدم عشان تشوف شغله بس.</div>
+  </div>`;
+  el.querySelectorAll('.au-user').forEach(b=>b.addEventListener('click', ()=>{
+    const sel = document.getElementById('auditUser');
+    sel.value = sel.value === b.dataset.u ? '' : b.dataset.u;
+    auditLimit = 100; renderAuditList();
+    document.getElementById('auditList').scrollIntoView({ behavior:'smooth', block:'start' });
+  }));
+}
+function auditChangesHtml(e){
+  const ch = e.changes || [];
+  if(!ch.length) return '';
+  const li = ch.map(c=>`<li><b>${escHtml(c.f)}</b>: ${c.from !== undefined ? `<span style="color:#7A2E2E;text-decoration:line-through;">${escHtml(c.from)}</span> ← ` : ''}<span style="color:#2f6b3a;">${escHtml(c.to)}</span></li>`).join('');
+  return ch.length > 3 ? `<details><summary>التفاصيل (${ch.length})</summary><ul>${li}</ul></details>` : `<ul>${li}</ul>`;
+}
+function renderAuditList(){
+  document.querySelectorAll('#auditPeriods button').forEach(b=>{ b.className = b.dataset.p === auditPeriod ? 'primary' : 'ghost'; });
+  document.getElementById('auditCustomRange').style.display = auditPeriod === 'custom' ? 'flex' : 'none';
+  const listEl = document.getElementById('auditList');
+  const { rows, any } = auditFiltered();
+  document.getElementById('auditClearBtn').style.display = any ? 'inline-block' : 'none';
+  renderAuditSummary(rows);
+  if(rows.length === 0){ listEl.innerHTML = '<div class="empty-note">مفيش تعديلات متسجّلة' + (any || auditPeriod !== 'all' ? ' في الفترة أو الاختيار ده' : ' لسه') + '</div>'; return; }
+  const total = rows.length, shown = rows.slice(0, auditLimit);
+  const dayCount = {};
+  rows.forEach(e=>{ const k = auditDayKey(new Date(e.t)); dayCount[k] = (dayCount[k]||0) + 1; });
+  let html = '', lastDay = '';
+  shown.forEach(e=>{
+    const d = new Date(e.t), k = auditDayKey(d);
+    if(k !== lastDay){
+      lastDay = k;
+      html += `<div class="au-day">${d.toLocaleDateString('ar-EG-u-nu-latn', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}<span>${dayCount[k]} عملية</span></div>`;
+    }
+    html += `<div class="au-row">
+      <div class="au-time">${d.toLocaleTimeString('ar-EG-u-nu-latn', { hour:'numeric', minute:'2-digit' })}</div>
+      <div class="au-body">
+        <span class="au-who">👤 ${escHtml(e.by)}</span> <span class="chip" style="font-size:.7rem;">${escHtml(e.area)}</span>
+        <div><b>${escHtml(e.action)}</b>: ${escHtml(e.target)}</div>
+        ${auditChangesHtml(e)}
+        ${e.rest ? '<div style="font-size:.7rem;color:var(--faint);margin-top:2px;">باقي البيانات ما اتغيّرتش</div>' : ''}
+      </div>
+    </div>`;
+  });
+  listEl.innerHTML = html + (total > auditLimit ? `<div style="text-align:center;margin:12px 0;"><button class="ghost" id="auditMoreBtn">عرض ${Math.min(100,total-auditLimit)} كمان (باقي ${total-auditLimit})</button></div>` : '');
+  const more = document.getElementById('auditMoreBtn');
+  if(more) more.addEventListener('click', ()=>{ auditLimit += 100; renderAuditList(); });
+}
+function exportAuditLog(){
+  const { rows } = auditFiltered();
+  if(!rows.length){ alert('مفيش عمليات في الاختيار ده عشان تتصدّر.'); return; }
+  const detailRows = rows.map(e=>{
+    const d = new Date(e.t);
+    return {
+      'التاريخ': d.toLocaleDateString('ar-EG-u-nu-latn', { day:'numeric', month:'numeric', year:'numeric' }),
+      'اليوم': d.toLocaleDateString('ar-EG-u-nu-latn', { weekday:'long' }),
+      'الوقت': d.toLocaleTimeString('ar-EG-u-nu-latn', { hour:'numeric', minute:'2-digit' }),
+      'المستخدم': e.by, 'القسم': e.area, 'العملية': e.action, 'على': e.target,
+      'التفاصيل': (e.changes||[]).map(c=>`${c.f}: ${c.from !== undefined ? c.from + ' ← ' : ''}${c.to}`).join(' | '),
+    };
+  });
+  const areas = Array.from(new Set(rows.map(e=>e.area))).sort((a,b)=>a.localeCompare(b,'ar'));
+  const byUser = new Map();
+  rows.forEach(e=>{ if(!byUser.has(e.by)) byUser.set(e.by, {}); const r = byUser.get(e.by); r[e.area] = (r[e.area]||0) + 1; });
+  const sumRows = Array.from(byUser.entries()).map(([u, r])=>{
+    const o = { 'المستخدم': u, 'الإجمالي': Object.values(r).reduce((x,y)=>x+y, 0) };
+    areas.forEach(a=>{ o[a] = r[a] || 0; });
+    return o;
+  }).sort((a,b)=>b['الإجمالي'] - a['الإجمالي']);
+  const wb = XLSX.utils.book_new();
+  const ws1 = XLSX.utils.json_to_sheet(sumRows); ws1['!views'] = [{ RTL:true }];
+  const ws2 = XLSX.utils.json_to_sheet(detailRows); ws2['!views'] = [{ RTL:true }];
+  ws2['!cols'] = [{wch:12},{wch:10},{wch:10},{wch:16},{wch:14},{wch:16},{wch:30},{wch:70}];
+  XLSX.utils.book_append_sheet(wb, ws1, 'ملخص المستخدمين');
+  XLSX.utils.book_append_sheet(wb, ws2, 'كل العمليات');
+  wb.Workbook = { Views:[{ RTL:true }] };
+  window.saveWorkbookToViewer(wb, `سجل_التعديلات_${todayStr()}.xlsx`);
+}
+const auditRerender = ()=>{ auditLimit = 100; renderAuditList(); };
+['auditUser','auditArea','auditAction','auditFrom','auditTo'].forEach(id=>document.getElementById(id).addEventListener('change', auditRerender));
+document.querySelectorAll('#auditPeriods button').forEach(b=>b.addEventListener('click', ()=>{ auditPeriod = b.dataset.p; auditRerender(); }));
 let auditSearchTimer = null;
-document.getElementById('auditSearch').addEventListener('input', ()=>{ clearTimeout(auditSearchTimer); auditSearchTimer = setTimeout(()=>{ auditLimit = 50; renderAuditList(); }, 250); });
+document.getElementById('auditSearch').addEventListener('input', ()=>{ clearTimeout(auditSearchTimer); auditSearchTimer = setTimeout(auditRerender, 250); });
+document.getElementById('auditClearBtn').addEventListener('click', ()=>{
+  ['auditUser','auditArea','auditAction'].forEach(id=>{ document.getElementById(id).value = ''; });
+  document.getElementById('auditSearch').value = '';
+  auditRerender();
+});
+document.getElementById('auditExportBtn').addEventListener('click', exportAuditLog);
 document.getElementById('auditRefreshBtn').addEventListener('click', loadAuditLog);
 
 function initialsOf(name){
