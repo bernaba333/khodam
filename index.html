@@ -2040,7 +2040,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '11-Oct-2026 C';
+const APP_VERSION = '11-Oct-2026 D';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -2089,9 +2089,13 @@ window.addEventListener('beforeunload', e=>{
 const AUDIT_KEY = 'khodam_audit_log';
 const AUDIT_MAX = 3000;
 let pendingAudit = [], auditFlushing = false;
+// Who is working on this device. Kept after an auto-logout, because a save that was already
+// running (or a prompt that was still open) can finish a moment after the logout.
+let auditLastUser = '';
 function auditPush(entry){
   entry.t = new Date().toISOString();
-  entry.by = currentUser ? currentUser.name : (entry.target || '—'); // the very first admin sets themself up
+  if(currentUser) auditLastUser = currentUser.name;
+  entry.by = currentUser ? currentUser.name : (auditLastUser || entry.target || '—'); // target: the very first admin sets themself up
   pendingAudit.push(entry);
   flushAudit();
 }
@@ -3793,7 +3797,7 @@ async function doLogin(name, password){
       const user = { name, role:'admin', password, addedBy: name, addedAt: todayStr() };
       USERS.push(user);
       await saveUsers();
-      currentUser = user;
+      currentUser = user; auditLastUser = user.name;
       await setPersonalLogin(name);
       hideLoginOverlay();
       try{ applyUserUI(); }catch(uiErr){ console.error('applyUserUI failed after signup', uiErr); note.textContent = 'دخلت، لكن حصلت مشكلة في عرض الصفحة: ' + uiErr.message; }
@@ -3804,7 +3808,7 @@ async function doLogin(name, password){
     if(!user){ note.textContent = 'مفيش مستخدم بالاسم ده. اطلب من المدير يضيفك.'; return; }
     if(user.password !== password){ note.textContent = 'كلمة السر غلط.'; return; }
 
-    currentUser = user;
+    currentUser = user; auditLastUser = user.name;
     await setPersonalLogin(name);
     hideLoginOverlay();
     try{ applyUserUI(); }catch(uiErr){ console.error('applyUserUI failed after login', uiErr); note.textContent = 'دخلت، لكن حصلت مشكلة في عرض الصفحة: ' + uiErr.message; }
@@ -3931,6 +3935,7 @@ document.getElementById('loginPasswordInput').addEventListener('keydown', (e)=>{
 });
 async function doLogout(reasonMsg){
   await clearPersonalLogin();
+  if(currentUser) auditLastUser = currentUser.name;
   currentUser = null;
   { const bn = document.getElementById('bottomNav'); if(bn) bn.style.display = 'none'; }
   document.getElementById('welcomeBanner').style.display = 'none';
@@ -5808,6 +5813,8 @@ async function loadAuditLog(){
     AUDIT_ENTRIES = res.value ? (JSON.parse(res.value).entries || []) : [];
   }catch(e){ AUDIT_ENTRIES = []; }
   AUDIT_ENTRIES = AUDIT_ENTRIES.concat(pendingAudit);
+  // older entries saved right after an auto-logout carried the edited item's name as the user
+  AUDIT_ENTRIES.forEach(e=>{ if(e.by && e.by === e.target && e.area !== 'المستخدمين') e.by = 'غير معروف (بعد خروج تلقائي)'; });
   const fill = (id, all, vals)=>{
     const el = document.getElementById(id), v = el.value;
     el.innerHTML = `<option value="">${all}</option>` + vals.map(x=>`<option ${x===v?'selected':''}>${escHtml(x)}</option>`).join('');
@@ -6132,7 +6139,7 @@ async function init(){
   if(personal && personal.name){
     const user = USERS.find(u=>u.name === personal.name);
     if(user){
-      currentUser = user;
+      currentUser = user; auditLastUser = user.name;
       hideLoginOverlay();
       try{ applyUserUI(); }catch(uiErr){ console.error('applyUserUI failed on auto-login', uiErr); showLoginOverlay(); document.getElementById('loginNote').textContent = 'حصلت مشكلة في تحميل بياناتك، سجّل دخول تاني: ' + uiErr.message; }
       return;
