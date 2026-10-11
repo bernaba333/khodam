@@ -953,8 +953,11 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
   <datalist id="churchOptionsList"></datalist>
 
   <div class="card">
-    <h2>قائمة الخدام والمخدومين (<span id="servantCount">0</span>)</h2>
-    <input type="text" id="servantSearch" placeholder="🔍 دوّر على اسم..." style="margin-bottom:14px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+      <h2 style="margin:0;">قائمة الخدام والمخدومين (<span id="servantCount">0</span>)</h2>
+      <button class="ghost" id="servantPrintBtn">🖨️ طباعة البيانات</button>
+    </div>
+    <input type="text" id="servantSearch" placeholder="🔍 دوّر على اسم..." style="margin:12px 0 14px;">
     <div id="servantList"></div>
   </div>
 </section>
@@ -2040,7 +2043,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '11-Oct-2026 D';
+const APP_VERSION = '11-Oct-2026 E';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -2552,6 +2555,144 @@ document.getElementById('servantSearch').addEventListener('input', (e)=>{
     renderServantList();
   }, 220);
 });
+
+/* ---- printing people's data with a choice of columns ----
+   Only columns the current user is allowed to see are offered. */
+const SP_FIELDS_KEY = 'khodam_servant_print_fields';
+function servantPrintFields(){
+  const kids = s=>{
+    const raw = (s.children && s.children.length) ? s.children : (s.childrenNames ? s.childrenNames.split(',').map(c=>c.trim()).filter(Boolean) : []);
+    return raw.map(c=> typeof c === 'string' ? {name:c} : c).map(c=>{
+      const lvl = c.schoolLevelBase ? computedSchoolLevel(c.schoolLevelBase, c.schoolLevelBaseYear) : 0;
+      return lvl ? `${c.name} (${schoolLevelLabel(lvl)})` : c.name;
+    }).join('، ');
+  };
+  const all = [
+    { k:'code',    label:'الكود',              on:true,  get:s=>s.personCode||'' },
+    { k:'photo',   label:'الصورة',             on:false, photo:true },
+    { k:'phone',   label:'التليفون',           on:true,  perm:'phones', ltr:true, get:s=>s.phone||'' },
+    { k:'groups',  label:'الاجتماعات',         on:true,  get:(s,vis)=>s.groups.filter(g=>vis.includes(g)).map(groupName).join('، ') },
+    { k:'area',    label:'المنطقة',            on:false, perm:'addresses', get:s=>s.area||'' },
+    { k:'address', label:'العنوان',            on:false, perm:'addresses', get:s=>s.address||'' },
+    { k:'birth',   label:'تاريخ الميلاد',      on:false, perm:'otherDetails', ltr:true, get:s=>s.birthDate||'' },
+    { k:'conf',    label:'أب الاعتراف',        on:false, perm:'otherDetails', get:s=>s.confessionFather||'' },
+    { k:'church',  label:'الكنيسة',            on:false, perm:'otherDetails', get:s=>s.church||'' },
+    { k:'job',     label:'الوظيفة ومكان العمل', on:false, perm:'otherDetails', get:s=>[s.occupation, s.workplace].filter(Boolean).join(' — ') },
+    { k:'spouse',  label:'الزوج / الزوجة',     on:false, perm:'otherDetails', get:(s,vis,ctx)=>s.spouseName || (ctx.spouseOf.get(s.name)||{}).name || '' },
+    { k:'kids',    label:'الأبناء',            on:false, perm:'otherDetails', get:kids },
+    { k:'visit',   label:'آخر افتقاد',         on:false, perm:'tabAfeqad', get:s=>s.lastVisitDate ? s.lastVisitDate + (s.lastVisitType ? ' — ' + s.lastVisitType : '') : '' },
+    { k:'att',     label:'نسبة الحضور',        on:false, perm:'tabReports', get:(s,vis)=>{ const a = personAttendance(s, vis); return a.possible ? `${a.pct}% (${a.attended}/${a.possible})` : '—'; } },
+    { k:'notes',   label:'خانة ملاحظات فاضية', on:false, blank:true, get:()=>'' }
+  ];
+  return all.filter(f=>!f.perm || can(f.perm));
+}
+function openServantPrint(){
+  const vis = visibleGroupIds();
+  const groups = GROUPS.filter(g=>vis.includes(g.id));
+  const fields = servantPrintFields();
+  let saved = null; try{ saved = JSON.parse(localStorage.getItem(SP_FIELDS_KEY) || 'null'); }catch(e){}
+  const isOn = f=> Array.isArray(saved) ? saved.includes(f.k) : f.on;
+  const wrap = document.createElement('div');
+  wrap.id = 'servantPrintModal';
+  wrap.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(27,42,74,.6);display:flex;align-items:center;justify-content:center;padding:12px;direction:rtl;';
+  wrap.innerHTML = `
+    <div style="background:var(--card);border-radius:16px;max-width:560px;width:100%;max-height:94vh;display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(0,0,0,.25);">
+      <div style="padding:16px 18px 10px;border-bottom:1px solid var(--line-soft);">
+        <h2 style="margin:0 0 4px;font-family:'Amiri',serif;color:var(--ink);">🖨️ طباعة بيانات الخدام</h2>
+        <div style="font-size:.8rem;color:var(--muted);">اختار مين يظهر وإيه البيانات اللي تتطبع.</div>
+      </div>
+      <div style="flex:1;overflow:auto;padding:10px 18px;">
+        <label style="font-weight:700;">الاجتماعات</label>
+        <div class="group-grid" id="spGroups" style="margin:6px 0 12px;">${groups.map(g=>`<label class="group-chk"><input type="checkbox" value="${g.id}" checked> ${escHtml(g.name)}</label>`).join('')}</div>
+        ${servantSearchTerm ? `<label class="group-chk" style="margin-bottom:12px;display:inline-flex;"><input type="checkbox" id="spOnlySearch" checked> نتايج البحث بس ("${escHtml(servantSearchTerm)}")</label>` : ''}
+        <label style="font-weight:700;display:block;">البيانات اللي تتطبع</label>
+        <div style="display:flex;gap:6px;margin:6px 0;">
+          <button type="button" class="ghost" id="spAll" style="padding:4px 10px;font-size:.8rem;">الكل</button>
+          <button type="button" class="ghost" id="spNone" style="padding:4px 10px;font-size:.8rem;">ولا حاجة</button>
+        </div>
+        <div class="group-grid" id="spFields" style="margin-bottom:12px;grid-template-columns:repeat(2,minmax(0,1fr));">${fields.map(f=>`<label class="group-chk"><input type="checkbox" value="${f.k}" ${isOn(f)?'checked':''}> ${f.label}</label>`).join('')}</div>
+        <label style="font-weight:700;">الترتيب</label>
+        <select id="spSort" style="margin:6px 0 12px;max-width:240px;">
+          <option value="name">بالاسم</option>
+          <option value="area">بالمنطقة ثم الاسم</option>
+          <option value="group">بالاجتماع ثم الاسم</option>
+        </select>
+        <div id="spCount" style="font-size:.85rem;color:var(--ink-soft);"></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;padding:12px 18px 16px;border-top:1px solid var(--line-soft);">
+        <button class="primary" id="spPrintGo">🖨️ طباعة</button>
+        <button class="ghost" id="spClose">إغلاق</button>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap);
+  const close = ()=>wrap.remove();
+  wrap.addEventListener('click', e=>{ if(e.target === wrap) close(); });
+  wrap.querySelector('#spClose').addEventListener('click', close);
+  const chosenGroups = ()=>[...wrap.querySelectorAll('#spGroups input:checked')].map(i=>i.value);
+  const people = ()=>{
+    const gs = chosenGroups();
+    let list = activeServants().filter(s=>s.groups.some(g=>gs.includes(g)));
+    const only = wrap.querySelector('#spOnlySearch');
+    if(only && only.checked) list = list.filter(s=>s.name.includes(servantSearchTerm) || (s.phone||'').includes(servantSearchTerm) || (s.area||'').includes(servantSearchTerm));
+    const sort = wrap.querySelector('#spSort').value;
+    const byName = (a,b)=>a.name.localeCompare(b.name,'ar');
+    if(sort === 'area') return list.slice().sort((a,b)=>(a.area||'￿').localeCompare(b.area||'￿','ar') || byName(a,b));
+    if(sort === 'group'){
+      const order = g=>{ const i = GROUPS.findIndex(x=>x.id === s0(g)); return i < 0 ? 99 : i; };
+      const s0 = p=>p.groups.find(g=>gs.includes(g));
+      return list.slice().sort((a,b)=>order(a)-order(b) || byName(a,b));
+    }
+    return list.slice().sort(byName);
+  };
+  const updateCount = ()=>{ wrap.querySelector('#spCount').textContent = `هيتطبع ${people().length} اسم`; };
+  wrap.querySelectorAll('#spGroups input, #spOnlySearch, #spSort').forEach(el=>el.addEventListener('change', updateCount));
+  wrap.querySelector('#spAll').addEventListener('click', ()=>wrap.querySelectorAll('#spFields input').forEach(i=>i.checked = true));
+  wrap.querySelector('#spNone').addEventListener('click', ()=>wrap.querySelectorAll('#spFields input').forEach(i=>i.checked = false));
+  updateCount();
+
+  wrap.querySelector('#spPrintGo').addEventListener('click', ()=>{
+    const keys = [...wrap.querySelectorAll('#spFields input:checked')].map(i=>i.value);
+    try{ localStorage.setItem(SP_FIELDS_KEY, JSON.stringify(keys)); }catch(e){}
+    const cols = fields.filter(f=>keys.includes(f.k));
+    const rows = people();
+    if(!rows.length){ alert('مفيش أسماء في الاجتماعات اللي اخترتها.'); return; }
+    const gs = chosenGroups();
+    const spouseOf = new Map();
+    DATA.servants.forEach(o=>{ if(o.spouseName && !spouseOf.has(o.spouseName)) spouseOf.set(o.spouseName, o); });
+    const ctx = { spouseOf };
+    const w = window.open('', '_blank');
+    if(!w){ alert('المتصفح منع فتح صفحة الطباعة. اسمح بالنوافذ المنبثقة وجرّب تاني.'); return; }
+    const brand = document.querySelector('header h1').textContent;
+    const logo = document.querySelector('.halo-mark').src;
+    const sub = gs.length === groups.length ? 'كل الاجتماعات' : gs.map(groupName).join('، ');
+    const today = new Date().toLocaleDateString('ar-EG-u-nu-latn', { day:'numeric', month:'long', year:'numeric' });
+    const cell = (f,s)=>{
+      if(f.photo) return `<td class="pic">${s.photo ? `<img class="ava" src="${s.photo}">` : `<div class="noava">${escHtml(initialsOf(s.name))}</div>`}</td>`;
+      if(f.blank) return '<td class="blank"></td>';
+      return `<td${f.ltr ? ' class="ltr"' : ''}>${escHtml(f.get(s, vis, ctx))}</td>`;
+    };
+    w.document.open();
+    w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>بيانات الخدام — ${escHtml(sub)}</title>
+      <style>body{font-family:Cairo,Arial,sans-serif;color:#1B2A4A;margin:20px;}
+      .head{display:flex;align-items:center;gap:12px;border-bottom:2px solid #C9A227;padding-bottom:8px;margin-bottom:12px;}
+      .head img{width:54px;height:54px;object-fit:contain;border-radius:50%;}
+      .head .t{font-size:18px;font-weight:700;} .head .s{font-size:12px;color:#555;}
+      table{width:100%;border-collapse:collapse;font-size:12px;} th,td{border:1px solid #c9b98a;padding:5px 7px;vertical-align:middle;text-align:right;}
+      th{background:#1B2A4A;color:#fff;} tr:nth-child(even) td{background:#faf6ea;}
+      td.ltr{direction:ltr;text-align:left;white-space:nowrap;} td.num{width:28px;text-align:center;} td.blank{min-width:120px;}
+      td.pic{width:50px;text-align:center;} .ava{width:42px;height:42px;border-radius:50%;object-fit:cover;border:2px solid #C9A227;display:block;margin:0 auto;}
+      .noava{width:42px;height:42px;border-radius:50%;border:2px solid #e8d8a3;background:#f7f1e3;display:flex;align-items:center;justify-content:center;font-size:14px;margin:0 auto;}
+      td.nm{min-width:110px;} thead{display:table-header-group;} ${cols.length > 5 ? '@page{size:A4 landscape;}' : ''} @media print{ body{margin:8mm;} tr{page-break-inside:avoid;} th{-webkit-print-color-adjust:exact;print-color-adjust:exact;} }</style></head><body>
+      <div class="head"><img src="${logo}" alt=""><div><div class="t">${escHtml(brand)}</div><div class="s">بيانات الخدام — ${escHtml(sub)} — ${rows.length} اسم — ${today}</div></div></div>
+      <table><thead><tr><th>م</th><th>الاسم</th>${cols.map(f=>`<th>${f.label === 'خانة ملاحظات فاضية' ? 'ملاحظات' : f.label}</th>`).join('')}</tr></thead><tbody>
+      ${rows.map((s,i)=>`<tr><td class="num">${i+1}</td><td class="nm"><b>${escHtml(s.name)}</b></td>${cols.map(f=>cell(f,s)).join('')}</tr>`).join('')}
+      </tbody></table>
+      <script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script></body></html>`);
+    w.document.close();
+    close();
+  });
+}
+document.getElementById('servantPrintBtn').addEventListener('click', openServantPrint);
 
 function renderServantList(){
   refreshAreaChurchDatalists();
