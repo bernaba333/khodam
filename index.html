@@ -1588,6 +1588,22 @@ function personAttendance(s, gids, sessFilter){
   const pct = possible>0 ? Math.round((attended/possible)*100) : 0;
   return { attended, possible, pct };
 }
+// Attendance of a whole meeting (group). Only people who are currently active members of the
+// group are counted, both on top and on the bottom, so people who moved, left or were removed
+// from the group no longer push the percentage up. pct = all attendances / all possible attendances.
+function groupAttendance(gid, sessFilter){
+  const members = activeServants().filter(s=>s.groups.includes(gid));
+  const ids = new Set(members.map(s=>s.id));
+  let sessions = (DATA.sessions[gid]||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
+  if(sessFilter) sessions = sessions.filter(sessFilter);
+  const counts = sessions.map(sess=>sess.present.filter(id=>ids.has(id)).length);
+  const total = counts.reduce((a,b)=>a+b,0);
+  const pct = (sessions.length && members.length) ? Math.round(total/(sessions.length*members.length)*100) : 0;
+  const lastCount = counts.length ? counts[counts.length-1] : 0;
+  const lastPct = (sessions.length && members.length) ? Math.round(lastCount/members.length*100) : 0;
+  const lastDate = sessions.length ? sessions[sessions.length-1].date : '';
+  return { members, sessions, pct, lastCount, lastPct, lastDate };
+}
 const MOVE_REASONS = {
   departed:  { label:'انتقل (للسماء)',     title:'المنتقلين',            icon:'🕊️' },
   emigrated: { label:'هاجر',               title:'المهاجرين',            icon:'✈️' },
@@ -2043,7 +2059,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '11-Oct-2026 E';
+const APP_VERSION = '11-Oct-2026 F';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -3007,11 +3023,12 @@ function renderHistory(){
     return;
   }
   emptyNote.style.display='none';
-  const totalMembers = activeServants().filter(s=>s.groups.includes(currentGroupId)).length;
+  const memberIds = new Set(activeServants().filter(s=>s.groups.includes(currentGroupId)).map(s=>s.id));
+  const totalMembers = memberIds.size;
   body.innerHTML = sessions.map(s=>`
     <tr>
       <td>${prettyDate(s.date)}</td>
-      <td>${s.present.length} / ${totalMembers}</td>
+      <td>${s.present.filter(id=>memberIds.has(id)).length} / ${totalMembers}</td>
       <td style="font-size:.78rem;color:var(--muted);">${can('addedBy') ? (s.recordedBy || '—') : ''}</td>
       <td>
         <button class="ghost" data-open="${s.date}">فتح</button>
@@ -3049,11 +3066,9 @@ function renderDashboard(){
   const totalSessions = allDatesSet.size;
   let overallPctSum = 0, overallPctCount = 0;
   visibleGroups.forEach(g=>{
-    const members = activeServants().filter(s=>s.groups.includes(g.id));
-    const sessions = DATA.sessions[g.id]||[];
+    const { members, sessions, pct } = groupAttendance(g.id);
     if(sessions.length>0 && members.length>0){
-      const avg = sessions.reduce((sum,s)=>sum+s.present.length,0)/sessions.length;
-      overallPctSum += Math.round((avg/members.length)*100);
+      overallPctSum += pct;
       overallPctCount++;
     }
   });
@@ -3083,13 +3098,7 @@ function renderDashboard(){
   } else {
     const labels = [], data = [];
     visibleGroups.forEach(g=>{
-      const members = activeServants().filter(s=>s.groups.includes(g.id));
-      const sessions = DATA.sessions[g.id]||[];
-      let pct = 0;
-      if(sessions.length>0 && members.length>0){
-        const avg = sessions.reduce((sum,s)=>sum+s.present.length,0)/sessions.length;
-        pct = Math.round((avg/members.length)*100);
-      }
+      const { members, sessions, pct } = groupAttendance(g.id);
       labels.push({ g, members: members.length, sessions: sessions.length }); data.push(pct);
     });
     chartContainer.innerHTML = '<div class="sector-bars">' + labels.map((l,i)=>`
@@ -3421,13 +3430,7 @@ function renderReports(){
   const visible = visibleGroupIds();
   const visibleGroups = GROUPS.filter(g=>visible.includes(g.id));
   halos.innerHTML = visibleGroups.map(g=>{
-    const members = activeServants().filter(s=>s.groups.includes(g.id));
-    const sessions = DATA.sessions[g.id]||[];
-    let pct = 0;
-    if(sessions.length>0 && members.length>0){
-      const avgPresent = sessions.reduce((sum,s)=>sum+s.present.length,0)/sessions.length;
-      pct = Math.round((avgPresent/members.length)*100);
-    }
+    const { members, sessions, pct, lastCount, lastPct, lastDate } = groupAttendance(g.id);
     const C = 2*Math.PI*34;
     const dash = (pct/100)*C;
     const ringColor = colorForPercent(pct);
@@ -3441,6 +3444,7 @@ function renderReports(){
       </svg>
       <h3>${g.name}</h3>
       <div class="sub">${members.length} ${g.id==='anba-boula' ? 'خادم' : 'مخدوم'} · ${sessions.length} اجتماع</div>
+      ${lastDate ? `<div class="sub" style="margin-top:4px;">آخر اجتماع (${prettyDate(lastDate,false)}): <b style="color:${colorForPercent(lastPct)};">${lastCount} من ${members.length} · ${lastPct}%</b></div>` : ''}
     </div>`;
   }).join('');
 
@@ -4306,13 +4310,7 @@ document.getElementById('exportExcelBtn').addEventListener('click', async ()=>{
   const visibleServants = activeServants().filter(s=>s.groups.some(g=>visible.includes(g)));
 
   const summaryRows = visibleGroups.map(g=>{
-    const members = activeServants().filter(s=>s.groups.includes(g.id));
-    const sessions = DATA.sessions[g.id] || [];
-    let pct = 0;
-    if(sessions.length > 0 && members.length > 0){
-      const avgPresent = sessions.reduce((sum,s)=>sum+s.present.length,0) / sessions.length;
-      pct = Math.round((avgPresent / members.length) * 100);
-    }
+    const { members, sessions, pct } = groupAttendance(g.id);
     return { 'الاجتماع': g.name, 'عدد الأفراد': members.length, 'عدد الاجتماعات': sessions.length, 'متوسط نسبة الحضور %': pct };
   });
   const ws1 = XLSX.utils.json_to_sheet(summaryRows);
@@ -4672,13 +4670,7 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
     const rows = [];
     const chartLabels = [], attendPct = [], absentPct = [];
     selectedGroups.forEach(gid=>{
-      const members = activeServants().filter(s=>s.groups.includes(gid));
-      const sessions = (DATA.sessions[gid]||[]).filter(s=>inRange(s.date, from, to));
-      let pct = 0;
-      if(sessions.length>0 && members.length>0){
-        const avg = sessions.reduce((sum,s)=>sum+s.present.length,0)/sessions.length;
-        pct = Math.round((avg/members.length)*100);
-      }
+      const { members, sessions, pct } = groupAttendance(gid, s=>inRange(s.date, from, to));
       rows.push([groupName(gid), members.length, sessions.length, pct, 100-pct]);
       chartLabels.push(groupName(gid));
       attendPct.push(pct);
