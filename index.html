@@ -860,6 +860,7 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
       <button class="ghost" id="progPostBtn">🖼️ بوست الشهر</button>
       <button class="ghost" id="progPrintBtn">🖨️ طباعة</button>
       <button class="ghost" id="progExportBtn">⬇️ تصدير Excel</button>
+      <button class="ghost" id="progSpeakersBtn" style="display:none;">📇 تقرير المتكلمين</button>
       <label class="ghost" id="progImportLabel" for="progImportFile" style="cursor:pointer;display:none;padding:8px 14px;border-radius:10px;">⬆️ استيراد من Excel</label>
       <input type="file" id="progImportFile" accept=".xlsx,.xls" style="display:none;">
     </div>
@@ -2039,7 +2040,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '11-Oct-2026 A';
+const APP_VERSION = '11-Oct-2026 B';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -4905,7 +4906,8 @@ function maybeShowBirthdayPopup(){
   document.getElementById('bdayPopupClose').addEventListener('click', close);
 }
 /* ---------- SERVICE PROGRAM (Friday / Sunday, October → September) ----------
-   Stored in its own key: { years: { "2026": { friday: {title, vision, items:{ "2026-10-02": {title, goal, speaker, church} }}, sunday: {...} } } }
+   Stored in its own key: { years: { "2026": { friday: {title, vision, items:{ "2026-10-02": {title, goal, speaker, church} }}, sunday: {...} } },
+                            speakers: { <speakerKey>: { name, phone } } }
    Each change re-reads the latest copy and applies just that change, so two
    people editing different days never overwrite each other. */
 const PROGRAM_KEY = 'khodam_service_program';
@@ -4983,6 +4985,7 @@ function renderProgramPanel(){
   fillProgYears();
   const canEdit = can('editProgram');
   document.getElementById('progImportLabel').style.display = canEdit ? 'inline-block' : 'none';
+  document.getElementById('progSpeakersBtn').style.display = canEdit ? 'inline-block' : 'none';
   document.querySelectorAll('.prog-day').forEach(b=>{ b.className = (b.dataset.day===progDay ? 'primary' : 'ghost') + ' prog-day'; });
   const sec = progSection(PROGRAM, progYear, progDay, false) || { title:'', vision:'', items:{} };
   const head = document.getElementById('progHeader');
@@ -5039,7 +5042,7 @@ function renderProgramPanel(){
         <div style="font-weight:700;margin-top:4px;">${it.title ? escHtml(it.title) : '<span style="color:var(--faint);font-weight:400;">لسه مفيش موضوع</span>'}</div>
         ${it.goal ? `<div style="font-size:.82rem;color:var(--text-2);margin-top:2px;">${escHtml(it.goal)}</div>` : ''}
         <div style="font-size:.82rem;margin-top:6px;color:var(--ink);">
-          ${it.speaker ? `🎤 ${escHtml(it.speaker)}` : '<span style="color:var(--faint);">🎤 لسه محدش اتحدد</span>'}
+          ${it.speaker ? `🎤 ${escHtml(it.speaker)}` : '<span style="color:var(--faint);">🎤 لسه محدش اتحدد</span>'}${canEdit && it.speaker && speakerPhone(it.speaker) ? ` <a href="tel:${escHtml(speakerPhone(it.speaker).replace(/[^\d+]/g,''))}" title="${escHtml(speakerPhone(it.speaker))}" style="text-decoration:none;font-size:.78rem;">📞</a>` : ''}
           ${it.church ? ` &nbsp;—&nbsp; ⛪ ${escHtml(it.church)}` : ''}
         </div>
         ${canEdit ? `<div style="margin-top:8px;"><button class="ghost prog-edit-btn" style="font-size:.8rem;padding:4px 12px;">✏️ تعديل</button></div>
@@ -5072,6 +5075,8 @@ function openProgEdit(row, it){
     <textarea class="pe-goal" rows="2" style="margin-bottom:8px;width:100%;">${escHtml(it.goal||'')}</textarea>
     <label style="display:block;margin-bottom:4px;">المتكلم</label>
     <input type="text" class="pe-speaker" value="${escHtml(it.speaker||'')}" placeholder="مثلًا: القس / انطونيوس فوزي" style="margin-bottom:8px;">
+    <label style="display:block;margin-bottom:4px;">📞 تليفون المتكلم <span style="font-size:.75rem;color:var(--muted);">(للمرجع بس، مش بيظهر في الطباعة ولا البوست)</span></label>
+    <input type="tel" class="pe-phone" dir="ltr" inputmode="tel" value="${escHtml(speakerPhone(it.speaker))}" placeholder="01xxxxxxxxx" style="margin-bottom:8px;">
     <label style="display:block;margin-bottom:4px;">كنيسته</label>
     <input type="text" class="pe-church" value="${escHtml(it.church||'')}" style="margin-bottom:10px;">
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -5079,6 +5084,8 @@ function openProgEdit(row, it){
       <button class="ghost pe-cancel">إلغاء</button>
     </div>`;
   box.querySelector('.pe-cancel').addEventListener('click', ()=>{ progEditDate = null; box.style.display='none'; box.innerHTML=''; });
+  // typing a known speaker's name fills in the number already saved for them
+  box.querySelector('.pe-speaker').addEventListener('change', e=>{ const ph = box.querySelector('.pe-phone'); if(!ph.value.trim()) ph.value = speakerPhone(e.target.value); });
   box.querySelector('.pe-save').addEventListener('click', async ()=>{
     const v = {
       title: box.querySelector('.pe-title').value.trim(),
@@ -5089,11 +5096,15 @@ function openProgEdit(row, it){
     const iso = row.dataset.date, y = progYear, d = progDay;
     const PF = { title:'العنوان', goal:'الهدف والمحتوى', speaker:'المتكلم', church:'كنيسته' };
     const pch = Object.keys(PF).filter(k=>(it[k]||'') !== v[k]).map(k=>({ f: PF[k], from: it[k] || '—', to: v[k] || '—' }));
+    const phone = box.querySelector('.pe-phone').value.trim(), oldPhone = speakerPhone(v.speaker);
+    const phoneChanged = !!v.speaker && phone !== oldPhone;
+    if(phoneChanged) pch.push({ f:'تليفون المتكلم', from: oldPhone || '—', to: phone || '—' });
     const dd = new Date(iso + 'T00:00:00');
     const ok = await saveProgramChange(obj=>{
       const s2 = progSection(obj, y, d, true);
       if(!v.title && !v.goal && !v.speaker && !v.church) delete s2.items[iso];
-      else s2.items[iso] = Object.assign(v, { by: currentUser ? currentUser.name : '' });
+      else s2.items[iso] = Object.assign({}, v, { by: currentUser ? currentUser.name : '' });
+      if(phoneChanged) setSpeakerPhone(obj, v.speaker, phone);
     });
     if(ok){
       if(pch.length) auditPush({ area:'برنامج الخدمة', action: it.title || it.speaker ? 'تعديل' : 'إضافة', target:`${PROG_DAYS[d].meeting} — ${dd.getDate()} ${PROG_MONTHS[dd.getMonth()]} ${dd.getFullYear()}`, changes: pch, rest: true });
@@ -5102,6 +5113,174 @@ function openProgEdit(row, it){
   });
   box.querySelector('.pe-title').focus();
 }
+/* ---------- SPEAKER PHONES + SPEAKERS REPORT ----------
+   Phones live once per speaker in PROGRAM.speakers { key: { name, phone } }, not on each
+   meeting, so a speaker who serves Friday and Sunday has one number. They are never
+   printed with the program or the monthly post; they show only in the speakers report. */
+function speakerKey(n){
+  return String(n||'').replace(/[ً-ْـ]/g,'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي')
+    .replace(/[\/\\.\-–،,:]/g,' ').replace(/\s+/g,' ').trim();
+}
+function speakerPhone(name){ const e = (PROGRAM.speakers||{})[speakerKey(name)]; return e ? (e.phone||'') : ''; }
+function setSpeakerPhone(obj, name, phone){
+  const k = speakerKey(name); if(!k) return;
+  if(!obj.speakers) obj.speakers = {};
+  if(phone) obj.speakers[k] = { name: String(name).trim(), phone };
+  else if(obj.speakers[k]) delete obj.speakers[k];
+}
+function speakersReportData(scope){
+  const map = {};
+  const years = scope === 'all' ? Object.keys(PROGRAM.years||{}).map(Number) : [progYear];
+  years.forEach(y=>['friday','sunday'].forEach(day=>{
+    const sec = progSection(PROGRAM, y, day, false); if(!sec) return;
+    Object.keys(sec.items).sort().forEach(iso=>{
+      const it = sec.items[iso]; const k = speakerKey(it.speaker); if(!k) return;
+      const e = map[k] || (map[k] = { key:k, name:'', church:'', days:{ friday:0, sunday:0 }, talks:[] });
+      e.name = it.speaker.trim(); if(it.church) e.church = it.church;
+      e.days[day]++; e.talks.push({ iso, day, title: it.title || '' });
+    });
+  }));
+  Object.keys(PROGRAM.speakers||{}).forEach(k=>{
+    if(!map[k]) map[k] = { key:k, name: PROGRAM.speakers[k].name, church:'', days:{ friday:0, sunday:0 }, talks:[] };
+  });
+  return Object.values(map).map(e=>Object.assign(e, { phone: speakerPhone(e.name) || ((PROGRAM.speakers||{})[e.key]||{}).phone || '' }))
+    .sort((a,b)=>a.name.localeCompare(b.name, 'ar'));
+}
+function speakerDaysLabel(e){
+  if(e.days.friday && e.days.sunday) return 'الجمعة والأحد';
+  if(e.days.friday) return 'الجمعة'; if(e.days.sunday) return 'الأحد'; return '—';
+}
+function talkLabel(t){ const d = new Date(t.iso + 'T00:00:00'); return `${PROG_DAYS[t.day].label} ${d.getDate()} ${PROG_MONTHS[d.getMonth()]} ${d.getFullYear()}${t.title ? ' — ' + t.title : ''}`; }
+
+function openSpeakersReport(){
+  let scope = 'year', show = 'all', q = '';
+  const wrap = document.createElement('div');
+  wrap.id = 'speakersModal';
+  wrap.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(27,42,74,.6);display:flex;align-items:center;justify-content:center;padding:12px;direction:rtl;';
+  wrap.innerHTML = `
+    <div style="background:var(--card);border-radius:16px;max-width:640px;width:100%;max-height:94vh;display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(0,0,0,.25);">
+      <div style="padding:16px 18px 10px;border-bottom:1px solid var(--line-soft);">
+        <h2 style="margin:0 0 4px;font-family:'Amiri',serif;color:var(--ink);">📇 تقرير المتكلمين</h2>
+        <div style="font-size:.8rem;color:var(--muted);margin-bottom:10px;">الأسماء وأرقام التليفونات للمرجع. الأرقام دي مش بتظهر في طباعة البرنامج ولا في بوست الشهر.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <select id="spkScope" style="max-width:220px;">
+            <option value="year">سنة ${copticYear(progYear)} ش (${progYear} - ${progYear+1})</option>
+            <option value="all">كل السنين</option>
+          </select>
+          <input type="text" id="spkSearch" placeholder="🔍 دوّر بالاسم أو الكنيسة أو الرقم" style="flex:1;min-width:160px;">
+        </div>
+        <div id="spkChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;"></div>
+      </div>
+      <div id="spkList" style="flex:1;overflow:auto;padding:8px 18px;"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;padding:12px 18px 16px;border-top:1px solid var(--line-soft);">
+        <button class="primary" id="spkExcelBtn">⬇️ Excel</button>
+        <button class="ghost" id="spkPrintBtn">🖨️ طباعة التقرير</button>
+        <button class="ghost" id="spkCloseBtn">إغلاق</button>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap);
+  const close = ()=>wrap.remove();
+  wrap.addEventListener('click', e=>{ if(e.target === wrap) close(); });
+  document.getElementById('spkCloseBtn').addEventListener('click', close);
+
+  const filtered = ()=>{
+    const all = speakersReportData(scope);
+    const qq = speakerKey(q);
+    const qd = q.replace(/\D/g,'');
+    const rows = all.filter(e=>{
+      if(show === 'friday' && !(e.days.friday && !e.days.sunday)) return false;
+      if(show === 'sunday' && !(e.days.sunday && !e.days.friday)) return false;
+      if(show === 'both' && !(e.days.friday && e.days.sunday)) return false;
+      if(show === 'nophone' && e.phone) return false;
+      if(qq && !(speakerKey(e.name).includes(qq) || speakerKey(e.church).includes(qq) || (qd && String(e.phone).replace(/\D/g,'').includes(qd)))) return false;
+      return true;
+    });
+    return { all, rows };
+  };
+  const render = ()=>{
+    const { all, rows } = filtered();
+    const cnt = f=>all.filter(f).length;
+    const chips = [
+      ['all', 'الكل', all.length],
+      ['friday', 'الجمعة بس', cnt(e=>e.days.friday && !e.days.sunday)],
+      ['sunday', 'الأحد بس', cnt(e=>e.days.sunday && !e.days.friday)],
+      ['both', 'الجمعة والأحد', cnt(e=>e.days.friday && e.days.sunday)],
+      ['nophone', 'ناقص رقم', cnt(e=>!e.phone)]
+    ];
+    document.getElementById('spkChips').innerHTML = chips.map(([k,l,n])=>`<button class="${show===k?'primary':'ghost'} spk-chip" data-k="${k}" style="font-size:.78rem;padding:4px 10px;">${l} (${n})</button>`).join('');
+    document.querySelectorAll('.spk-chip').forEach(b=>b.addEventListener('click', ()=>{ show = b.dataset.k; render(); }));
+    const canEdit = can('editProgram');
+    document.getElementById('spkList').innerHTML = rows.length ? rows.map(e=>{
+      const wa = waNumber(e.phone);
+      const badge = (day, n)=> n ? `<span class="chip" style="font-size:.72rem;">${PROG_DAYS[day].label} × ${n}</span>` : '';
+      return `<div class="spk-row" data-key="${escHtml(e.key)}" style="padding:10px 0;border-bottom:1px solid var(--line-soft);">
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap;">
+          <div style="min-width:0;">
+            <div style="font-weight:700;">🎤 ${escHtml(e.name)}</div>
+            ${e.church ? `<div style="font-size:.82rem;color:var(--sage, #3f6152);">⛪ ${escHtml(e.church)}</div>` : ''}
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">${badge('friday', e.days.friday)}${badge('sunday', e.days.sunday)}${!e.talks.length ? '<span class="chip" style="font-size:.72rem;">مفيش مواعيد هنا</span>' : ''}</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;font-size:.9rem;">
+          ${e.phone ? `<a href="tel:${escHtml(e.phone.replace(/[^\d+]/g,''))}" dir="ltr" style="font-weight:600;">📞 ${escHtml(e.phone)}</a>${wa ? ` <a href="https://wa.me/${wa}" target="_blank" rel="noopener" title="واتساب" style="text-decoration:none;">💬</a>` : ''}` : '<span style="color:var(--faint);">📞 ناقص الرقم</span>'}
+          ${canEdit ? `<button class="ghost spk-phone-btn" style="font-size:.75rem;padding:2px 10px;">${e.phone ? '✏️ تعديل الرقم' : '➕ إضافة رقم'}</button>` : ''}
+        </div>
+        ${e.talks.length ? `<details style="margin-top:4px;font-size:.8rem;color:var(--text-2);"><summary style="cursor:pointer;">مواعيده (${e.talks.length})</summary>${e.talks.map(t=>`<div>• ${escHtml(talkLabel(t))}</div>`).join('')}</details>` : ''}
+      </div>`;
+    }).join('') : '<div class="empty-note" style="padding:20px 0;">مفيش متكلمين مطابقين</div>';
+    document.querySelectorAll('.spk-phone-btn').forEach(b=>b.addEventListener('click', async ()=>{
+      const key = b.closest('.spk-row').dataset.key;
+      const e = all.find(x=>x.key === key); if(!e) return;
+      const v = prompt('رقم تليفون ' + e.name, e.phone || ''); if(v === null) return;
+      const phone = v.trim();
+      if(phone === (e.phone||'')) return;
+      if(await saveProgramChange(obj=>setSpeakerPhone(obj, e.name, phone))){
+        auditPush({ area:'برنامج الخدمة', action:'تعديل', target:'تليفون المتكلم — ' + e.name, changes:[{ f:'تليفون المتكلم', from: e.phone || '—', to: phone || '—' }], rest: true });
+        render();
+      }
+    }));
+  };
+  document.getElementById('spkScope').addEventListener('change', e=>{ scope = e.target.value; render(); });
+  document.getElementById('spkSearch').addEventListener('input', e=>{ q = e.target.value.trim(); render(); });
+  const scopeLabel = ()=> scope === 'all' ? 'كل السنين' : `سنة ${copticYear(progYear)} ش (${progYear}-${progYear+1})`;
+
+  document.getElementById('spkExcelBtn').addEventListener('click', ()=>{
+    if(typeof XLSX === 'undefined'){ alert('مكتبة Excel مش متحمّلة. اتأكد من النت.'); return; }
+    const { rows } = filtered();
+    const aoa = [[`تقرير المتكلمين — ${scopeLabel()}`], ['م','المتكلم','كنيسته','التليفون','بيخدم','عدد الجمعة','عدد الأحد','المواعيد']];
+    rows.forEach((e,i)=>aoa.push([i+1, e.name, e.church, e.phone, speakerDaysLabel(e), e.days.friday, e.days.sunday, e.talks.map(talkLabel).join('\n')]));
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:7} }];
+    ws['!cols'] = [{wch:4},{wch:28},{wch:26},{wch:16},{wch:14},{wch:10},{wch:10},{wch:60}];
+    ws['!views'] = [{ RTL: true }];
+    const wb = XLSX.utils.book_new();
+    wb.Workbook = { Views: [{ RTL: true }] };
+    XLSX.utils.book_append_sheet(wb, ws, 'المتكلمين');
+    window.saveWorkbookToViewer(wb, `تقرير-المتكلمين-${scope === 'all' ? 'كل-السنين' : copticYear(progYear)}.xlsx`);
+  });
+  document.getElementById('spkPrintBtn').addEventListener('click', ()=>{
+    const { rows } = filtered();
+    const w = window.open('', '_blank');
+    if(!w){ alert('المتصفح منع فتح صفحة الطباعة. اسمح بالنوافذ المنبثقة وجرّب تاني.'); return; }
+    const title = `تقرير المتكلمين — ${scopeLabel()}`;
+    w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${escHtml(title)}</title>
+      <style>body{font-family:Cairo,Arial,sans-serif;color:#1B2A4A;margin:24px;} h1{font-size:20px;text-align:center;margin:6px 0 14px;}
+      table{width:100%;border-collapse:collapse;font-size:12px;} th,td{border:1px solid #c9b98a;padding:5px 7px;vertical-align:top;text-align:right;} th{background:#1B2A4A;color:#fff;}
+      td.ph{direction:ltr;text-align:left;white-space:nowrap;} .t{color:#5a5140;font-size:11px;} @media print{ tr{page-break-inside:avoid;} }</style></head><body>
+      <h1>${escHtml(title)}</h1>
+      <table><thead><tr><th>م</th><th>المتكلم</th><th>كنيسته</th><th>التليفون</th><th>بيخدم</th><th>المواعيد</th></tr></thead><tbody>
+      ${rows.map((e,i)=>`<tr><td>${i+1}</td><td><b>${escHtml(e.name)}</b></td><td>${escHtml(e.church)}</td><td class="ph">${escHtml(e.phone)}</td><td>${escHtml(speakerDaysLabel(e))}</td><td class="t">${e.talks.map(t=>escHtml(talkLabel(t))).join('<br>')}</td></tr>`).join('')}
+      </tbody></table>
+      <script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script></body></html>`);
+    w.document.close();
+  });
+  render();
+}
+document.getElementById('progSpeakersBtn').addEventListener('click', ()=>{
+  if(!programLoaded){ alert('البرنامج لسه بيتحمّل، استنى ثانية وجرّب تاني.'); return; }
+  openSpeakersReport();
+});
+
 function renderDashboardNext(){
   const card = document.getElementById('dashboardNextCard'), el = document.getElementById('dashboardNext');
   if(!card || !el || !programLoaded) return;
@@ -5155,7 +5334,7 @@ document.getElementById('progImportFile').addEventListener('change', e=>{
       if(hi < 0){ alert('مش لاقي صف العناوين في الملف. لازم يكون فيه عمود "التاريخ" أو "الشهر"، وعمود "العنوان" أو "المتكلم".'); return; }
       const H = rows[hi].map(c=>String(c||'').trim());
       const col = names=>H.findIndex(h=>names.some(n=>h.includes(n)));
-      const cDate = col(['التاريخ']), cMonth = col(['الشهر']), cTitle = col(['العنوان','الموضوع','الكلمة']), cGoal = col(['الهدف','المحتوى']), cSpeaker = col(['المتكلم']), cChurch = col(['كنيسته','الكنيسة','كنيسة']);
+      const cDate = col(['التاريخ']), cMonth = col(['الشهر']), cTitle = col(['العنوان','الموضوع','الكلمة']), cGoal = col(['الهدف','المحتوى']), cSpeaker = col(['المتكلم']), cPhone = col(['تليفون','تلفون','موبايل','هاتف']), cChurch = col(['كنيسته','الكنيسة','كنيسة']);
       const title = (rows.slice(0, hi).find(r=>r && r[0]) || [])[0] || '';
       const visionRow = rows.slice(0, hi).filter(r=>r && r[0]).slice(1)[0];
       const vision = visionRow ? String(visionRow[0]).replace(/^الرؤية المركزية\s*[:：]\s*/, '') : '';
@@ -5168,7 +5347,7 @@ document.getElementById('progImportFile').addEventListener('change', e=>{
       let year, notes = [], mismatch = false, fileLooksLike = null;
       rows.slice(hi+1).forEach(r=>{
         if(!r) return;
-        const item = { title: clean(r[cTitle]), goal: cGoal>=0 ? clean(r[cGoal]) : '', speaker: cSpeaker>=0 ? clean(r[cSpeaker]) : '', church: cChurch>=0 ? clean(r[cChurch]) : '' };
+        const item = { title: clean(r[cTitle]), goal: cGoal>=0 ? clean(r[cGoal]) : '', speaker: cSpeaker>=0 ? clean(r[cSpeaker]) : '', church: cChurch>=0 ? clean(r[cChurch]) : '', phone: cPhone>=0 ? clean(r[cPhone]) : '' };
         if(!item.title && !item.speaker) return;
         if(cDate >= 0){ const d = progExcelDate(r[cDate]); if(d && !isNaN(d)){ item.d = d; parsed.push(item); return; } }
         if(cMonth >= 0){ const m = monthOf(r[cMonth]); if(m !== null){ item.m = m; parsed.push(item); } }
@@ -5228,6 +5407,7 @@ document.getElementById('progImportFile').addEventListener('change', e=>{
         parsed.forEach(p=>{
           const v = { title:p.title, goal:p.goal, speaker:p.speaker, church:p.church, by: currentUser ? currentUser.name : '' };
           if(v.title || v.goal || v.speaker || v.church) s2.items[isoDate(p.d)] = v;
+          if(p.speaker && p.phone) setSpeakerPhone(obj, p.speaker, p.phone);
         });
       });
       if(ok){
