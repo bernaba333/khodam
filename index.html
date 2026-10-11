@@ -2040,7 +2040,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '11-Oct-2026 B';
+const APP_VERSION = '11-Oct-2026 C';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -4907,7 +4907,7 @@ function maybeShowBirthdayPopup(){
 }
 /* ---------- SERVICE PROGRAM (Friday / Sunday, October → September) ----------
    Stored in its own key: { years: { "2026": { friday: {title, vision, items:{ "2026-10-02": {title, goal, speaker, church} }}, sunday: {...} } },
-                            speakers: { <speakerKey>: { name, phone } } }
+                            speakers: { <speakerKey>: { name, phone, photoVer } } }  (photo itself in the 'ph' collection as 'spk:<key>')
    Each change re-reads the latest copy and applies just that change, so two
    people editing different days never overwrite each other. */
 const PROGRAM_KEY = 'khodam_service_program';
@@ -5122,11 +5122,31 @@ function speakerKey(n){
     .replace(/[\/\\.\-–،,:]/g,' ').replace(/\s+/g,' ').trim();
 }
 function speakerPhone(name){ const e = (PROGRAM.speakers||{})[speakerKey(name)]; return e ? (e.phone||'') : ''; }
-function setSpeakerPhone(obj, name, phone){
-  const k = speakerKey(name); if(!k) return;
+function putSpeaker(obj, k, name, change){
+  if(!k) return;
   if(!obj.speakers) obj.speakers = {};
-  if(phone) obj.speakers[k] = { name: String(name).trim(), phone };
-  else if(obj.speakers[k]) delete obj.speakers[k];
+  const e = obj.speakers[k] || {};
+  e.name = String(name).trim();
+  change(e);
+  Object.keys(e).forEach(f=>{ if(e[f] === '' || e[f] == null) delete e[f]; });
+  if(e.phone || e.photoVer || e.photo) obj.speakers[k] = e; else delete obj.speakers[k];
+}
+function setSpeakerPhone(obj, name, phone){ putSpeaker(obj, speakerKey(name), name, e=>{ e.phone = phone; }); }
+// photos go to the same small-document store as people's photos; without it (offline copy) they stay inline
+function setSpeakerPhoto(obj, key, name, ver, inline){ putSpeaker(obj, key, name, e=>{ e.photoVer = ver; e.photo = inline; }); }
+const spkPhotoId = key => 'spk:' + key;
+async function speakerPhotoUrl(key){
+  const e = (PROGRAM.speakers||{})[key]; if(!e) return '';
+  if(e.photo) return e.photo;
+  if(!e.photoVer || !window.storage.photoGet) return '';
+  const id = spkPhotoId(key);
+  const mem = PHOTO_MEM.get(id); if(mem && mem.ver === e.photoVer) return mem.v;
+  const c = await photoCache.get(id); if(c && c.ver === e.photoVer){ PHOTO_MEM.set(id, c); return c.v; }
+  try{
+    const r = await window.storage.photoGet(id);
+    if(r && r.v){ const rec = { ver: r.ver, v: r.v }; PHOTO_MEM.set(id, rec); photoCache.put(id, rec); return r.v; }
+  }catch(err){}
+  return '';
 }
 function speakersReportData(scope){
   const map = {};
@@ -5143,7 +5163,7 @@ function speakersReportData(scope){
   Object.keys(PROGRAM.speakers||{}).forEach(k=>{
     if(!map[k]) map[k] = { key:k, name: PROGRAM.speakers[k].name, church:'', days:{ friday:0, sunday:0 }, talks:[] };
   });
-  return Object.values(map).map(e=>Object.assign(e, { phone: speakerPhone(e.name) || ((PROGRAM.speakers||{})[e.key]||{}).phone || '' }))
+  return Object.values(map).map(e=>{ const d = (PROGRAM.speakers||{})[e.key] || {}; return Object.assign(e, { phone: speakerPhone(e.name) || d.phone || '', hasPhoto: !!(d.photoVer || d.photo) }); })
     .sort((a,b)=>a.name.localeCompare(b.name, 'ar'));
 }
 function speakerDaysLabel(e){
@@ -5215,15 +5235,20 @@ function openSpeakersReport(){
       const badge = (day, n)=> n ? `<span class="chip" style="font-size:.72rem;">${PROG_DAYS[day].label} × ${n}</span>` : '';
       return `<div class="spk-row" data-key="${escHtml(e.key)}" style="padding:10px 0;border-bottom:1px solid var(--line-soft);">
         <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap;">
+          <div style="display:flex;gap:10px;align-items:center;min-width:0;">
+          <div class="spk-ava" style="width:56px;height:56px;flex:none;border-radius:50%;border:2px solid #C9A227;background:var(--cream-dark, #efe6d0);display:flex;align-items:center;justify-content:center;font-size:1.4rem;overflow:hidden;">🎤</div>
           <div style="min-width:0;">
-            <div style="font-weight:700;">🎤 ${escHtml(e.name)}</div>
+            <div style="font-weight:700;">${escHtml(e.name)}</div>
             ${e.church ? `<div style="font-size:.82rem;color:var(--sage, #3f6152);">⛪ ${escHtml(e.church)}</div>` : ''}
+          </div>
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;">${badge('friday', e.days.friday)}${badge('sunday', e.days.sunday)}${!e.talks.length ? '<span class="chip" style="font-size:.72rem;">مفيش مواعيد هنا</span>' : ''}</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;font-size:.9rem;">
           ${e.phone ? `<a href="tel:${escHtml(e.phone.replace(/[^\d+]/g,''))}" dir="ltr" style="font-weight:600;">📞 ${escHtml(e.phone)}</a>${wa ? ` <a href="https://wa.me/${wa}" target="_blank" rel="noopener" title="واتساب" style="text-decoration:none;">💬</a>` : ''}` : '<span style="color:var(--faint);">📞 ناقص الرقم</span>'}
-          ${canEdit ? `<button class="ghost spk-phone-btn" style="font-size:.75rem;padding:2px 10px;">${e.phone ? '✏️ تعديل الرقم' : '➕ إضافة رقم'}</button>` : ''}
+          ${canEdit ? `<button class="ghost spk-phone-btn" style="font-size:.75rem;padding:2px 10px;">${e.phone ? '✏️ تعديل الرقم' : '➕ إضافة رقم'}</button>
+          <button class="ghost spk-photo-btn" style="font-size:.75rem;padding:2px 10px;">📷 ${e.hasPhoto ? 'تغيير الصورة' : 'إضافة صورة'}</button>
+          ${e.hasPhoto ? '<button class="ghost spk-photo-del" style="font-size:.75rem;padding:2px 10px;">🗑️ شيل الصورة</button>' : ''}` : ''}
         </div>
         ${e.talks.length ? `<details style="margin-top:4px;font-size:.8rem;color:var(--text-2);"><summary style="cursor:pointer;">مواعيده (${e.talks.length})</summary>${e.talks.map(t=>`<div>• ${escHtml(talkLabel(t))}</div>`).join('')}</details>` : ''}
       </div>`;
@@ -5239,6 +5264,47 @@ function openSpeakersReport(){
         render();
       }
     }));
+    document.querySelectorAll('.spk-photo-btn').forEach(b=>b.addEventListener('click', ()=>{
+      const e = all.find(x=>x.key === b.closest('.spk-row').dataset.key); if(!e) return;
+      const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
+      inp.addEventListener('change', ()=>{
+        const f = inp.files && inp.files[0]; if(!f) return;
+        const done = holdForPhoto(b);
+        resizeImageFile(f, 300, async dataUrl=>{
+          done(); b.disabled = true; b.textContent = 'جاري الرفع…';
+          let ok = false;
+          try{
+            if(window.storage.photoSet){
+              const ver = Date.now().toString(36) + Math.random().toString(36).slice(2,7), id = spkPhotoId(e.key);
+              await window.storage.photoSet(id, dataUrl, ver);
+              PHOTO_MEM.set(id, { ver, v: dataUrl }); photoCache.put(id, { ver, v: dataUrl });
+              ok = await saveProgramChange(obj=>setSpeakerPhoto(obj, e.key, e.name, ver, ''));
+            } else ok = await saveProgramChange(obj=>setSpeakerPhoto(obj, e.key, e.name, '', dataUrl));
+          }catch(err){ console.error(err); alert('مقدرناش نرفع الصورة. اتأكد إن النت شغال وجرّب تاني.'); }
+          if(ok) auditPush({ area:'برنامج الخدمة', action:'تعديل', target:'صورة المتكلم — ' + e.name, changes:[{ f:'الصورة', to: e.hasPhoto ? 'اتغيرت' : 'اتضافت' }], rest: true });
+          render();
+        }, 'image/jpeg', 0.82);
+      });
+      inp.click();
+    }));
+    document.querySelectorAll('.spk-photo-del').forEach(b=>b.addEventListener('click', async ()=>{
+      const e = all.find(x=>x.key === b.closest('.spk-row').dataset.key); if(!e) return;
+      if(!confirm('تشيل صورة ' + e.name + '؟')) return;
+      if(await saveProgramChange(obj=>setSpeakerPhoto(obj, e.key, e.name, '', ''))){
+        const id = spkPhotoId(e.key);
+        if(window.storage.photoDelete) window.storage.photoDelete(id).catch(()=>{});
+        PHOTO_MEM.delete(id); photoCache.del(id);
+        auditPush({ area:'برنامج الخدمة', action:'حذف', target:'صورة المتكلم — ' + e.name, changes:[{ f:'الصورة', from:'موجودة', to:'—' }], rest: true });
+        render();
+      }
+    }));
+    document.querySelectorAll('.spk-row').forEach(row=>{
+      speakerPhotoUrl(row.dataset.key).then(url=>{
+        if(!url) return;
+        const ava = row.querySelector('.spk-ava');
+        if(ava) ava.innerHTML = `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+      });
+    });
   };
   document.getElementById('spkScope').addEventListener('change', e=>{ scope = e.target.value; render(); });
   document.getElementById('spkSearch').addEventListener('input', e=>{ q = e.target.value.trim(); render(); });
@@ -5258,18 +5324,24 @@ function openSpeakersReport(){
     XLSX.utils.book_append_sheet(wb, ws, 'المتكلمين');
     window.saveWorkbookToViewer(wb, `تقرير-المتكلمين-${scope === 'all' ? 'كل-السنين' : copticYear(progYear)}.xlsx`);
   });
-  document.getElementById('spkPrintBtn').addEventListener('click', ()=>{
+  document.getElementById('spkPrintBtn').addEventListener('click', async ()=>{
     const { rows } = filtered();
     const w = window.open('', '_blank');
     if(!w){ alert('المتصفح منع فتح صفحة الطباعة. اسمح بالنوافذ المنبثقة وجرّب تاني.'); return; }
+    w.document.write('<p style="font-family:Cairo,Arial;text-align:center;margin-top:40px;">جاري تجهيز التقرير…</p>');
+    const photos = await Promise.all(rows.map(e=>speakerPhotoUrl(e.key)));
+    w.document.open();
     const title = `تقرير المتكلمين — ${scopeLabel()}`;
     w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${escHtml(title)}</title>
       <style>body{font-family:Cairo,Arial,sans-serif;color:#1B2A4A;margin:24px;} h1{font-size:20px;text-align:center;margin:6px 0 14px;}
       table{width:100%;border-collapse:collapse;font-size:12px;} th,td{border:1px solid #c9b98a;padding:5px 7px;vertical-align:top;text-align:right;} th{background:#1B2A4A;color:#fff;}
-      td.ph{direction:ltr;text-align:left;white-space:nowrap;} .t{color:#5a5140;font-size:11px;} @media print{ tr{page-break-inside:avoid;} }</style></head><body>
+      td{vertical-align:middle;} td.ph{direction:ltr;text-align:left;white-space:nowrap;} td.pic{width:62px;text-align:center;}
+      .ava{width:54px;height:54px;border-radius:50%;object-fit:cover;border:2px solid #C9A227;display:block;margin:0 auto;}
+      .noava{width:54px;height:54px;border-radius:50%;border:2px solid #e8d8a3;background:#f7f1e3;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto;}
+      @media print{ tr{page-break-inside:avoid;} }</style></head><body>
       <h1>${escHtml(title)}</h1>
-      <table><thead><tr><th>م</th><th>المتكلم</th><th>كنيسته</th><th>التليفون</th><th>بيخدم</th><th>المواعيد</th></tr></thead><tbody>
-      ${rows.map((e,i)=>`<tr><td>${i+1}</td><td><b>${escHtml(e.name)}</b></td><td>${escHtml(e.church)}</td><td class="ph">${escHtml(e.phone)}</td><td>${escHtml(speakerDaysLabel(e))}</td><td class="t">${e.talks.map(t=>escHtml(talkLabel(t))).join('<br>')}</td></tr>`).join('')}
+      <table><thead><tr><th>م</th><th>الصورة</th><th>المتكلم</th><th>كنيسته</th><th>التليفون</th><th>بيخدم</th></tr></thead><tbody>
+      ${rows.map((e,i)=>`<tr><td>${i+1}</td><td class="pic">${photos[i] ? `<img class="ava" src="${photos[i]}">` : '<div class="noava">🎤</div>'}</td><td><b>${escHtml(e.name)}</b></td><td>${escHtml(e.church)}</td><td class="ph">${escHtml(e.phone)}</td><td>${escHtml(speakerDaysLabel(e))}</td></tr>`).join('')}
       </tbody></table>
       <script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script></body></html>`);
     w.document.close();
