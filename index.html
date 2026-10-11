@@ -393,16 +393,22 @@ html[data-theme="dark"] .follow-row .why b{color:#f08a84;}
 .follow-acts a{display:inline-flex;align-items:center;justify-content:center;min-width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--card);text-decoration:none;font-size:1.05rem;}
 .follow-more{display:block;width:100%;margin-top:8px;}
 .follow-all{margin-top:16px;}
-.dc-top{display:flex;align-items:center;gap:14px;margin-bottom:12px;}
-.dc-ring{flex:none;width:84px;height:84px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
-.dc-ring span{width:66px;height:66px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.15rem;color:var(--ink);}
-.dc-sum{font-size:.85rem;color:var(--text-2);line-height:1.7;}
-.dc-sum b{color:var(--ink);}
-.dc-field{margin:7px 0;}
-.dc-field .lbl{display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:3px;}
-.dc-field .lbl .meta{color:var(--muted);font-size:.74rem;}
-.dc-bar{height:9px;border-radius:6px;background:var(--line);overflow:hidden;}
+.dc-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+.dc-summary .dash-stat{padding:12px 8px;}
+.dc-summary .sub{font-size:.72rem;color:var(--muted);margin-top:2px;}
+.dc-groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:12px;}
+.dc-group{background:var(--cream);border:1px solid var(--line);border-radius:14px;padding:12px 14px;}
+.dc-group h3{display:flex;justify-content:space-between;align-items:center;margin:0 0 8px;font-size:.92rem;color:var(--ink);}
+.dc-group h3 .gp{font-size:.85rem;font-weight:800;}
+.dc-field{display:grid;grid-template-columns:88px 1fr 40px 70px;align-items:center;gap:8px;padding:5px 0;font-size:.82rem;}
+.dc-field .pc{font-weight:700;text-align:center;font-size:.8rem;}
+.dc-bar{height:8px;border-radius:6px;background:var(--line);overflow:hidden;}
 .dc-bar i{display:block;height:100%;border-radius:6px;}
+.dc-need{font-size:.7rem;padding:2px 6px;text-align:center;border-radius:9px;border:none;cursor:pointer;background:rgba(178,59,59,.1);color:#b23b3b;white-space:nowrap;min-width:0;}
+html[data-theme="dark"] .dc-need{color:#f08a84;}
+.dc-need.ok{background:rgba(46,125,79,.12);color:#2e7d4f;cursor:default;}
+.dc-hint{font-size:.74rem;color:var(--muted);margin:10px 0 0;}
+@media (max-width:480px){ .dc-summary .num{font-size:1.3rem;} .dc-field{grid-template-columns:78px 1fr 36px 64px;gap:6px;} }
 .dc-miss{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;}
 .dc-miss span{font-size:.68rem;padding:1px 7px;border-radius:9px;background:rgba(178,59,59,.1);color:#b23b3b;}
 html[data-theme="dark"] .dc-miss span{color:#f08a84;}
@@ -2033,7 +2039,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '10-Oct-2026 B';
+const APP_VERSION = '11-Oct-2026 A';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -3020,6 +3026,12 @@ const DATA_FIELDS = [
   { key:'occupation',       label:'الوظيفة' },
   { key:'workplace',        label:'مكان العمل' },
 ];
+const DATA_GROUPS = [
+  { title:'👤 البيانات الأساسية', keys:['photo','phone','birthDate'] },
+  { title:'🏠 السكن',            keys:['area','address'] },
+  { title:'⛪ الكنيسة',           keys:['confessionFather','church'] },
+  { title:'💼 العمل',             keys:['occupation','workplace'] },
+];
 function fieldFilled(s, f){ return f.has ? f.has(s) : String(s[f.key]||'').trim() !== ''; }
 let dataCompleteField = '';
 function renderDataCompleteness(people){
@@ -3035,28 +3047,31 @@ function renderDataCompleteness(people){
   const overall = Math.round(filledCells / (n * F) * 100);
   const complete = rows.filter(r=>!r.missing.length).length;
   const completePct = Math.round(complete / n * 100);
-  const ring = colorForPercent(overall);
-  const fieldsHtml = DATA_FIELDS.map(f=>{
-    const done = people.filter(s=>fieldFilled(s, f)).length;
-    const pct = Math.round(done / n * 100);
-    return `<div class="dc-field">
-      <div class="lbl"><span>${f.label}</span><span class="meta">${pct}% · ${done} من ${n}${done<n ? ` · ناقص ${n-done}` : ' ✓'}</span></div>
-      <div class="dc-bar"><i style="width:${pct}%;background:${colorForPercent(pct)};"></i></div>
+  const fieldStat = f=>{ const done = people.filter(s=>fieldFilled(s, f)).length; return { f, done, pct: Math.round(done / n * 100) }; };
+  const groupsHtml = DATA_GROUPS.map(g=>{
+    const stats = g.keys.map(k=>fieldStat(DATA_FIELDS.find(f=>f.key===k)));
+    const gp = Math.round(stats.reduce((t,x)=>t+x.pct,0) / stats.length);
+    return `<div class="dc-group">
+      <h3><span>${g.title}</span><span class="gp" style="color:${colorForPercent(gp)};">${gp}%</span></h3>
+      ${stats.map(x=>`<div class="dc-field">
+        <span>${x.f.label}</span>
+        <div class="dc-bar"><i style="width:${x.pct}%;background:${colorForPercent(x.pct)};"></i></div>
+        <span class="pc" style="color:${colorForPercent(x.pct)};">${x.pct}%</span>
+        ${x.done<n ? `<button type="button" class="dc-need" data-field="${x.f.key}">ناقص ${n-x.done}</button>` : '<span class="dc-need ok">✓ كامل</span>'}
+      </div>`).join('')}
     </div>`;
   }).join('');
   const incomplete = rows.filter(r=>r.missing.length && (!dataCompleteField || r.missing.some(f=>f.key===dataCompleteField)))
     .sort((a,b)=>a.pct-b.pct || a.s.name.localeCompare(b.s.name,'ar'));
   const opts = ['<option value="">كل البيانات الناقصة</option>'].concat(DATA_FIELDS.map(f=>`<option value="${f.key}"${f.key===dataCompleteField?' selected':''}>ناقص: ${f.label}</option>`)).join('');
   el.innerHTML = `
-    <div class="dc-top">
-      <div class="dc-ring" style="background:conic-gradient(${ring} ${overall*3.6}deg, var(--line) 0);"><span>${overall}%</span></div>
-      <div class="dc-sum">
-        البيانات المتسجّلة: <b>${overall}%</b> والناقصة <b>${100-overall}%</b><br>
-        بياناتهم كاملة: <b>${complete}</b> من ${n} (${completePct}%)<br>
-        لسه ناقصهم حاجة: <b>${n-complete}</b> (${100-completePct}%)
-      </div>
+    <div class="dc-summary">
+      <div class="dash-stat"><div class="num" style="color:${colorForPercent(overall)};">${overall}%</div><div class="label">نسبة اكتمال البيانات</div><div class="sub">ناقص ${100-overall}%</div></div>
+      <div class="dash-stat"><div class="num" style="color:#2e7d4f;">${complete}</div><div class="label">بياناتهم كاملة</div><div class="sub">${completePct}% من ${n}</div></div>
+      <div class="dash-stat"><div class="num" style="color:#b23b3b;">${n-complete}</div><div class="label">لسه ناقصهم حاجة</div><div class="sub">${100-completePct}% من ${n}</div></div>
     </div>
-    ${fieldsHtml}
+    <div class="dc-groups">${groupsHtml}</div>
+    ${(n-complete) ? '<p class="dc-hint">دوس على "ناقص" جنب أي خانة علشان تشوف أسماء اللي ناقصهم.</p>' : ''}
     ${(n-complete) ? `<details class="follow-all" id="dcDetails"${dataCompleteField||dataCompleteOpen?' open':''}>
       <summary>مين لسه بياناته ناقصة (${n-complete})</summary>
       <select id="dcFieldFilter" style="margin:6px 0 8px;">${opts}</select>
@@ -3070,6 +3085,10 @@ function renderDataCompleteness(people){
     </details>` : '<div class="empty-note">كل البيانات كاملة 🎉</div>'}`;
   const sel = el.querySelector('#dcFieldFilter');
   if(sel) sel.addEventListener('change', ()=>{ dataCompleteField = sel.value; renderDataCompleteness(people); });
+  el.querySelectorAll('button.dc-need').forEach(b=>b.addEventListener('click', ()=>{
+    dataCompleteField = b.dataset.field; dataCompleteOpen = true; renderDataCompleteness(people);
+    const d = el.querySelector('#dcDetails'); if(d) d.scrollIntoView({behavior:'smooth', block:'start'});
+  }));
   const det = el.querySelector('#dcDetails');
   if(det) det.addEventListener('toggle', ()=>{ dataCompleteOpen = det.open; });
   el.querySelectorAll('.dc-edit').forEach(b=>b.addEventListener('click', ()=>openMissingDataEdit(b.dataset.id)));
