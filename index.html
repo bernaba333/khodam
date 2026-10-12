@@ -584,6 +584,11 @@ html[data-theme="dark"] .dc-miss span{color:#f08a84;}
 .role-tag.supervisor{background:var(--sage);color:#fff;}
 .role-tag.user{background:var(--gold-soft);color:var(--chip-ink);}
 .added-by{font-size:.68rem;color:#9a8c5f;margin-top:3px;}
+.perm-sum{font-size:.78rem;color:var(--ink-soft);line-height:1.75;margin-top:5px;}
+.perm-sum b{color:var(--ink);}
+.perm-quick{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:10px 0;}
+.perm-quick button{font-size:.78rem;padding:5px 12px;}
+.profile-select{padding:6px 8px;border-radius:8px;border:1px solid var(--line);font-family:'Cairo',sans-serif;font-size:.8rem;background:var(--input);color:var(--ink);}
 
 .print-footer{
   display:none;
@@ -1133,14 +1138,19 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
         <button type="button" id="newUserPasswordToggle" class="pw-toggle-btn" aria-label="إظهار كلمة السر">👁️</button>
       </div>
       <select id="newUserRole" style="padding:10px;border-radius:10px;border:1px solid var(--line);font-family:'Cairo',sans-serif;">
-        <option value="user">مستخدم</option>
+        <option value="user">خادم (الصلاحيات العامة)</option>
+        <option value="attendance">حضور وافتقاد</option>
+        <option value="viewOnly">يشوف بس</option>
         <option value="program">برنامج الخدمة بس</option>
         <option value="supervisor">مشرف</option>
         <option value="admin">مدير</option>
       </select>
     </div>
-    <label style="display:block;margin-bottom:6px;font-size:.85rem;">الاجتماعات اللي يقدر يشوفها (بتتحدد للمستخدم العادي بس — المشرف والمدير شايفين كل حاجة دايمًا)</label>
+    <div class="perm-sum" id="newUserRoleHint" style="margin:-4px 0 10px;"></div>
+    <div id="newUserGroupsWrap">
+    <label style="display:block;margin-bottom:6px;font-size:.85rem;">الاجتماعات اللي يقدر يشوفها</label>
     <div class="group-grid" id="newUserGroups" style="margin-bottom:12px;"></div>
+    </div>
     <button class="primary" id="addUserBtn">إضافة</button>
     <div id="usersList"></div>
   </div>
@@ -1172,10 +1182,18 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
   </div>
 
   <div class="card" id="permissionsCard" style="display:none;">
-    <h2>صلاحيات المستخدمين العاديين</h2>
-    <p style="font-size:.82rem;color:var(--ink-soft);margin-top:0;">دي الصلاحيات العامة لأي "مستخدم" عادي. تقدر تدّي أي مستخدم صلاحيات مختلفة من زرار "صلاحياته الخاصة" جنب اسمه. المدير والمشرف دايمًا شايفين ومعدّلين كل حاجة.</p>
-
+    <h2>🔐 صلاحيات الخادم العادي</h2>
+    <p style="font-size:.82rem;color:var(--ink-soft);margin-top:0;">بتتطبق على كل حد نوعه "خادم" (<span id="globalPermUsersCount">0</span>). لأي حد تاني اختار نوعه من قايمة المستخدمين فوق بضغطة واحدة.</p>
+    <div class="perm-sum" id="globalPermSummary" style="font-size:.84rem;"></div>
+    <div class="perm-quick">
+      <span style="font-size:.8rem;">اختيار سريع:</span>
+      <button type="button" class="ghost" data-gpreset="all">كل الشاشات</button>
+      <button type="button" class="ghost" data-gpreset="attendance">حضور وافتقاد</button>
+      <button type="button" class="ghost" data-gpreset="viewOnly">يشوف بس</button>
+    </div>
+    <details class="follow-all"><summary>⚙️ تفاصيل (شاشة شاشة)</summary>
     <div id="globalPermMatrix"></div>
+    </details>
     <p style="font-size:.78rem;color:var(--ink-soft);margin-top:8px;">🔒 حذف الأسماء (خدام ومخدومين) للمدير والمشرف بس. حذف الاجتماعات وتصفير البيانات للمدير بس. المستخدم العادي مش بيقدر يحذف أي حاجة.</p>
 
     <button class="primary" style="margin-top:16px;" id="savePermissionsBtn">حفظ الصلاحيات</button>
@@ -2059,7 +2077,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '11-Oct-2026 F';
+const APP_VERSION = '12-Oct-2026 A';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -3546,7 +3564,7 @@ async function loadUsers(){
 }
 function diffUsers(before, after){
   const out = [], bm = new Map(before.map(u=>[u.name,u])), am = new Map(after.map(u=>[u.name,u]));
-  const typeLabel = u=> isProgramOnly(u) ? 'برنامج الخدمة بس' : roleLabelFor(u.role);
+  const typeLabel = u=> profileLabel(profileOf(u));
   am.forEach((a,name)=>{
     const b = bm.get(name);
     if(!b){ out.push({ area:'المستخدمين', action:'إضافة مستخدم', target:name, changes:[{ f:'النوع', to: typeLabel(a) }] }); return; }
@@ -3852,8 +3870,53 @@ const ALL_PERM_KEYS = Object.keys(PERM_LABELS);
 const PERM_PRESETS = {
   all:     ()=>Object.fromEntries(ALL_PERM_KEYS.map(k=>[k,true])),
   viewOnly:()=>Object.fromEntries(ALL_PERM_KEYS.map(k=>[k, !PERM_SCREENS.some(sc=>(sc.edit||[]).includes(k))])),
-  program: ()=>Object.fromEntries(ALL_PERM_KEYS.map(k=>[k, k==='tabProgram' || k==='editProgram']))
+  program: ()=>Object.fromEntries(ALL_PERM_KEYS.map(k=>[k, k==='tabProgram' || k==='editProgram'])),
+  attendance: ()=>{ const on = ['tabDashboard','tabServants','tabAttendance','editAttendance','tabAfeqad','editAfeqad','phones']; return Object.fromEntries(ALL_PERM_KEYS.map(k=>[k, on.includes(k)])); }
 };
+/* one pick per user: role + ready-made permission set */
+const USER_PROFILES = [
+  { id:'admin',      label:'مدير',              hint:'كل حاجة + المستخدمين والإعدادات والحذف' },
+  { id:'supervisor', label:'مشرف',              hint:'كل الشاشات وكل الاجتماعات + حذف الأسماء' },
+  { id:'user',       label:'خادم',              hint:'حسب صلاحيات الخادم العادي (تحت)' },
+  { id:'attendance', label:'حضور وافتقاد',      hint:'يسجّل الحضور والافتقاد ويشوف التليفونات' },
+  { id:'viewOnly',   label:'يشوف بس',           hint:'يشوف كل حاجة من غير ما يعدّل' },
+  { id:'program',    label:'برنامج الخدمة بس',  hint:'شاشة برنامج الخدمة بس' },
+  { id:'all',        label:'كل الشاشات',        hint:'يشوف ويعدّل كل الشاشات من غير حذف' },
+  { id:'custom',     label:'مخصص',              hint:'' }
+];
+function profileOf(u){
+  if(!u) return 'user';
+  if(u.role === 'admin' || u.role === 'supervisor') return u.role;
+  if(!u.perms) return 'user';
+  const hit = ['attendance','viewOnly','program','all'].find(id=>{
+    const pr = PERM_PRESETS[id]();
+    return ALL_PERM_KEYS.every(k=>effectivePerm(u,k) === !!pr[k]);
+  });
+  return hit || 'custom';
+}
+function profileLabel(id){ const p = USER_PROFILES.find(x=>x.id===id); return p ? p.label : id; }
+const PERM_DATA_SHORT = { phones:'التليفون', addresses:'العنوان', otherDetails:'الميلاد وأب الاعتراف والكنيسة', addedBy:'مين أضاف' };
+function permSummaryHtml(get){
+  const edit = [], view = [];
+  PERM_SCREENS.forEach(sc=>{
+    if(!get(sc.view)) return;
+    const eds = (sc.edit||[]).filter(k=>get(k));
+    if(!eds.length){ view.push(sc.label); return; }
+    edit.push(sc.label + (eds.length < sc.edit.length ? ' (' + eds.map(k=>sc.editLabels[sc.edit.indexOf(k)]).join('، ') + ' بس)' : ''));
+  });
+  const data = PERM_DATA.filter(([k])=>get(k)).map(([k])=>PERM_DATA_SHORT[k] || k);
+  if(!edit.length && !view.length) return '🚫 <b>مالوش أي شاشة</b>';
+  const lines = [];
+  if(edit.length) lines.push('✏️ <b>يعدّل:</b> ' + edit.join('، '));
+  if(view.length) lines.push('👁️ <b>يشوف بس:</b> ' + view.join('، '));
+  lines.push(data.length ? '📇 <b>بيانات:</b> ' + data.join('، ') : '🔒 <b>من غير بيانات شخصية</b>');
+  return lines.join('<br>');
+}
+function userSummaryHtml(u){
+  const id = profileOf(u);
+  if(id === 'admin' || id === 'supervisor') return '⭐ ' + USER_PROFILES.find(x=>x.id===id).hint;
+  return permSummaryHtml(k=>effectivePerm(u,k));
+}
 function isProgramOnly(user){
   if(!user || user.role !== 'user' || !user.perms) return false;
   return ALL_PERM_KEYS.every(k=>!!user.perms[k] === (k==='tabProgram' || k==='editProgram'));
@@ -3877,7 +3940,8 @@ function permMatrixHtml(values){
     <label style="display:block;margin:14px 0 6px;font-weight:700;">البيانات الشخصية</label>
     ${PERM_DATA.map(([k,l])=>`<label class="group-chk" style="margin-bottom:6px;"><input type="checkbox" data-perm="${k}" ${v(k)?'checked':''}> ${l}</label>`).join('')}`;
 }
-function wirePermMatrix(container){
+function wirePermMatrix(container, onChange){
+  if(onChange) container.addEventListener('change', ()=>onChange(readPermMatrix(container)));
   container.querySelectorAll('input[data-role="edit"]').forEach(cb=>cb.addEventListener('change', ()=>{
     if(cb.checked){ const vcb = container.querySelector(`input[data-perm="${cb.dataset.view}"]`); if(vcb) vcb.checked = true; }
   }));
@@ -4046,8 +4110,18 @@ function loadPermissionsForm(){
   const box = document.getElementById('globalPermMatrix');
   const vals = Object.fromEntries(ALL_PERM_KEYS.map(k=>[k, effectivePerm(null, k)]));
   box.innerHTML = permMatrixHtml(vals);
-  wirePermMatrix(box);
+  const sum = document.getElementById('globalPermSummary');
+  const refresh = v=>{ sum.innerHTML = permSummaryHtml(k=>!!v[k]); };
+  wirePermMatrix(box, refresh);
+  refresh(vals);
+  document.getElementById('globalPermUsersCount').textContent = USERS.filter(u=>profileOf(u)==='user').length;
 }
+document.querySelectorAll('[data-gpreset]').forEach(b=>b.addEventListener('click', ()=>{
+  const box = document.getElementById('globalPermMatrix');
+  const v = PERM_PRESETS[b.dataset.gpreset]();
+  setPermMatrix(box, v);
+  document.getElementById('globalPermSummary').innerHTML = permSummaryHtml(k=>!!v[k]) + '<br><span style="color:var(--wine);">⚠️ لسه محتاج تدوس "حفظ الصلاحيات"</span>';
+}));
 
 document.getElementById('savePermissionsBtn').addEventListener('click', async ()=>{
   if(!isAdmin()) return;
@@ -4119,20 +4193,19 @@ function renderUsersList(){
   list.innerHTML = USERS.map(u=>`
     <div class="user-row" data-name="${u.name}">
       <div>
-        ${u.name}
-        <span class="role-tag ${u.role}">${roleLabelFor(u.role)}</span>${isProgramOnly(u) ? ' <span class="chip" style="font-size:.72rem;">برنامج الخدمة بس</span>' : (u.role==='user' && u.perms ? ' <span class="chip" style="font-size:.72rem;">صلاحيات خاصة</span>' : '')}
-        <div class="added-by">أضافه: ${u.addedBy || '—'}</div>
+        <b>${u.name}</b>
+        <span class="role-tag ${u.role}">${profileLabel(profileOf(u))}</span>
+        <div class="perm-sum">${userSummaryHtml(u)}</div>
         ${u.role === 'user' ? `<div class="chips" style="margin-top:6px;">${allowedGroupsFor(u).map(gid=>`<span class="chip g-${gid}">${groupName(gid)}</span>`).join('')}</div>` : ''}
+        <div class="added-by">أضافه: ${u.addedBy || '—'}</div>
       </div>
       <div class="row-actions">
-        ${u.role === 'user' ? `<button class="ghost edit-user-groups">تعديل الاجتماعات المسموحة</button>` : ''}
-        ${u.role === 'user' ? `<button class="ghost edit-user-perms">صلاحياته الخاصة</button>` : ''}
-        <button class="ghost change-pass">كلمة سر جديدة</button>
-        <select class="role-select" style="padding:6px 8px;border-radius:8px;border:1px solid var(--line);font-family:'Cairo',sans-serif;font-size:.8rem;">
-          <option value="user" ${u.role==='user'?'selected':''}>مستخدم</option>
-          <option value="supervisor" ${u.role==='supervisor'?'selected':''}>مشرف</option>
-          <option value="admin" ${u.role==='admin'?'selected':''}>مدير</option>
+        <select class="profile-select" title="نوع المستخدم وصلاحياته">
+          ${USER_PROFILES.filter(p=>p.id!=='custom' || profileOf(u)==='custom' || u.role==='user').map(p=>`<option value="${p.id}" ${profileOf(u)===p.id?'selected':''}>${p.id==='custom' ? 'مخصص… ⚙️' : p.label}</option>`).join('')}
         </select>
+        ${u.role === 'user' ? `<button class="ghost edit-user-perms" title="تخصيص الصلاحيات">⚙️</button>` : ''}
+        ${u.role === 'user' ? `<button class="ghost edit-user-groups">الاجتماعات</button>` : ''}
+        <button class="ghost change-pass">كلمة السر</button>
         <button class="ghost danger del-user">حذف</button>
       </div>
     </div>
@@ -4168,19 +4241,13 @@ function renderUsersList(){
       if(editPanel.style.display === 'none'){
         const vals = Object.fromEntries(ALL_PERM_KEYS.map(k=>[k, effectivePerm(u, k)]));
         editPanel.innerHTML = `
-          <p style="font-size:.8rem;color:var(--ink-soft);margin:0 0 8px;">صلاحيات خاصة بـ "${name}" بس — بتتجاوز الإعدادات العامة.</p>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
-            <span style="font-size:.8rem;align-self:center;">اختيارات جاهزة:</span>
-            <button class="ghost" data-preset="all" style="font-size:.78rem;padding:4px 10px;">كل حاجة</button>
-            <button class="ghost" data-preset="viewOnly" style="font-size:.78rem;padding:4px 10px;">يشوف بس</button>
-            <button class="ghost" data-preset="program" style="font-size:.78rem;padding:4px 10px;">برنامج الخدمة بس</button>
-          </div>
+          <p style="font-size:.8rem;color:var(--ink-soft);margin:0 0 8px;">تخصيص صلاحيات "${name}" بس.</p>
+          <div class="perm-sum" data-live-sum style="margin-bottom:8px;">${permSummaryHtml(k=>!!vals[k])}</div>
           <div class="perm-box">${permMatrixHtml(vals)}</div>
           <button class="primary" style="margin-top:8px;">حفظ صلاحياته</button>
-          <button class="ghost" style="margin-top:8px;margin-inline-start:6px;" data-reset-perms>رجوع للإعدادات العامة</button>`;
+          ${u.perms ? `<button class="ghost" style="margin-top:8px;margin-inline-start:6px;" data-reset-perms>رجوع لصلاحيات الخادم العادي</button>` : ''}`;
         const box = editPanel.querySelector('.perm-box');
-        wirePermMatrix(box);
-        editPanel.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click', ()=>setPermMatrix(box, PERM_PRESETS[b.dataset.preset]())));
+        wirePermMatrix(box, v=>{ editPanel.querySelector('[data-live-sum]').innerHTML = permSummaryHtml(k=>!!v[k]); });
         editPanel.style.display = 'block';
         editPanel.querySelector('button.primary').addEventListener('click', async ()=>{
           u.perms = readPermMatrix(editPanel.querySelector('.perm-box'));
@@ -4189,8 +4256,9 @@ function renderUsersList(){
           renderUsersList();
           alert('اتحفظت صلاحيات ' + name + ' ✓');
         });
-        editPanel.querySelector('[data-reset-perms]').addEventListener('click', async ()=>{
-          if(!confirm(`ترجّع "${name}" للإعدادات العامة؟`)) return;
+        const resetBtn = editPanel.querySelector('[data-reset-perms]');
+        if(resetBtn) resetBtn.addEventListener('click', async ()=>{
+          if(!confirm(`ترجّع "${name}" لصلاحيات الخادم العادي؟`)) return;
           delete u.perms;
           await saveUsers();
           if(currentUser && currentUser.name === name){ currentUser = u; applyUserUI(); }
@@ -4212,17 +4280,31 @@ function renderUsersList(){
       alert('اتغيرت كلمة السر ✓');
     });
   });
-  list.querySelectorAll('.role-select').forEach(sel=>{
+  list.querySelectorAll('.profile-select').forEach(sel=>{
     sel.addEventListener('change', async (e)=>{
-      const name = e.target.closest('.user-row').dataset.name;
-      if(currentUser && name === currentUser.name && e.target.value !== 'admin' && isAdmin()){
+      const row = e.target.closest('.user-row');
+      const name = row.dataset.name;
+      const u = USERS.find(x=>x.name === name);
+      const pick = e.target.value;
+      if(pick === 'custom'){
+        // open the per-screen editor; nothing changes until "حفظ"
+        if(u.role !== 'user'){ renderUsersList(); return; }
+        const panel = list.querySelector(`.edit-panel[data-user-edit-for="${name}"]`);
+        if(panel.style.display === 'none') row.querySelector('.edit-user-perms').click();
+        return;
+      }
+      if(currentUser && name === currentUser.name && pick !== 'admin' && isAdmin()){
         if(!confirm('هتقلّل صلاحيتك من مدير — هتحتاج تعمل حساب مدير تاني عشان ترجّع صلاحيتك. متابع؟')){
           renderUsersList();
           return;
         }
       }
-      const u = USERS.find(x=>x.name === name);
-      u.role = e.target.value;
+      if(pick === 'admin' || pick === 'supervisor') u.role = pick;
+      else {
+        u.role = 'user';
+        if(pick === 'user') delete u.perms;
+        else u.perms = PERM_PRESETS[pick]();
+      }
       await saveUsers();
       if(currentUser && currentUser.name === name) currentUser = u;
       applyUserUI();
@@ -4255,12 +4337,12 @@ document.getElementById('addUserBtn').addEventListener('click', async ()=>{
   if(!name || !password){ alert('لازم تكتب الاسم وكلمة السر.'); return; }
   if(USERS.find(u=>u.name === name)){ alert('في مستخدم بنفس الاسم بالفعل'); return; }
   const picked = document.getElementById('newUserRole').value;
-  const role = picked === 'program' ? 'user' : picked;
+  const role = (picked === 'admin' || picked === 'supervisor') ? picked : 'user';
   let allowedGroups = Array.from(document.querySelectorAll('#newUserGroups input:checked')).map(c=>c.value);
-  if(picked === 'program') allowedGroups = GROUPS.map(g=>g.id);
+  if(picked === 'program' || role !== 'user') allowedGroups = GROUPS.map(g=>g.id);
   if(role === 'user' && allowedGroups.length === 0){ alert('اختار اجتماع واحد على الأقل يشوفه المستخدم ده.'); return; }
   const newUser = { name, role, password, allowedGroups, addedBy: currentUser ? currentUser.name : '—', addedAt: todayStr() };
-  if(picked === 'program') newUser.perms = PERM_PRESETS.program();
+  if(PERM_PRESETS[picked]) newUser.perms = PERM_PRESETS[picked]();
   USERS.push(newUser);
   nameInput.value = '';
   passInput.value = '';
@@ -4621,6 +4703,14 @@ document.getElementById('importAllDataFile').addEventListener('change', (e)=>{
 /* ---------- CUSTOM REPORT BUILDER ---------- */
 buildGroupGrid(document.getElementById('customReportGroups'), GROUPS.map(g=>g.id));
 buildGroupGrid(document.getElementById('newUserGroups'), GROUPS.map(g=>g.id));
+function refreshNewUserRoleHint(){
+  const picked = document.getElementById('newUserRole').value;
+  const p = USER_PROFILES.find(x=>x.id===picked);
+  document.getElementById('newUserRoleHint').textContent = p ? p.hint : '';
+  document.getElementById('newUserGroupsWrap').style.display = (picked === 'admin' || picked === 'supervisor' || picked === 'program') ? 'none' : '';
+}
+document.getElementById('newUserRole').addEventListener('change', refreshNewUserRoleHint);
+refreshNewUserRoleHint();
 
 function visibleGroupIds(){
   return allowedGroupsFor(currentUser);
