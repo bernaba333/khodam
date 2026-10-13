@@ -2078,7 +2078,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '13-Oct-2026 D';
+const APP_VERSION = '13-Oct-2026 E';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -3555,7 +3555,7 @@ function followWaLink(s){
   const num = waNumber(s.phone); if(!num) return '';
   const first = (s.name||'').trim().split(/\s+/)[0];
   const text = `إزيك يا ${first} 🙏\nوحشتنا في الاجتماع، طمّنا عليك.\nاجتماع الأنبا بولا والعائلة المقدسة`;
-  return `https://api.whatsapp.com/send?phone=${num}&text=${encodeURIComponent(text)}`;
+  return waUrl(num, text);
 }
 function renderFollowUp(people, visible){
   const statsEl = document.getElementById('followStats');
@@ -5248,11 +5248,23 @@ function waNumber(phone){
   else if(d.length === 10 && d.startsWith('1')) d = '20' + d;
   return d.length >= 10 && d.length <= 15 ? d : '';
 }
+// On phones open the WhatsApp app directly (the web page can hang inside the installed app / in-app browsers)
+const IS_MOBILE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+function waUrl(num, text){
+  const t = text ? '&text=' + encodeURIComponent(text) : '';
+  return IS_MOBILE ? `whatsapp://send?phone=${num}${t}` : `https://api.whatsapp.com/send?phone=${num}${t}`;
+}
+document.addEventListener('click', e=>{
+  const a = e.target.closest && e.target.closest('a[href^="whatsapp:"]');
+  if(!a) return;
+  e.preventDefault();
+  window.location.href = a.getAttribute('href');
+}, true);
 function waBirthdayLink(s){
   const num = waNumber(s.phone); if(!num) return '';
   const first = (s.name||'').trim().split(/\s+/)[0];
   const text = `كل سنة وانت طيب يا ${first} 🎂\nربنا يفرّح قلبك ويبارك سنتك الجديدة 🙏\nاجتماع الأنبا بولا والعائلة المقدسة`;
-  return `https://api.whatsapp.com/send?phone=${num}&text=${encodeURIComponent(text)}`;
+  return waUrl(num, text);
 }
 function birthdayRowHtml(u){
   const link = can('phones') ? waBirthdayLink(u.s) : '';
@@ -5647,7 +5659,7 @@ function openSpeakersReport(){
           <div style="display:flex;gap:6px;flex-wrap:wrap;">${badge('friday', e.days.friday)}${badge('sunday', e.days.sunday)}${!e.talks.length ? '<span class="chip" style="font-size:.72rem;">مفيش مواعيد هنا</span>' : ''}</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;font-size:.9rem;">
-          ${e.phone ? `<a href="tel:${escHtml(e.phone.replace(/[^\d+]/g,''))}" dir="ltr" style="font-weight:600;">📞 ${escHtml(e.phone)}</a>${wa ? ` <a href="https://wa.me/${wa}" target="_blank" rel="noopener" title="واتساب" style="text-decoration:none;">💬</a>` : ''}` : '<span style="color:var(--faint);">📞 ناقص الرقم</span>'}
+          ${e.phone ? `<a href="tel:${escHtml(e.phone.replace(/[^\d+]/g,''))}" dir="ltr" style="font-weight:600;">📞 ${escHtml(e.phone)}</a>${wa ? ` <a href="${waUrl(wa, '')}" target="_blank" rel="noopener" title="واتساب" style="text-decoration:none;">💬</a>` : ''}` : '<span style="color:var(--faint);">📞 ناقص الرقم</span>'}
           ${canEdit ? `<button class="ghost spk-phone-btn" style="font-size:.75rem;padding:2px 10px;">${e.phone ? '✏️ تعديل الرقم' : '➕ إضافة رقم'}</button>
           <button class="ghost spk-photo-btn" style="font-size:.75rem;padding:2px 10px;">📷 ${e.hasPhoto ? 'تغيير الصورة' : 'إضافة صورة'}</button>
           ${e.hasPhoto ? '<button class="ghost spk-photo-del" style="font-size:.75rem;padding:2px 10px;">🗑️ شيل الصورة</button>' : ''}` : ''}
