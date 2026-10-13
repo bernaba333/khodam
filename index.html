@@ -2078,7 +2078,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '13-Oct-2026 F';
+const APP_VERSION = '13-Oct-2026 G';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -5240,7 +5240,8 @@ function upcomingBirthdays(days){
 function waNumber(phone){
   // Arabic/Persian digits (٠١٢…) -> 0-9, then take the first number if several are written ("010… / 012…")
   const raw = String(phone||'').replace(/[\u0660-\u0669]/g, c=>c.charCodeAt(0)-0x0660).replace(/[\u06F0-\u06F9]/g, c=>c.charCodeAt(0)-0x06F0);
-  const parts = raw.split(/[\/,;|\n،؛]|\s(?:و|او|أو)\s/).map(p=>p.replace(/\D/g,'')).filter(p=>p.length >= 10);
+  // numbers that came from Excel can look like 1012345678.0
+  const parts = raw.replace(/(\d)\.0+\b/g,'$1').split(/[\/,;|\n،؛]|\s(?:و|او|أو)\s/).map(p=>p.replace(/\D/g,'')).filter(p=>p.length >= 10);
   let d = parts[0] || '';
   if(d.startsWith('00')) d = d.slice(2);
   if(d.startsWith('200') && d.length === 13) d = '20' + d.slice(3);   // +20 010… -> 2010…
