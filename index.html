@@ -2078,7 +2078,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '13-Oct-2026 G';
+const APP_VERSION = '13-Oct-2026 H';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -2690,7 +2690,10 @@ function printHtmlNow(html){
 }`;
   document.head.appendChild(st);
   document.body.appendChild(host);
-  const cleanup = ()=>{ host.remove(); st.remove(); window.removeEventListener('afterprint', cleanup); };
+  // the dark theme's colours (dark rows, pale text) must not leak into the printed page
+  const darkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
+  if(darkTheme) document.documentElement.removeAttribute('data-theme');
+  const cleanup = ()=>{ host.remove(); st.remove(); window.removeEventListener('afterprint', cleanup); if(darkTheme) document.documentElement.setAttribute('data-theme','dark'); };
   window.addEventListener('afterprint', cleanup);
   const imgs = [...host.querySelectorAll('img')].filter(im=>!im.complete);
   Promise.all(imgs.map(im=>new Promise(r=>{ im.onload = im.onerror = r; setTimeout(r, 2500); }))).then(()=>{
