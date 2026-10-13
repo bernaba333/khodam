@@ -817,6 +817,7 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
   <div class="card" id="dashboardStatsCard">
     <h2>نظرة عامة</h2>
     <div class="dash-stats-grid" id="dashboardStats"></div>
+    <p class="dc-hint" id="dashboardStatsNote"></p>
   </div>
 
   <div class="card" id="dataCompleteCard">
@@ -2077,7 +2078,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '12-Oct-2026 B';
+const APP_VERSION = '13-Oct-2026 B';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -2620,6 +2621,48 @@ function servantPrintFields(){
   ];
   return all.filter(f=>!f.perm || can(f.perm));
 }
+/* Print pages open as a full-screen preview inside the app (not a new tab),
+   with a clear "back" bar, so it is always easy to return and keep editing.
+   Returns a window-like object: callers write HTML to .document as before. */
+function openPrintPreview(){
+  let html = '', shown = null;
+  const show = ()=>{
+    if(shown){ shown.frame.srcdoc = html; return; }
+    const ov = document.createElement('div');
+    ov.id = 'printPreview';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:10000;background:#e9e6df;display:flex;flex-direction:column;direction:rtl;';
+    ov.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#1B2A4A;box-shadow:0 2px 8px rgba(0,0,0,.2);flex:none;">
+        <button type="button" data-pp="back" style="font-family:inherit;font-size:15px;font-weight:700;background:#fff;color:#1B2A4A;border:none;border-radius:10px;padding:9px 16px;cursor:pointer;">→ رجوع للبرنامج</button>
+        <button type="button" data-pp="print" style="font-family:inherit;font-size:15px;font-weight:700;background:#C9A227;color:#1B2A4A;border:none;border-radius:10px;padding:9px 16px;cursor:pointer;">🖨️ طباعة</button>
+        <span style="color:#e9dcb2;font-size:.8rem;margin-inline-start:auto;">معاينة الطباعة</span>
+      </div>
+      <iframe title="معاينة الطباعة" style="flex:1;width:100%;border:0;background:#e9e6df;"></iframe>`;
+    document.body.appendChild(ov);
+    const frame = ov.querySelector('iframe');
+    frame.srcdoc = html;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    let closed = false;
+    const close = ()=>{
+      if(closed) return; closed = true;
+      ov.remove(); document.body.style.overflow = prevOverflow;
+      window.removeEventListener('popstate', onPop); document.removeEventListener('keydown', onKey);
+    };
+    // the phone's back button closes the preview instead of leaving the app
+    const onPop = ()=>close();
+    const onKey = e=>{ if(e.key === 'Escape') back(); };
+    const back = ()=>{ if(!closed && history.state && history.state.printPreview) history.back(); else close(); };
+    try{ history.pushState({ printPreview: true }, ''); }catch(e){}
+    window.addEventListener('popstate', onPop); document.addEventListener('keydown', onKey);
+    ov.querySelector('[data-pp="back"]').addEventListener('click', back);
+    ov.querySelector('[data-pp="print"]').addEventListener('click', ()=>{
+      try{ frame.contentWindow.focus(); frame.contentWindow.print(); }catch(e){ alert('مقدرناش نفتح الطباعة. جرّب تاني.'); }
+    });
+    shown = { frame };
+  };
+  return { document: { open(){ html = ''; }, write(h){ html += h; if(shown) show(); }, close(){ show(); } } };
+}
 function openServantPrint(){
   const vis = visibleGroupIds();
   const groups = GROUPS.filter(g=>vis.includes(g.id));
@@ -2694,7 +2737,7 @@ function openServantPrint(){
     const spouseOf = new Map();
     DATA.servants.forEach(o=>{ if(o.spouseName && !spouseOf.has(o.spouseName)) spouseOf.set(o.spouseName, o); });
     const ctx = { spouseOf };
-    const w = window.open('', '_blank');
+    const w = openPrintPreview();
     if(!w){ alert('المتصفح منع فتح صفحة الطباعة. اسمح بالنوافذ المنبثقة وجرّب تاني.'); return; }
     const brand = document.querySelector('header h1').textContent;
     const logo = document.querySelector('.halo-mark').src;
@@ -2744,7 +2787,7 @@ function openServantPrint(){
       .bar{max-width:${landscape ? '297mm' : '210mm'};margin:0 auto 14px;display:flex;gap:8px;justify-content:flex-start;}
       .bar button{font-family:inherit;font-size:14px;font-weight:700;border-radius:10px;padding:8px 18px;cursor:pointer;border:1px solid var(--navy);}
       .bar .go{background:var(--navy);color:#fff;} .bar .x{background:#fff;color:var(--navy);}
-      .sheet{max-width:${landscape ? '297mm' : '210mm'};margin:0 auto;background:#fff;padding:12mm 10mm;box-shadow:0 4px 24px rgba(0,0,0,.12);border-radius:4px;}
+      .sheet{width:${landscape ? '297mm' : '210mm'};margin:0 auto;background:#fff;padding:12mm 10mm;box-shadow:0 4px 24px rgba(0,0,0,.12);border-radius:4px;}
       .lh{display:flex;align-items:center;gap:14px;padding-bottom:10px;}
       .lh img{width:62px;height:62px;object-fit:contain;border-radius:50%;flex:none;}
       .lh .t{font-family:Amiri,serif;font-size:24px;font-weight:700;color:var(--navy);line-height:1.2;}
@@ -2781,11 +2824,10 @@ function openServantPrint(){
         @bottom-center{content:"صفحة " counter(page) " من " counter(pages);font-family:Cairo,Arial,sans-serif;font-size:9pt;color:#8a8f9c;}}
       @media print{
         html{background:#fff;} body{padding:0;} .bar{display:none;}
-        .sheet{max-width:none;padding:0;box-shadow:none;border-radius:0;}
+        .sheet{width:auto;zoom:1 !important;padding:0;box-shadow:none;border-radius:0;}
         tr{break-inside:avoid;} tr.sec{break-after:avoid;}
       }
       </style></head><body>
-      <div class="bar"><button class="go" onclick="window.print()">🖨️ طباعة</button><button class="x" onclick="window.close()">إغلاق</button></div>
       <div class="sheet">
         <div class="lh"><img src="${logo}" alt=""><div><div class="t">${escHtml(brand)}</div><div class="d">بيانات الخدام والمخدومين</div></div>
           <div class="meta"><div><b>${rows.length}</b> اسم</div><div>${escHtml(sub)}</div><div>${today}</div></div></div>
@@ -2795,7 +2837,8 @@ function openServantPrint(){
         <tbody>${body}</tbody></table>
         <div class="foot"><span>${escHtml(brand)}</span><span>طُبع في ${today}</span></div>
       </div>
-      <script>window.onload=function(){(document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(function(){setTimeout(function(){window.print();},350);});};<\/script></body></html>`);
+      <script>(function(){var sh=document.querySelector('.sheet'),W=${landscape ? 1123 : 794};function fit(){sh.style.zoom=Math.min(1,(window.innerWidth-24)/W);}fit();window.addEventListener('resize',fit);})();<\/script>
+      </body></html>`);
     w.document.close();
     close();
   });
@@ -3175,6 +3218,9 @@ function renderDashboard(){
     { num: overallPct + '%', label: 'متوسط الحضور', ic:'📈' },
     { num: neverVisitedCount, label: 'لسه ما اتافتقدوش', ic:'🏠' }
   ];
+  const multi = visibleServants.filter(s=>s.groups.filter(g=>visible.includes(g)).length > 1).length;
+  const noteEl = document.getElementById('dashboardStatsNote');
+  if(noteEl) noteEl.textContent = multi ? `ملحوظة: ${multi} فرد مسجّلين في أكتر من اجتماع، فبيتحسبوا في كل اجتماع منهم، لكن مرة واحدة بس في "إجمالي الأفراد". علشان كده مجموع الاجتماعات أكبر من الإجمالي.` : '';
   statsEl.innerHTML = cards.map(c=>`
     <div class="dash-stat ${c.cls||''}">
       ${c.ic ? `<span class="ic" aria-hidden="true">${c.ic}</span>` : ''}
@@ -3281,10 +3327,19 @@ const DATA_GROUPS = [
 ];
 function fieldFilled(s, f){ return f.has ? f.has(s) : String(s[f.key]||'').trim() !== ''; }
 let dataCompleteField = '';
-function renderDataCompleteness(people){
+let dataCompleteGroup = '';
+function renderDataCompleteness(allPeople){
   const el = document.getElementById('dataComplete');
   if(!el) return;
-  if(!people.length){ el.innerHTML = '<div class="empty-note">مفيش حد في الاجتماعات اللي تقدر تشوفها</div>'; return; }
+  // same people as the dashboard tiles: "إجمالي الأفراد" for all, or one meeting's tile
+  const dcGroups = GROUPS.filter(g=>visibleGroupIds().includes(g.id));
+  if(dataCompleteGroup && !dcGroups.some(g=>g.id===dataCompleteGroup)) dataCompleteGroup = '';
+  const people = dataCompleteGroup ? allPeople.filter(s=>s.groups.includes(dataCompleteGroup)) : allPeople;
+  const groupPicker = dcGroups.length > 1 ? `<select id="dcGroupFilter" style="margin:0 0 12px;">
+      <option value="">كل الأفراد (${allPeople.length})</option>
+      ${dcGroups.map(g=>`<option value="${g.id}"${g.id===dataCompleteGroup?' selected':''}>${g.name} (${allPeople.filter(s=>s.groups.includes(g.id)).length})</option>`).join('')}
+    </select>` : '';
+  if(!people.length){ el.innerHTML = groupPicker + '<div class="empty-note">مفيش حد في الاجتماعات اللي تقدر تشوفها</div>'; wireDcGroup(el, allPeople); return; }
   const n = people.length, F = DATA_FIELDS.length;
   const rows = people.map(s=>{
     const missing = DATA_FIELDS.filter(f=>!fieldFilled(s, f));
@@ -3312,6 +3367,7 @@ function renderDataCompleteness(people){
     .sort((a,b)=>a.pct-b.pct || a.s.name.localeCompare(b.s.name,'ar'));
   const opts = ['<option value="">كل البيانات الناقصة</option>'].concat(DATA_FIELDS.map(f=>`<option value="${f.key}"${f.key===dataCompleteField?' selected':''}>ناقص: ${f.label}</option>`)).join('');
   el.innerHTML = `
+    ${groupPicker}
     <div class="dc-summary">
       <div class="dash-stat"><div class="num" style="color:${colorForPercent(overall)};">${overall}%</div><div class="label">نسبة اكتمال البيانات</div><div class="sub">ناقص ${100-overall}%</div></div>
       <div class="dash-stat"><div class="num" style="color:#2e7d4f;">${complete}</div><div class="label">بياناتهم كاملة</div><div class="sub">${completePct}% من ${n}</div></div>
@@ -3331,14 +3387,20 @@ function renderDataCompleteness(people){
       </div>`).join('') : '<div class="empty-note">مفيش حد ناقصه البيان ده 🎉</div>'}
     </details>` : '<div class="empty-note">كل البيانات كاملة 🎉</div>'}`;
   const sel = el.querySelector('#dcFieldFilter');
-  if(sel) sel.addEventListener('change', ()=>{ dataCompleteField = sel.value; renderDataCompleteness(people); });
+  if(sel) sel.addEventListener('change', ()=>{ dataCompleteField = sel.value; renderDataCompleteness(allPeople); });
+  wireDcGroup(el, allPeople);
   el.querySelectorAll('button.dc-need').forEach(b=>b.addEventListener('click', ()=>{
-    dataCompleteField = b.dataset.field; dataCompleteOpen = true; renderDataCompleteness(people);
+    dataCompleteField = b.dataset.field; dataCompleteOpen = true; renderDataCompleteness(allPeople);
     const d = el.querySelector('#dcDetails'); if(d) d.scrollIntoView({behavior:'smooth', block:'start'});
   }));
   const det = el.querySelector('#dcDetails');
   if(det) det.addEventListener('toggle', ()=>{ dataCompleteOpen = det.open; });
   el.querySelectorAll('.dc-edit').forEach(b=>b.addEventListener('click', ()=>openMissingDataEdit(b.dataset.id)));
+}
+
+function wireDcGroup(el, allPeople){
+  const gs = el.querySelector('#dcGroupFilter');
+  if(gs) gs.addEventListener('change', ()=>{ dataCompleteGroup = gs.value; renderDataCompleteness(allPeople); });
 }
 
 // Fill a person's missing data from the completeness list in a popup on the same screen,
@@ -5628,7 +5690,7 @@ function openSpeakersReport(){
   });
   document.getElementById('spkPrintBtn').addEventListener('click', async ()=>{
     const { rows } = filtered();
-    const w = window.open('', '_blank');
+    const w = openPrintPreview();
     if(!w){ alert('المتصفح منع فتح صفحة الطباعة. اسمح بالنوافذ المنبثقة وجرّب تاني.'); return; }
     w.document.write('<p style="font-family:Cairo,Arial;text-align:center;margin-top:40px;">جاري تجهيز التقرير…</p>');
     const photos = await Promise.all(rows.map(e=>speakerPhotoUrl(e.key)));
@@ -5828,7 +5890,7 @@ document.getElementById('progPrintBtn').addEventListener('click', ()=>{
   const body = months.map(mo=>`
     <tr class="month"><td colspan="6">ــ شهر ${PROG_MONTHS[mo.m]} ــ</td></tr>
     ${mo.rows.map((r,i)=>`<tr><td>${i+1}</td><td style="white-space:nowrap;">${r.d.getDate()}/${r.d.getMonth()+1}</td><td><b>${escHtml(r.it.title||'')}</b>${r.it.goal?`<div class="g">${escHtml(r.it.goal)}</div>`:''}</td><td>${escHtml(r.it.speaker||'')}</td><td>${escHtml(r.it.church||'')}</td></tr>`).join('')}`).join('');
-  const w = window.open('', '_blank');
+  const w = openPrintPreview();
   if(!w){ alert('المتصفح منع فتح صفحة الطباعة. اسمح بالنوافذ المنبثقة وجرّب تاني.'); return; }
   w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${escHtml(title)}</title>
     <style>body{font-family:Cairo,Arial,sans-serif;color:#1B2A4A;margin:24px;} h1{font-size:20px;text-align:center;margin:6px 0;} .v{text-align:center;color:#7A2E2E;font-weight:bold;margin-bottom:14px;}
@@ -6086,7 +6148,7 @@ function openMonthPost(){
   });
   document.getElementById('postPrintBtn').addEventListener('click', ()=>{
     if(!postCanvas) return;
-    const w = window.open('', '_blank');
+    const w = openPrintPreview();
     if(!w){ alert('المتصفح منع فتح صفحة الطباعة. اسمح بالنوافذ المنبثقة وجرّب تاني.'); return; }
     w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${escHtml(postFileName())}</title>
       <style>@page{margin:10mm;} body{margin:0;} img{display:block;width:100%;max-height:277mm;object-fit:contain;margin:0 auto;}</style></head>
