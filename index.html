@@ -2078,7 +2078,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '13-Oct-2026 B';
+const APP_VERSION = '13-Oct-2026 D';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -2626,42 +2626,76 @@ function servantPrintFields(){
    Returns a window-like object: callers write HTML to .document as before. */
 function openPrintPreview(){
   let html = '', shown = null;
+  // auto-print scripts are dropped: printing happens only from the preview bar
+  const clean = h=>h.replace(/<script>[^<]*window\.print\(\)[^<]*<\\?\/script>/g, '');
   const show = ()=>{
-    if(shown){ shown.frame.srcdoc = html; return; }
+    if(shown){ shown.frame.srcdoc = clean(html); return; }
     const ov = document.createElement('div');
     ov.id = 'printPreview';
     ov.style.cssText = 'position:fixed;inset:0;z-index:10000;background:#e9e6df;display:flex;flex-direction:column;direction:rtl;';
     ov.innerHTML = `
-      <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#1B2A4A;box-shadow:0 2px 8px rgba(0,0,0,.2);flex:none;">
-        <button type="button" data-pp="back" style="font-family:inherit;font-size:15px;font-weight:700;background:#fff;color:#1B2A4A;border:none;border-radius:10px;padding:9px 16px;cursor:pointer;">→ رجوع للبرنامج</button>
-        <button type="button" data-pp="print" style="font-family:inherit;font-size:15px;font-weight:700;background:#C9A227;color:#1B2A4A;border:none;border-radius:10px;padding:9px 16px;cursor:pointer;">🖨️ طباعة</button>
-        <span style="color:#e9dcb2;font-size:.8rem;margin-inline-start:auto;">معاينة الطباعة</span>
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;padding-top:calc(10px + env(safe-area-inset-top,0px));background:#1B2A4A;box-shadow:0 2px 8px rgba(0,0,0,.2);flex:none;position:relative;z-index:2;">
+        <button type="button" data-pp="back" style="font-family:'Cairo',sans-serif;font-size:15px;font-weight:700;background:#fff;color:#1B2A4A;border:none;border-radius:10px;padding:10px 16px;cursor:pointer;touch-action:manipulation;">→ رجوع للبرنامج</button>
+        <button type="button" data-pp="print" style="font-family:'Cairo',sans-serif;font-size:15px;font-weight:700;background:#C9A227;color:#1B2A4A;border:none;border-radius:10px;padding:10px 16px;cursor:pointer;touch-action:manipulation;">🖨️ طباعة</button>
       </div>
-      <iframe title="معاينة الطباعة" style="flex:1;width:100%;border:0;background:#e9e6df;"></iframe>`;
+      <div style="flex:1;position:relative;overflow:auto;-webkit-overflow-scrolling:touch;">
+        <iframe title="معاينة الطباعة" style="position:absolute;inset:0;width:100%;height:100%;border:0;background:#e9e6df;"></iframe>
+      </div>`;
     document.body.appendChild(ov);
     const frame = ov.querySelector('iframe');
-    frame.srcdoc = html;
+    frame.srcdoc = clean(html);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    let closed = false;
+    let closed = false, pushed = false;
     const close = ()=>{
       if(closed) return; closed = true;
       ov.remove(); document.body.style.overflow = prevOverflow;
       window.removeEventListener('popstate', onPop); document.removeEventListener('keydown', onKey);
+      // drop the history entry we added, without letting it close anything else
+      if(pushed && history.state && history.state.printPreview){ try{ history.back(); }catch(e){} }
     };
     // the phone's back button closes the preview instead of leaving the app
-    const onPop = ()=>close();
-    const onKey = e=>{ if(e.key === 'Escape') back(); };
-    const back = ()=>{ if(!closed && history.state && history.state.printPreview) history.back(); else close(); };
-    try{ history.pushState({ printPreview: true }, ''); }catch(e){}
+    const onPop = ()=>{ pushed = false; close(); };
+    const onKey = e=>{ if(e.key === 'Escape') close(); };
+    try{ history.pushState({ printPreview: true }, ''); pushed = true; }catch(e){}
     window.addEventListener('popstate', onPop); document.addEventListener('keydown', onKey);
-    ov.querySelector('[data-pp="back"]').addEventListener('click', back);
-    ov.querySelector('[data-pp="print"]').addEventListener('click', ()=>{
-      try{ frame.contentWindow.focus(); frame.contentWindow.print(); }catch(e){ alert('مقدرناش نفتح الطباعة. جرّب تاني.'); }
-    });
+    ov.querySelector('[data-pp="back"]').addEventListener('click', close);
+    ov.querySelector('[data-pp="print"]').addEventListener('click', ()=>printHtmlNow(html));
     shown = { frame };
   };
   return { document: { open(){ html = ''; }, write(h){ html += h; if(shown) show(); }, close(){ show(); } } };
+}
+/* Prints a report from the app page itself (not from the preview frame), so phones
+   print real sharp text: the report is placed in #printHost and everything else is
+   hidden for print only. Its own styles apply only inside @media print. */
+function printHtmlNow(html){
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const css = [...doc.querySelectorAll('style')].map(st=>st.textContent).join('\n')
+    .replace(/(^|[\s,}])html\s*\{/g, '$1#printHost{').replace(/(^|[\s,}])body\s*\{/g, '$1#printHost{');
+  doc.querySelectorAll('script,style,link,title,meta').forEach(n=>n.remove());
+  document.getElementById('printHost')?.remove();
+  document.getElementById('printHostStyle')?.remove();
+  const host = document.createElement('div');
+  host.id = 'printHost'; host.dir = 'rtl';
+  host.innerHTML = doc.body.innerHTML;
+  const st = document.createElement('style');
+  st.id = 'printHostStyle';
+  st.textContent = `@media screen{ #printHost{display:none !important;} }
+@media print{
+  html, body{background:#fff !important;margin:0 !important;padding:0 !important;overflow:visible !important;height:auto !important;}
+  body > *:not(#printHost){display:none !important;}
+  #printHost{display:block !important;}
+  ${css}
+  #printHost .sheet{width:auto !important;zoom:1 !important;box-shadow:none !important;padding:0 !important;margin:0 !important;}
+}`;
+  document.head.appendChild(st);
+  document.body.appendChild(host);
+  const cleanup = ()=>{ host.remove(); st.remove(); window.removeEventListener('afterprint', cleanup); };
+  window.addEventListener('afterprint', cleanup);
+  const imgs = [...host.querySelectorAll('img')].filter(im=>!im.complete);
+  Promise.all(imgs.map(im=>new Promise(r=>{ im.onload = im.onerror = r; setTimeout(r, 2500); }))).then(()=>{
+    setTimeout(()=>{ window.print(); }, 80);
+  });
 }
 function openServantPrint(){
   const vis = visibleGroupIds();
@@ -3521,7 +3555,7 @@ function followWaLink(s){
   const num = waNumber(s.phone); if(!num) return '';
   const first = (s.name||'').trim().split(/\s+/)[0];
   const text = `إزيك يا ${first} 🙏\nوحشتنا في الاجتماع، طمّنا عليك.\nاجتماع الأنبا بولا والعائلة المقدسة`;
-  return `https://wa.me/${num}?text=${encodeURIComponent(text)}`;
+  return `https://api.whatsapp.com/send?phone=${num}&text=${encodeURIComponent(text)}`;
 }
 function renderFollowUp(people, visible){
   const statsEl = document.getElementById('followStats');
@@ -5204,17 +5238,21 @@ function upcomingBirthdays(days){
   return out.sort((a,b)=>a.diffDays-b.diffDays || a.s.name.localeCompare(b.s.name,'ar'));
 }
 function waNumber(phone){
-  let d = String(phone||'').replace(/\D/g,'');
+  // Arabic/Persian digits (٠١٢…) -> 0-9, then take the first number if several are written ("010… / 012…")
+  const raw = String(phone||'').replace(/[\u0660-\u0669]/g, c=>c.charCodeAt(0)-0x0660).replace(/[\u06F0-\u06F9]/g, c=>c.charCodeAt(0)-0x06F0);
+  const parts = raw.split(/[\/,;|\n،؛]|\s(?:و|او|أو)\s/).map(p=>p.replace(/\D/g,'')).filter(p=>p.length >= 10);
+  let d = parts[0] || '';
   if(d.startsWith('00')) d = d.slice(2);
+  if(d.startsWith('200') && d.length === 13) d = '20' + d.slice(3);   // +20 010… -> 2010…
   if(d.length === 11 && d.startsWith('01')) d = '2' + d;      // 01xxxxxxxxx -> 201xxxxxxxxx
   else if(d.length === 10 && d.startsWith('1')) d = '20' + d;
-  return d.length >= 10 ? d : '';
+  return d.length >= 10 && d.length <= 15 ? d : '';
 }
 function waBirthdayLink(s){
   const num = waNumber(s.phone); if(!num) return '';
   const first = (s.name||'').trim().split(/\s+/)[0];
   const text = `كل سنة وانت طيب يا ${first} 🎂\nربنا يفرّح قلبك ويبارك سنتك الجديدة 🙏\nاجتماع الأنبا بولا والعائلة المقدسة`;
-  return `https://wa.me/${num}?text=${encodeURIComponent(text)}`;
+  return `https://api.whatsapp.com/send?phone=${num}&text=${encodeURIComponent(text)}`;
 }
 function birthdayRowHtml(u){
   const link = can('phones') ? waBirthdayLink(u.s) : '';
