@@ -2078,7 +2078,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '13-Oct-2026 J';
+const APP_VERSION = '13-Oct-2026 K';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -3879,7 +3879,7 @@ function holdForPhoto(btn){
   const t = setTimeout(()=>{ done(); alert('الصورة دي مااتفتحتش. جرّب صورة تانية (JPG أو PNG).'); }, 15000);
   return done;
 }
-function resizeImageFile(file, maxSize, callback, mimeType, quality){
+function resizeImageFile(file, maxSize, callback, mimeType, quality, square){
   // person photos (small) are stored as JPEG: about 5x smaller than PNG
   if(!mimeType) mimeType = maxSize <= 200 ? 'image/jpeg' : 'image/png';
   if(quality === undefined) quality = mimeType === 'image/jpeg' ? 0.82 : 0.92;
@@ -3888,13 +3888,16 @@ function resizeImageFile(file, maxSize, callback, mimeType, quality){
     const img = new Image();
     img.onload = ()=>{
       let w = img.width, h = img.height;
-      if(w > h){ if(w > maxSize){ h = Math.round(h*maxSize/w); w = maxSize; } }
+      // square: crop the middle square (a bit toward the top for portraits, where the face is) so it fits a round icon
+      let sx = 0, sy = 0, sw = w, sh = h;
+      if(square){ const m = Math.min(w, h); sx = Math.round((w-m)/2); sy = h > w ? Math.round((h-m)*0.2) : 0; sw = sh = m; w = h = Math.min(m, maxSize); }
+      else if(w > h){ if(w > maxSize){ h = Math.round(h*maxSize/w); w = maxSize; } }
       else { if(h > maxSize){ w = Math.round(w*maxSize/h); h = maxSize; } }
       const canvas = document.createElement('canvas');
       canvas.width = w; canvas.height = h;
       const ctx = canvas.getContext('2d');
       if(mimeType === 'image/jpeg'){ ctx.fillStyle = '#fff'; ctx.fillRect(0,0,w,h); }
-      ctx.drawImage(img, 0, 0, w, h);
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
       callback(canvas.toDataURL(mimeType, quality));
     };
     img.src = ev.target.result;
@@ -5710,7 +5713,7 @@ function openSpeakersReport(){
           }catch(err){ console.error(err); alert('مقدرناش نرفع الصورة. اتأكد إن النت شغال وجرّب تاني.'); }
           if(ok) auditPush({ area:'برنامج الخدمة', action:'تعديل', target:'صورة المتكلم — ' + e.name, changes:[{ f:'الصورة', to: e.hasPhoto ? 'اتغيرت' : 'اتضافت' }], rest: true });
           render();
-        }, 'image/jpeg', 0.82);
+        }, 'image/jpeg', 0.82, true);
       });
       inp.click();
     }));
@@ -5729,7 +5732,7 @@ function openSpeakersReport(){
       speakerPhotoUrl(row.dataset.key).then(url=>{
         if(!url) return;
         const ava = row.querySelector('.spk-ava');
-        if(ava) ava.innerHTML = `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+        if(ava) ava.innerHTML = `<img src="${url}" alt="" style="display:block;width:100%;height:100%;max-width:none;object-fit:cover;object-position:50% 25%;border-radius:50%;">`;
       });
     });
   };
@@ -5763,7 +5766,7 @@ function openSpeakersReport(){
       <style>body{font-family:Cairo,Arial,sans-serif;color:#1B2A4A;margin:24px;} h1{font-size:20px;text-align:center;margin:6px 0 14px;}
       table{width:100%;border-collapse:collapse;font-size:12px;} th,td{border:1px solid #c9b98a;padding:5px 7px;vertical-align:top;text-align:right;} th{background:#1B2A4A;color:#fff;}
       td{vertical-align:middle;} td.ph{direction:ltr;text-align:left;white-space:nowrap;} td.pic{width:62px;text-align:center;}
-      .ava{width:54px;height:54px;border-radius:50%;object-fit:cover;border:2px solid #C9A227;display:block;margin:0 auto;}
+      .ava{width:54px;height:54px;border-radius:50%;object-fit:cover;object-position:50% 25%;border:2px solid #C9A227;display:block;margin:0 auto;}
       .noava{width:54px;height:54px;border-radius:50%;border:2px solid #e8d8a3;background:#f7f1e3;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto;}
       @media print{ tr{page-break-inside:avoid;} }</style></head><body>
       <h1>${escHtml(title)}</h1>
