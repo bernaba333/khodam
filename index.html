@@ -2184,7 +2184,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '14-Oct-2026 G';
+const APP_VERSION = '14-Oct-2026 I';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -5894,6 +5894,24 @@ document.getElementById('progSpeakersBtn').addEventListener('click', ()=>{
   openSpeakersReport();
 });
 
+// gentle WhatsApp reminder for the speaker; feminine wording when the name looks like a woman's
+// (title like تاسوني/الأستاذة/مدام/د. …ة, or a common female first name), masculine otherwise
+const SPK_FEMALE_NAMES = ['مريم','ماريا','مارينا','مارينه','ماري','مرثا','مارثا','دميانه','دميانة','ايريني','إيريني','ايرينى','فيرينا','فيرونيكا','كاترين','كاترينا','تريزا','تيريزا','رفقه','رفقة','سارة','ساره','رحاب','نرمين','نيرمين','شيري','ساندي','ساندرا','جوليا','يوستينا','يوستينه','مونيكا','ماجدة','ماجده','نادية','ناديه','هالة','هاله','منى','نيفين','ايفون','إيفون','جاكلين','مادونا','ميرنا','ميريت','كريستين','كرستين','دينا','ريهام','رانيا','مها','هبة','هبه','عبير','مرفت','ميرفت','سوزان','نانسي','نجلاء','أماني','اماني','فيبي','بولين','مارلين','ماريان','مريانا','ايفلين','إيفلين','فاتن','ليلى','سلوى','عايدة','عايده','انجيل','أنجيل','باسمة','باسمه'];
+function speakerIsFemale(name){
+  const n = String(name||'').trim();
+  // \b doesn't work on Arabic letters, so end the title with a space, a slash or the end
+  if(/^(ال)?(تاسوني|مدام|استاذه|أستاذة|استاذة|دكتورة|دكتوره|أخت|اخت|ميس|مس|سيدة|سيده|مهندسة|مهندسه)(\s|\/|$)/.test(n)) return true;
+  const first = n.replace(/^(أ|ا|د|م)\s*[\/.]\s*/,'').split(/\s+/)[0] || '';
+  if(/ة$/.test(first) && !['حمزة','أسامة','اسامة','عطية','عطيه'].includes(first)) return true;
+  return SPK_FEMALE_NAMES.includes(first);
+}
+function speakerReminderText(name, day, d, title){
+  const f = speakerIsFemale(name), k = f ? 'كِ' : 'ك';
+  return `سلام ونعمة يا ${name} 🌿\n`
+    + `يسعدنا ونتشرف نفكّر حضرتك بميعاد كلمت${k} معانا في ${PROG_DAYS[day].meeting}، يوم ${PROG_DAYS[day].label} ${d.getDate()} ${PROG_MONTHS[d.getMonth()]}${title ? ` بعنوان «${title}»` : ''}.\n`
+    + `وجود حضرتك وسطنا بركة كبيرة، ومنتظرين${k} بكل محبة وشوق.\n`
+    + `ربنا يبارك خدمت${k} ويعوّض تعب محبت${k} 🙏`;
+}
 function renderDashboardNext(){
   const card = document.getElementById('dashboardNextCard'), el = document.getElementById('dashboardNext');
   if(!card || !el || !programLoaded) return;
@@ -5909,14 +5927,34 @@ function renderDashboardNext(){
   });
   if(rows.length === 0){ card.style.display = 'none'; return; }
   card.style.display = 'block';
+  // speaker photo (initials when none) + call / WhatsApp reminder; phones only for program editors, like the program screen
+  const canCall = can('editProgram');
   el.innerHTML = rows.map(r=>{
     const d = new Date(r.iso + 'T00:00:00');
-    return `<div class="dash-list-row" style="display:block;">
-      <div style="font-size:.8rem;color:var(--muted);">${PROG_DAYS[r.day].meeting} — ${d.getDate()} ${PROG_MONTHS[d.getMonth()]}</div>
-      <div style="font-weight:700;margin-top:2px;">${escHtml(r.it.title || '—')}</div>
-      <div class="meta" style="margin-top:2px;">${r.it.speaker ? '🎤 ' + escHtml(r.it.speaker) : '🎤 لسه محدش اتحدد'}${r.it.church ? ' — ⛪ ' + escHtml(r.it.church) : ''}</div>
+    const sp = (r.it.speaker || '').trim(), key = sp ? speakerKey(sp) : '';
+    const phone = canCall && sp ? speakerPhone(sp) : '', wa = waNumber(phone);
+    const msg = speakerReminderText(sp, r.day, d, r.it.title);
+    const btn = 'display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;border:1px solid var(--line-soft);text-decoration:none;font-size:1.1rem;flex:none;';
+    return `<div class="dash-list-row dash-next-row" data-key="${escHtml(key)}" style="display:flex;gap:10px;align-items:center;">
+      ${sp ? `<span class="dash-next-ava" style="flex:none;display:inline-flex;">${avatarHtml({ name: sp }, 48)}</span>` : ''}
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:.8rem;color:var(--muted);">${PROG_DAYS[r.day].meeting} — ${d.getDate()} ${PROG_MONTHS[d.getMonth()]}</div>
+        <div style="font-weight:700;margin-top:2px;">${escHtml(r.it.title || '—')}</div>
+        <div class="meta" style="margin-top:2px;">${sp ? '🎤 ' + escHtml(sp) : '🎤 لسه محدش اتحدد'}${r.it.church ? ' — ⛪ ' + escHtml(r.it.church) : ''}</div>
+      </div>
+      ${phone ? `<div style="display:flex;gap:6px;flex:none;">
+        <a href="tel:${escHtml(phone.replace(/[^\d+]/g,''))}" title="اتصال ${escHtml(phone)}" style="${btn}">📞</a>
+        ${wa ? `<a href="${escHtml(waUrl(wa, msg))}" target="_blank" rel="noopener" title="رسالة تفكير على واتساب" style="${btn}">💬</a>` : ''}
+      </div>` : ''}
     </div>`;
   }).join('');
+  el.querySelectorAll('.dash-next-row').forEach(row=>{
+    if(!row.dataset.key) return;
+    speakerPhotoUrl(row.dataset.key).then(url=>{
+      const ava = row.querySelector('.dash-next-ava');
+      if(url && ava) ava.innerHTML = `<img src="${url}" alt="" style="width:48px;height:48px;border-radius:50%;object-fit:cover;object-position:50% 25%;">`;
+    });
+  });
 }
 function progExcelDate(v){
   // Excel date cells can come back a few seconds/hours before midnight because of
