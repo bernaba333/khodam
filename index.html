@@ -499,6 +499,8 @@ html[data-theme="dark"] .dc-miss span{color:#f08a84;}
 .user-name{font-weight:700;font-size:.9rem;color:#fdf8ec;}
 .user-role{font-size:.72rem;color:var(--gold-soft);margin-top:1px;}
 .user-box .ghost{background:rgba(255,255,255,.08);color:#fdf8ec;border-color:rgba(255,255,255,.35);}
+.user-box-row{display:flex;align-items:center;gap:8px;}
+#userAvatar{display:inline-flex;flex:none;border-radius:50%;box-shadow:0 0 0 2px rgba(255,255,255,.6);}
 .user-box .ghost:hover{background:rgba(255,255,255,.18);}
 
 /* ---- login overlay ---- */
@@ -782,9 +784,14 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
     <h1>سجل حضور اجتماع الانبا بولا والعائلة المقدسة</h1>
   </div>
   <div class="user-box" id="userBox" style="display:none;">
-    <div class="user-name" id="userNameLabel"></div>
-    <div class="user-role" id="userRoleLabel"></div>
-    <button class="ghost" id="logoutBtn" style="margin-top:4px;">خروج</button>
+    <div class="user-box-row">
+      <span id="userAvatar"></span>
+      <div>
+        <div class="user-name" id="userNameLabel"></div>
+        <div class="user-role" id="userRoleLabel"></div>
+        <button class="ghost" id="logoutBtn" style="margin-top:4px;">خروج</button>
+      </div>
+    </div>
   </div>
 </header>
 
@@ -1307,6 +1314,19 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
     <p>حصلت مشكلة مؤقتة في الاتصال بالتخزين، فمعرفناش نتأكد من بيانات المستخدمين المحفوظة. عشان نحافظ على حساباتك، وقفنا هنا بدل ما نبدأ من جديد بالغلط.</p>
     <p id="loadErrorDetail" style="font-size:.7rem;color:#999;direction:ltr;text-align:left;word-break:break-word;"></p>
     <button class="primary" id="retryLoadBtn" style="width:100%;">إعادة المحاولة</button>
+  </div>
+</div>
+
+<div class="login-overlay" id="photoGateOverlay" style="display:none;z-index:1001;">
+  <div class="login-card">
+    <h1>ارفع صورتك الأول 📸</h1>
+    <p>عشان تدخل البرنامج لازم ترفع صورة ليك. هتظهر جنب اسمك فوق.</p>
+    <img id="photoGatePreview" src="" alt="" style="width:96px;height:96px;border-radius:50%;object-fit:cover;display:none;margin:6px auto 10px;border:2px solid var(--line);">
+    <label for="photoGateInput" class="ghost" style="cursor:pointer;display:inline-block;">⬆️ اختار صورة</label>
+    <input type="file" id="photoGateInput" accept="image/*" style="display:none;">
+    <button class="primary" id="photoGateSaveBtn" style="width:100%;margin-top:12px;" disabled>حفظ ودخول</button>
+    <div class="empty-note" id="photoGateNote" style="margin-top:10px;"></div>
+    <button class="ghost" id="photoGateLogoutBtn" style="margin-top:6px;">خروج</button>
   </div>
 </div>
 
@@ -2046,6 +2066,7 @@ function refreshAfterRemoteChange(oldRemote, newRemote){
   remoteRenderTimer = setTimeout(refreshScreensAfterRemoteChange, 400);
 }
 function refreshScreensAfterRemoteChange(){
+  try{ updateUserAvatar(); }catch(e){}
   const servantsPanel = document.getElementById('panel-servants');
   const editing = Array.from(document.querySelectorAll('.edit-panel')).some(el=>el.style.display !== 'none' && el.innerHTML.trim() !== '')
     || (servantsPanel && servantsPanel.contains(document.activeElement) && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName));
@@ -2079,7 +2100,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '14-Oct-2026 C';
+const APP_VERSION = '14-Oct-2026 E';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -4212,6 +4233,8 @@ function applyUserUI(){
   document.getElementById('userBox').style.display = 'block';
   document.getElementById('userNameLabel').textContent = currentUser.name;
   document.getElementById('userRoleLabel').textContent = currentUser.role === 'admin' ? 'Admin' : roleLabelFor(currentUser.role);
+  updateUserAvatar();
+  checkPhotoGate();
   resetInactivityTimer();
   showWelcomeBanner();
   document.getElementById('usersCard').style.display = isAdmin() ? 'block' : 'none';
@@ -4337,6 +4360,7 @@ async function doLogout(reasonMsg){
   await clearPersonalLogin();
   if(currentUser) auditLastUser = currentUser.name;
   currentUser = null;
+  { const pg = document.getElementById('photoGateOverlay'); if(pg) pg.style.display = 'none'; }
   { const bn = document.getElementById('bottomNav'); if(bn) bn.style.display = 'none'; }
   document.getElementById('welcomeBanner').style.display = 'none';
   if(liveClockInterval){ clearInterval(liveClockInterval); liveClockInterval = null; }
@@ -6482,7 +6506,61 @@ function applyTheme(pref){
   if(sel){ sel.value = pref; sel.addEventListener('change', ()=>{ try{ localStorage.setItem('khodam_theme', sel.value); }catch(e){} applyTheme(sel.value); }); }
 })();
 
+// header photo: the servant whose name matches the signed-in user; initials when there is none
+function updateUserAvatar(){
+  const box = document.getElementById('userAvatar');
+  if(!box || !currentUser) return;
+  const norm = n=>String(n||'').trim().replace(/\s+/g,' ').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي');
+  const me = norm(currentUser.name);
+  const s = (DATA.servants||[]).find(x=>norm(x.name) === me && x.photo) || (DATA.servants||[]).find(x=>norm(x.name) === me);
+  box.innerHTML = avatarHtml(currentUser.photo ? { name: currentUser.name, photo: currentUser.photo } : (s || { name: currentUser.name }), 40);
+}
+// every user has to upload a photo of their own before they can use the app
+let photoGatePending = '';
+function checkPhotoGate(){
+  const ov = document.getElementById('photoGateOverlay');
+  if(!currentUser || currentUser.photo){ ov.style.display = 'none'; return; }
+  photoGatePending = '';
+  document.getElementById('photoGatePreview').style.display = 'none';
+  document.getElementById('photoGateSaveBtn').disabled = true;
+  document.getElementById('photoGateNote').textContent = '';
+  ov.style.display = 'flex';
+}
+document.getElementById('photoGateInput').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  e.target.value = '';
+  if(!file) return;
+  resizeImageFile(file, 120, (dataUrl)=>{
+    photoGatePending = dataUrl;
+    const pv = document.getElementById('photoGatePreview');
+    pv.src = dataUrl; pv.style.display = 'block';
+    document.getElementById('photoGateSaveBtn').disabled = false;
+  }, 'image/jpeg', 0.72, true);
+});
+document.getElementById('photoGateSaveBtn').addEventListener('click', async ()=>{
+  if(!photoGatePending || !currentUser) return;
+  const btn = document.getElementById('photoGateSaveBtn');
+  const note = document.getElementById('photoGateNote');
+  btn.disabled = true; note.textContent = 'جاري الحفظ…';
+  try{
+    try{ await loadUsers(); }catch(e){}
+    const u = USERS.find(x=>x.name === currentUser.name) || currentUser;
+    u.photo = photoGatePending;
+    await saveUsers();
+    currentUser = u;
+    document.getElementById('photoGateOverlay').style.display = 'none';
+    updateUserAvatar();
+  }catch(err){
+    note.textContent = 'محصلش حفظ، جرّب تاني.';
+    btn.disabled = false;
+  }
+});
+document.getElementById('photoGateLogoutBtn').addEventListener('click', ()=>{
+  document.getElementById('photoGateOverlay').style.display = 'none';
+  doLogout();
+});
 function renderAll(){
+  try{ updateUserAvatar(); }catch(e){}
   renderServantList();
   renderMeetingPicker();
   document.getElementById('attendDate').value = nearestMeetingDateStr();
