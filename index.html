@@ -499,8 +499,14 @@ html[data-theme="dark"] .dc-miss span{color:#f08a84;}
 .user-name{font-weight:700;font-size:.9rem;color:#fdf8ec;}
 .user-role{font-size:.72rem;color:var(--gold-soft);margin-top:1px;}
 .user-box .ghost{background:rgba(255,255,255,.08);color:#fdf8ec;border-color:rgba(255,255,255,.35);}
-.user-box-row{display:flex;align-items:center;gap:8px;}
-#userAvatar{display:inline-flex;flex:none;border-radius:50%;box-shadow:0 0 0 2px rgba(255,255,255,.6);}
+.user-box{position:relative;z-index:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:5px;box-shadow:0 4px 14px rgba(0,0,0,.18);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}
+.user-box-row{display:flex;align-items:center;gap:10px;}
+#userAvatar{display:inline-flex;flex:none;border-radius:50%;box-shadow:0 0 0 2px var(--gold),0 0 0 4px rgba(255,255,255,.12);}
+#userAvatar .avatar{background:linear-gradient(135deg,#e9cf7a,var(--gold)) !important;color:#1b2440 !important;}
+.user-text{text-align:start;line-height:1.25;min-width:0;}
+.user-box .user-name{font-size:.88rem;white-space:nowrap;}
+.user-box .user-role{font-size:.68rem;letter-spacing:.06em;margin-top:2px;white-space:nowrap;}
+#logoutBtn{display:inline-flex;align-items:center;gap:6px;margin:0;padding:7px 12px;border-radius:999px;font-size:.78rem;line-height:1;}
 .user-box .ghost:hover{background:rgba(255,255,255,.18);}
 
 /* ---- login overlay ---- */
@@ -741,10 +747,13 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
 @media (max-width:760px){
   header{flex-wrap:nowrap !important;}
   header h1{flex:1;min-width:0;}
-  #userBox{margin-inline-start:auto;text-align:center;flex:none;}
-  #userRoleLabel{font-size:.66rem !important;margin-top:0 !important;}
-  #userNameLabel{font-size:.74rem !important;}
-  #logoutBtn{padding:3px 9px !important;font-size:.7rem !important;margin-top:3px !important;}
+  #userBox{margin-inline-start:auto;flex:none;padding:4px !important;}
+  .user-box-row{gap:6px !important;}
+  #userAvatar .avatar, #userAvatar img{width:32px !important;height:32px !important;font-size:11px !important;}
+  .user-box .user-name{font-size:.7rem !important;max-width:72px;overflow:hidden;text-overflow:ellipsis;}
+  .user-box .user-role{font-size:.6rem !important;margin-top:1px !important;}
+  #logoutBtn{padding:0 !important;width:32px;height:32px;justify-content:center;}
+  #logoutBtn span{display:none;}
   .row-actions{flex-direction:row !important;flex-wrap:wrap;gap:6px !important;justify-content:flex-start;}
   .servant-row{flex-wrap:wrap;}
   .servant-row > .row-actions{width:100%;padding-top:8px;}
@@ -786,11 +795,11 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
   <div class="user-box" id="userBox" style="display:none;">
     <div class="user-box-row">
       <span id="userAvatar"></span>
-      <div>
+      <div class="user-text">
         <div class="user-name" id="userNameLabel"></div>
         <div class="user-role" id="userRoleLabel"></div>
-        <button class="ghost" id="logoutBtn" style="margin-top:4px;">خروج</button>
       </div>
+      <button class="ghost" id="logoutBtn" title="خروج" aria-label="خروج"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v8"/><path d="M6.4 6.6a8 8 0 1 0 11.2 0"/></svg><span>خروج</span></button>
     </div>
   </div>
 </header>
@@ -2100,7 +2109,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '14-Oct-2026 E';
+const APP_VERSION = '14-Oct-2026 F';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
