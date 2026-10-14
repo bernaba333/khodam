@@ -734,12 +734,13 @@ input, select, textarea{background:var(--input);color:var(--ink);}
 html[data-theme="dark"] .dash-stat .num{color:var(--gold);}
 html[data-theme="dark"] #liveClock{color:var(--gold) !important;}
 html[data-theme="dark"] .welcome-banner{background:linear-gradient(135deg,var(--card) 0%,var(--gold-soft) 160%) !important;border-color:var(--line) !important;}
+html[data-theme="dark"] #userRoleLabel{color:#fff !important;text-shadow:0 0 6px rgba(255,255,255,.85),0 0 12px rgba(255,255,255,.5);font-weight:600;}
 html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;border-color:#6b3a3e !important;color:#f2b8b5 !important;}
 @media (max-width:760px){
   header{flex-wrap:nowrap !important;}
   header h1{flex:1;min-width:0;}
   #userBox{margin-inline-start:auto;text-align:center;flex:none;}
-  #userRoleLabel{display:none !important;}
+  #userRoleLabel{font-size:.66rem !important;margin-top:0 !important;}
   #userNameLabel{font-size:.74rem !important;}
   #logoutBtn{padding:3px 9px !important;font-size:.7rem !important;margin-top:3px !important;}
   .row-actions{flex-direction:row !important;flex-wrap:wrap;gap:6px !important;justify-content:flex-start;}
@@ -2078,7 +2079,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '14-Oct-2026 A';
+const APP_VERSION = '14-Oct-2026 C';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -4210,7 +4211,7 @@ async function doLogin(name, password){
 function applyUserUI(){
   document.getElementById('userBox').style.display = 'block';
   document.getElementById('userNameLabel').textContent = currentUser.name;
-  document.getElementById('userRoleLabel').textContent = roleLabelFor(currentUser.role);
+  document.getElementById('userRoleLabel').textContent = currentUser.role === 'admin' ? 'Admin' : roleLabelFor(currentUser.role);
   resetInactivityTimer();
   showWelcomeBanner();
   document.getElementById('usersCard').style.display = isAdmin() ? 'block' : 'none';
