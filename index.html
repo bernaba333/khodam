@@ -509,6 +509,48 @@ html[data-theme="dark"] .dc-miss span{color:#f08a84;}
 #logoutBtn{display:inline-flex;align-items:center;gap:6px;margin:0;padding:7px 12px;border-radius:999px;font-size:.78rem;line-height:1;}
 .user-box .ghost:hover{background:rgba(255,255,255,.18);}
 
+/* ---- team chat ---- */
+#chatFab{position:fixed;left:18px;bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:900;width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;
+  background:linear-gradient(135deg,var(--brand) 0%,var(--brand-2) 100%);color:#fdf8ec;box-shadow:0 8px 22px rgba(27,42,74,.35),0 0 0 2px var(--gold);display:flex;align-items:center;justify-content:center;padding:0;}
+#chatFab:hover{transform:translateY(-1px);}
+#chatBadge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:#d64545;color:#fff;font-size:.7rem;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px var(--card);}
+#chatFabOnline{position:absolute;bottom:-3px;left:-3px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:#2e9b5f;color:#fff;font-size:.68rem;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px var(--card);}
+#chatPanel{position:fixed;left:18px;bottom:calc(86px + env(safe-area-inset-bottom,0px));z-index:950;width:360px;max-width:calc(100vw - 36px);height:min(540px, calc(100vh - 120px));
+  background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.28);display:flex;flex-direction:column;overflow:hidden;direction:rtl;}
+.chat-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:linear-gradient(135deg,var(--brand) 0%,var(--brand-2) 100%);color:#fdf8ec;}
+.chat-title{font-weight:700;font-size:.95rem;}
+.chat-x{background:rgba(255,255,255,.12);border:none;color:#fdf8ec;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.85rem;padding:0;}
+.chat-online{display:flex;gap:10px;overflow-x:auto;padding:10px 12px;border-bottom:1px solid var(--line-soft);background:var(--cream-dark);flex:none;min-height:30px;align-items:flex-start;}
+.chat-online .who{display:flex;flex-direction:column;align-items:center;gap:3px;flex:none;width:52px;font-size:.62rem;color:var(--text-2);text-align:center;}
+.chat-online .who span.n{max-width:52px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.chat-online .pic{position:relative;display:inline-flex;}
+.chat-online .pic::after{content:'';position:absolute;bottom:0;left:0;width:10px;height:10px;border-radius:50%;background:#2e9b5f;box-shadow:0 0 0 2px var(--cream-dark);}
+.chat-online .none{font-size:.75rem;color:var(--muted);align-self:center;}
+.chat-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;}
+.chat-msg{display:flex;gap:8px;align-items:flex-end;max-width:88%;}
+.chat-msg.mine{align-self:flex-end;flex-direction:row-reverse;}
+.chat-msg .bub{background:var(--cream-dark);border:1px solid var(--line-soft);border-radius:14px;border-bottom-right-radius:4px;padding:6px 10px;min-width:0;position:relative;}
+.chat-msg.mine .bub{background:var(--brand);color:#fdf8ec;border-color:transparent;border-bottom-right-radius:14px;border-bottom-left-radius:4px;}
+.chat-msg .by{font-size:.68rem;font-weight:700;color:var(--wine);margin-bottom:1px;}
+html[data-theme="dark"] .chat-msg .by{color:var(--gold);}
+.chat-msg .by small{font-weight:600;color:var(--muted);margin-inline-start:4px;}
+.chat-msg .txt{font-size:.86rem;white-space:pre-wrap;word-break:break-word;line-height:1.5;}
+.chat-msg .tm{font-size:.6rem;opacity:.65;margin-top:2px;display:flex;gap:8px;align-items:center;}
+.chat-msg .del{background:none;border:none;color:inherit;opacity:.6;cursor:pointer;font-size:.62rem;padding:0;text-decoration:underline;}
+#chatPanel .avatar{background:linear-gradient(135deg,#e9cf7a,var(--gold)) !important;color:#1b2440 !important;}
+html[data-theme="dark"] .chat-msg.mine .bub{background:#34508a;}
+html[data-theme="dark"] .chat-msg .bub{background:#222d42;}
+.chat-day{align-self:center;font-size:.66rem;color:var(--muted);background:var(--cream-dark);padding:2px 10px;border-radius:10px;}
+.chat-empty{margin:auto;color:var(--muted);font-size:.85rem;text-align:center;}
+.chat-form{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line-soft);flex:none;}
+.chat-form input{flex:1;margin:0;border-radius:999px;padding:9px 14px;}
+.chat-form button{border-radius:50%;width:40px;height:40px;padding:0;display:flex;align-items:center;justify-content:center;flex:none;margin:0;}
+@media (max-width:760px){
+  #chatFab{left:14px;bottom:calc(82px + env(safe-area-inset-bottom,0px));width:50px;height:50px;}
+  #chatPanel{left:8px;right:8px;width:auto;max-width:none;top:calc(8px + env(safe-area-inset-top,0px));bottom:calc(74px + env(safe-area-inset-bottom,0px));height:auto;}
+}
+@media print{ #chatFab, #chatPanel{display:none !important;} }
+
 /* ---- login overlay ---- */
 .login-overlay{
   position:fixed;
@@ -1326,6 +1368,24 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
   </div>
 </div>
 
+<button type="button" id="chatFab" aria-label="الشات" title="الشات" style="display:none;">
+  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.9A8 8 0 1 1 21 12z"/></svg>
+  <span id="chatBadge" style="display:none;"></span>
+  <span id="chatFabOnline" style="display:none;"></span>
+</button>
+<div id="chatPanel" style="display:none;" role="dialog" aria-label="الشات">
+  <div class="chat-head">
+    <div class="chat-title">💬 شات الخدمة</div>
+    <button type="button" class="chat-x" id="chatCloseBtn" aria-label="قفل">✕</button>
+  </div>
+  <div class="chat-online" id="chatOnline"></div>
+  <div class="chat-msgs" id="chatMsgs"></div>
+  <form class="chat-form" id="chatForm" autocomplete="off">
+    <input type="text" id="chatInput" placeholder="اكتب رسالة…" maxlength="1000">
+    <button type="submit" class="primary" id="chatSendBtn" aria-label="إرسال"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="transform:scaleX(-1);"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg></button>
+  </form>
+</div>
+
 <div class="login-overlay" id="photoGateOverlay" style="display:none;z-index:1001;">
   <div class="login-card">
     <h1>ارفع صورتك الأول 📸</h1>
@@ -1516,6 +1576,21 @@ window.addEventListener('error', function(e){
   fbStore.photoGet = async id=>{ const snap = await db.collection('ph').doc(id).get(); return snap.exists ? snap.data() : null; };
   fbStore.photoSet = (id, v, ver)=> db.collection('ph').doc(id).set({ v, ver, at: Date.now() });
   fbStore.photoDelete = id=> db.collection('ph').doc(id).delete();
+  // team chat + who is online
+  fbStore.chatWatch = (cb, onErr)=> db.collection('chat').orderBy('at','desc').limit(150).onSnapshot(snap=>{
+    cb(snap.docs.map(d=>Object.assign({ id:d.id }, d.data())).reverse());
+  }, err=>{ console.error('chat watch failed', err); if(onErr) onErr(err); });
+  fbStore.chatSend = m=> db.collection('chat').add(m);
+  fbStore.chatDelete = id=> db.collection('chat').doc(id).delete();
+  fbStore.chatPruneOld = async before=>{
+    const snap = await db.collection('chat').where('at','<',before).limit(50).get();
+    snap.docs.forEach(d=>d.ref.delete().catch(()=>{}));
+  };
+  fbStore.presenceSet = (id, v)=> db.collection('presence').doc(id).set(v);
+  fbStore.presenceDelete = id=> db.collection('presence').doc(id).delete();
+  fbStore.presenceWatch = cb=> db.collection('presence').onSnapshot(snap=>{
+    cb(snap.docs.map(d=>d.data()));
+  }, err=>console.error('presence watch failed', err));
   fbStore.lastRev = key => lastRevs[key] || 0;
   fbStore.watch = (key, cb)=> mainRef(key).onSnapshot(snap=>{
     if(snap.metadata.hasPendingWrites) return;
@@ -2109,7 +2184,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '14-Oct-2026 F';
+const APP_VERSION = '14-Oct-2026 G';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -4244,6 +4319,7 @@ function applyUserUI(){
   document.getElementById('userRoleLabel').textContent = currentUser.role === 'admin' ? 'Admin' : roleLabelFor(currentUser.role);
   updateUserAvatar();
   checkPhotoGate();
+  try{ startTeamChat(); }catch(e){ console.error('chat start failed', e); }
   resetInactivityTimer();
   showWelcomeBanner();
   document.getElementById('usersCard').style.display = isAdmin() ? 'block' : 'none';
@@ -4368,6 +4444,7 @@ document.getElementById('loginPasswordInput').addEventListener('keydown', (e)=>{
 async function doLogout(reasonMsg){
   await clearPersonalLogin();
   if(currentUser) auditLastUser = currentUser.name;
+  try{ stopTeamChat(); }catch(e){}
   currentUser = null;
   { const pg = document.getElementById('photoGateOverlay'); if(pg) pg.style.display = 'none'; }
   { const bn = document.getElementById('bottomNav'); if(bn) bn.style.display = 'none'; }
@@ -6665,6 +6742,142 @@ async function init(){
   showLoadErrorScreen();
  }
 }
+/* ---------- TEAM CHAT + WHO IS ONLINE ----------
+   One room for every account (users, supervisors, admins). Messages live in
+   their own Firestore collection; each signed-in device writes a heartbeat
+   to presence/<name> so the others can see who is online now. */
+let chatUnsub = null, presenceUnsub = null, presenceTimer = null;
+let chatMsgsCache = [], chatOnlineCache = [], chatStartedFor = '';
+const CHAT_ONLINE_MS = 75000;
+function presenceId(name){ return 'u_' + encodeURIComponent(String(name||'').trim()).slice(0, 400); }
+function chatSeenKey(){ return 'khodam_chat_seen_' + (currentUser ? currentUser.name : ''); }
+function chatSeenAt(){ try{ return +localStorage.getItem(chatSeenKey()) || 0; }catch(e){ return 0; } }
+function chatMarkSeen(){ try{ localStorage.setItem(chatSeenKey(), String(Date.now())); }catch(e){} renderChatBadge(); }
+function chatPerson(name){
+  const u = USERS.find(x=>x.name === name);
+  return { name, photo: u && u.photo ? u.photo : '', role: u ? u.role : '' };
+}
+function chatRoleTag(role){ return role === 'admin' ? 'Admin' : role === 'supervisor' ? 'مشرف' : ''; }
+function chatIsOpen(){ return document.getElementById('chatPanel').style.display !== 'none'; }
+function sendPresence(){
+  if(!currentUser || !window.storage.presenceSet) return;
+  window.storage.presenceSet(presenceId(currentUser.name), { name: currentUser.name, role: currentUser.role || '', at: Date.now() }).catch(()=>{});
+}
+function startTeamChat(){
+  if(!currentUser || !window.storage.chatWatch) return;
+  if(chatStartedFor === currentUser.name && chatUnsub) { document.getElementById('chatFab').style.display = 'flex'; return; }
+  stopTeamChat();
+  chatStartedFor = currentUser.name;
+  document.getElementById('chatFab').style.display = 'flex';
+  chatUnsub = window.storage.chatWatch(list=>{ chatMsgsCache = list; renderChatMsgs(); renderChatBadge(); },
+    ()=>{ document.getElementById('chatMsgs').innerHTML = '<div class="chat-empty">الشات مش شغال دلوقتي. جرّب تفتح البرنامج تاني.</div>'; });
+  presenceUnsub = window.storage.presenceWatch(list=>{ chatOnlineCache = list; renderChatOnline(); });
+  sendPresence();
+  presenceTimer = setInterval(()=>{ if(document.visibilityState !== 'hidden') sendPresence(); renderChatOnline(); }, 30000);
+}
+function stopTeamChat(){
+  if(chatUnsub){ try{ chatUnsub(); }catch(e){} chatUnsub = null; }
+  if(presenceUnsub){ try{ presenceUnsub(); }catch(e){} presenceUnsub = null; }
+  if(presenceTimer){ clearInterval(presenceTimer); presenceTimer = null; }
+  if(chatStartedFor && window.storage.presenceDelete) window.storage.presenceDelete(presenceId(chatStartedFor)).catch(()=>{});
+  chatStartedFor = ''; chatMsgsCache = []; chatOnlineCache = [];
+  const fab = document.getElementById('chatFab'); if(fab) fab.style.display = 'none';
+  const pn = document.getElementById('chatPanel'); if(pn) pn.style.display = 'none';
+}
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'visible' && chatStartedFor) sendPresence(); });
+window.addEventListener('pagehide', ()=>{ if(chatStartedFor && window.storage.presenceDelete) window.storage.presenceDelete(presenceId(chatStartedFor)).catch(()=>{}); });
+function onlineNow(){
+  const now = Date.now(), seen = new Set();
+  return chatOnlineCache.filter(p=>p && p.name && now - (p.at||0) < CHAT_ONLINE_MS && !seen.has(p.name) && seen.add(p.name))
+    .sort((a,b)=> (currentUser && a.name === currentUser.name ? -1 : currentUser && b.name === currentUser.name ? 1 : a.name.localeCompare(b.name, 'ar')));
+}
+function renderChatOnline(){
+  const list = onlineNow();
+  const fabOn = document.getElementById('chatFabOnline');
+  fabOn.textContent = list.length; fabOn.style.display = list.length ? 'flex' : 'none';
+  fabOn.title = list.length + ' أونلاين';
+  const box = document.getElementById('chatOnline');
+  if(!list.length){ box.innerHTML = '<span class="none">مفيش حد أونلاين دلوقتي</span>'; return; }
+  box.innerHTML = list.map(p=>{
+    const per = chatPerson(p.name);
+    const me = currentUser && p.name === currentUser.name;
+    return `<div class="who" title="${escHtml(p.name)}"><span class="pic">${avatarHtml(per, 34)}</span><span class="n">${me ? 'إنت' : escHtml(p.name.split(/\s+/)[0])}</span></div>`;
+  }).join('');
+}
+function renderChatBadge(){
+  const b = document.getElementById('chatBadge');
+  if(!currentUser){ b.style.display = 'none'; return; }
+  if(chatIsOpen()){ b.style.display = 'none'; return; }
+  const seen = chatSeenAt();
+  const n = chatMsgsCache.filter(m=>m.by !== currentUser.name && (m.at||0) > seen).length;
+  b.textContent = n > 99 ? '99+' : n; b.style.display = n ? 'flex' : 'none';
+}
+function chatTime(ts){ const d = new Date(ts); return d.toLocaleTimeString('ar-EG', { hour:'numeric', minute:'2-digit' }); }
+function chatDay(ts){
+  const d = new Date(ts), t = new Date(); const y = new Date(); y.setDate(t.getDate()-1);
+  if(d.toDateString() === t.toDateString()) return 'النهارده';
+  if(d.toDateString() === y.toDateString()) return 'امبارح';
+  return d.toLocaleDateString('ar-EG', { weekday:'long', day:'numeric', month:'long' });
+}
+function renderChatMsgs(){
+  const box = document.getElementById('chatMsgs');
+  if(!chatIsOpen()) return;
+  const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+  if(!chatMsgsCache.length){ box.innerHTML = '<div class="chat-empty">لسه مفيش رسايل. ابدأ إنت 👋</div>'; return; }
+  let lastDay = '', html = '';
+  chatMsgsCache.forEach(m=>{
+    const day = chatDay(m.at||Date.now());
+    if(day !== lastDay){ html += `<div class="chat-day">${escHtml(day)}</div>`; lastDay = day; }
+    const mine = currentUser && m.by === currentUser.name;
+    const per = chatPerson(m.by);
+    const tag = chatRoleTag(per.role || m.role);
+    const canDel = mine || isAdmin();
+    html += `<div class="chat-msg${mine ? ' mine' : ''}">
+      ${mine ? '' : avatarHtml(per, 30)}
+      <div class="bub">
+        ${mine ? '' : `<div class="by">${escHtml(m.by)}${tag ? `<small>${tag}</small>` : ''}</div>`}
+        <div class="txt">${escHtml(m.text)}</div>
+        <div class="tm">${chatTime(m.at||Date.now())}${canDel ? `<button type="button" class="del" data-id="${escHtml(m.id)}">مسح</button>` : ''}</div>
+      </div>
+    </div>`;
+  });
+  box.innerHTML = html;
+  if(nearBottom || box.dataset.first !== '1'){ box.scrollTop = box.scrollHeight; box.dataset.first = '1'; }
+  chatMarkSeen();
+}
+function openChat(){
+  const pn = document.getElementById('chatPanel');
+  pn.style.display = 'flex';
+  document.getElementById('chatMsgs').dataset.first = '';
+  renderChatOnline(); renderChatMsgs(); chatMarkSeen();
+  if(window.matchMedia('(min-width:761px)').matches) setTimeout(()=>document.getElementById('chatInput').focus(), 50);
+}
+function closeChat(){ document.getElementById('chatPanel').style.display = 'none'; renderChatBadge(); }
+document.getElementById('chatFab').addEventListener('click', ()=>{ chatIsOpen() ? closeChat() : openChat(); });
+document.getElementById('chatCloseBtn').addEventListener('click', closeChat);
+document.getElementById('chatMsgs').addEventListener('click', async e=>{
+  const btn = e.target.closest('.del'); if(!btn) return;
+  if(!confirm('تمسح الرسالة دي؟')) return;
+  try{ await window.storage.chatDelete(btn.dataset.id); }catch(err){ alert('معرفناش نمسح الرسالة، جرّب تاني.'); }
+});
+let chatLastPrune = 0;
+document.getElementById('chatForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const inp = document.getElementById('chatInput');
+  const text = inp.value.trim();
+  if(!text || !currentUser) return;
+  inp.value = '';
+  try{
+    await window.storage.chatSend({ by: currentUser.name, role: currentUser.role || '', text: text.slice(0, 1000), at: Date.now() });
+    sendPresence();
+    // keep the room light: drop messages older than 60 days now and then
+    if(Date.now() - chatLastPrune > 3600000){ chatLastPrune = Date.now(); window.storage.chatPruneOld(Date.now() - 60*86400000).catch(()=>{}); }
+  }catch(err){
+    inp.value = text;
+    alert('الرسالة متبعتتش. اتأكد من النت وجرّب تاني.');
+  }
+});
+
 init();
 </script>
 </body>
