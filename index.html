@@ -633,6 +633,8 @@ html[data-theme="dark"] .chat-msg .bub{background:#222d42;}
 .role-tag.admin{background:var(--wine);color:#fff;}
 .role-tag.supervisor{background:var(--sage);color:#fff;}
 .role-tag.user{background:var(--gold-soft);color:var(--chip-ink);}
+.role-tag.locked{background:#b3261e;color:#fff;}
+#loginBtn:disabled{opacity:.45;cursor:not-allowed;}
 .added-by{font-size:.68rem;color:#9a8c5f;margin-top:3px;}
 .perm-sum{font-size:.78rem;color:var(--ink-soft);line-height:1.75;margin-top:5px;}
 .perm-sum b{color:var(--ink);}
@@ -2184,7 +2186,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '14-Oct-2026 I';
+const APP_VERSION = '15-Oct-2026 A';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -3854,6 +3856,7 @@ function diffUsers(before, after){
     const ch = [];
     if(b.role !== a.role) ch.push({ f:'النوع', from: roleLabelFor(b.role), to: roleLabelFor(a.role) });
     if(b.password !== a.password) ch.push({ f:'كلمة السر', from:'—', to:'اتغيّرت' });
+    if(!!b.locked !== !!a.locked) ch.push({ f:'الحساب', from: b.locked ? 'مقفول 🔒' : 'مفتوح', to: a.locked ? 'مقفول 🔒 (٣ محاولات غلط)' : 'مفتوح' });
     if(JSON.stringify(allowedGroupsFor(b)) !== JSON.stringify(allowedGroupsFor(a))) ch.push({ f:'الاجتماعات المسموحة', from: allowedGroupsFor(b).map(groupName).join(' + '), to: allowedGroupsFor(a).map(groupName).join(' + ') });
     ALL_PERM_KEYS.forEach(k=>{
       const pb = effectivePerm(b,k), pa = effectivePerm(a,k);
@@ -4272,6 +4275,58 @@ function hideLoginOverlay(){
   document.getElementById('loginOverlay').style.display = 'none';
 }
 
+/* ---------- WRONG-PASSWORD LOCK ----------
+   Counted on the account itself (shared), so another device doesn't reset it.
+   User/supervisor: the 3rd wrong try locks the account and asks the admin in
+   the chat; the admin unlocks it or gives a new password from the users list.
+   Admin: never locked (nobody could open it) — login just pauses 3 minutes. */
+const MAX_WRONG_TRIES = 3;
+const ADMIN_LOCK_MS = 3 * 60000;
+const LOCKED_MSG = 'الحساب ده اتقفل بعد ٣ محاولات غلط 🔒 واتبعت طلب للمدير يفتحه أو يديك كلمة سر جديدة.';
+let adminLockTimer = null;
+async function registerWrongPassword(user){
+  const note = document.getElementById('loginNote');
+  user.failedAttempts = (user.failedAttempts||0) + 1;
+  if(user.failedAttempts < MAX_WRONG_TRIES){
+    await saveUsers();
+    const left = MAX_WRONG_TRIES - user.failedAttempts;
+    note.textContent = 'كلمة السر غلط. ' + (left === 1 ? 'فاضلك محاولة واحدة وبعدها الحساب هيتقفل.' : 'فاضلك محاولتين.');
+    if(user.role === 'admin') note.textContent = 'كلمة السر غلط. ' + (left === 1 ? 'فاضلك محاولة واحدة وبعدها الدخول هيقف ٣ دقايق.' : 'فاضلك محاولتين.');
+    return;
+  }
+  user.failedAttempts = 0;
+  if(user.role === 'admin'){
+    user.lockUntil = Date.now() + ADMIN_LOCK_MS;
+    await saveUsers();
+    startAdminLockCountdown(user.lockUntil);
+    return;
+  }
+  user.locked = true; user.lockedAt = new Date().toISOString();
+  await saveUsers();
+  note.textContent = LOCKED_MSG;
+  try{
+    if(window.storage.chatSend) await window.storage.chatSend({ by: user.name, role: user.role || '', to: 'admin', kind: 'lock',
+      text: '🔒 حسابي اتقفل بعد ٣ محاولات غلط لكلمة السر. محتاج تفتحه أو تديني كلمة سر جديدة (من قائمة المستخدمين).', at: Date.now() });
+  }catch(e){ console.error('lock request to admin failed', e); }
+}
+function startAdminLockCountdown(until){
+  const note = document.getElementById('loginNote');
+  const btn = document.getElementById('loginBtn');
+  if(adminLockTimer) clearInterval(adminLockTimer);
+  const tick = ()=>{
+    const left = Math.max(0, until - Date.now());
+    if(!left){
+      clearInterval(adminLockTimer); adminLockTimer = null;
+      btn.disabled = false; note.textContent = 'تقدر تجرّب تاني دلوقتي.';
+      return;
+    }
+    const s = Math.ceil(left/1000);
+    btn.disabled = true;
+    note.innerHTML = '⏳ كلمة السر اتكتبت غلط ٣ مرات. الدخول واقف لمدة<br><b style="font-size:1.6rem;direction:ltr;display:inline-block;">' + Math.floor(s/60) + ':' + String(s%60).padStart(2,'0') + '</b>';
+  };
+  tick(); adminLockTimer = setInterval(tick, 1000);
+}
+
 let APP_READY = false;
 async function doLogin(name, password){
   name = (name||'').trim();
@@ -4299,9 +4354,14 @@ async function doLogin(name, password){
       return;
     }
 
+    // fresh copy first, so a lock/unlock done on another device counts here too
+    try{ await loadUsers(); }catch(e){}
     const user = USERS.find(u=>u.name.trim() === name);
     if(!user){ note.textContent = 'مفيش مستخدم بالاسم ده. اطلب من المدير يضيفك.'; return; }
-    if(user.password !== password){ note.textContent = 'كلمة السر غلط.'; return; }
+    if(user.role !== 'admin' && user.locked){ note.textContent = LOCKED_MSG; return; }
+    if(user.role === 'admin' && (user.lockUntil||0) > Date.now()){ startAdminLockCountdown(user.lockUntil); return; }
+    if(user.password !== password){ await registerWrongPassword(user); return; }
+    if(user.failedAttempts || user.lockUntil){ delete user.failedAttempts; delete user.lockUntil; await saveUsers(); }
 
     currentUser = user; auditLastUser = user.name;
     await setPersonalLogin(name);
@@ -4486,6 +4546,7 @@ function renderUsersList(){
       <div>
         <b>${u.name}</b>
         <span class="role-tag ${u.role}">${profileLabel(profileOf(u))}</span>
+        ${u.locked ? `<span class="role-tag locked" title="اتقفل بعد ٣ محاولات غلط">🔒 مقفول</span>` : ''}
         <div class="perm-sum">${userSummaryHtml(u)}</div>
         ${u.role === 'user' ? `<div class="chips" style="margin-top:6px;">${allowedGroupsFor(u).map(gid=>`<span class="chip g-${gid}">${groupName(gid)}</span>`).join('')}</div>` : ''}
         <div class="added-by">أضافه: ${u.addedBy || '—'}</div>
@@ -4496,7 +4557,8 @@ function renderUsersList(){
         </select>
         ${u.role === 'user' ? `<button class="ghost edit-user-perms" title="تخصيص الصلاحيات">⚙️</button>` : ''}
         ${u.role === 'user' ? `<button class="ghost edit-user-groups">الاجتماعات</button>` : ''}
-        <button class="ghost change-pass">كلمة السر</button>
+        ${u.locked ? `<button class="ghost unlock-user" title="يفتح الحساب بنفس كلمة السر">🔓 فتح القفل</button>` : ''}
+        <button class="ghost change-pass">${u.locked ? 'كلمة سر جديدة' : 'كلمة السر'}</button>
         <button class="ghost danger del-user">حذف</button>
       </div>
     </div>
@@ -4566,9 +4628,23 @@ function renderUsersList(){
       const newPass = prompt(`كلمة سر جديدة لـ "${name}":`);
       if(!newPass) return;
       const u = USERS.find(x=>x.name === name);
+      const wasLocked = !!u.locked;
       u.password = newPass;
+      delete u.locked; delete u.lockedAt; delete u.failedAttempts; delete u.lockUntil;
       await saveUsers();
-      alert('اتغيرت كلمة السر ✓');
+      renderUsersList();
+      alert(wasLocked ? 'اتغيرت كلمة السر واتفتح الحساب ✓ بلّغه بكلمة السر الجديدة.' : 'اتغيرت كلمة السر ✓');
+    });
+  });
+  list.querySelectorAll('.unlock-user').forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{
+      const name = e.target.closest('.user-row').dataset.name;
+      if(!confirm(`تفتح حساب "${name}" بنفس كلمة السر القديمة؟`)) return;
+      const u = USERS.find(x=>x.name === name);
+      delete u.locked; delete u.lockedAt; delete u.failedAttempts;
+      await saveUsers();
+      renderUsersList();
+      alert('اتفتح الحساب ✓');
     });
   });
   list.querySelectorAll('.profile-select').forEach(sel=>{
@@ -6807,7 +6883,7 @@ function startTeamChat(){
   stopTeamChat();
   chatStartedFor = currentUser.name;
   document.getElementById('chatFab').style.display = 'flex';
-  chatUnsub = window.storage.chatWatch(list=>{ chatMsgsCache = list; renderChatMsgs(); renderChatBadge(); },
+  chatUnsub = window.storage.chatWatch(list=>{ chatMsgsCache = list.filter(m=>!m.to || isAdmin() || (currentUser && m.by === currentUser.name)); renderChatMsgs(); renderChatBadge(); },
     ()=>{ document.getElementById('chatMsgs').innerHTML = '<div class="chat-empty">الشات مش شغال دلوقتي. جرّب تفتح البرنامج تاني.</div>'; });
   presenceUnsub = window.storage.presenceWatch(list=>{ chatOnlineCache = list; renderChatOnline(); });
   sendPresence();
