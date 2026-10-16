@@ -507,6 +507,7 @@ html[data-theme="dark"] .dc-miss span{color:#f08a84;}
 .user-box .user-name{font-size:.88rem;white-space:nowrap;}
 .user-box .user-role{font-size:.68rem;letter-spacing:.06em;margin-top:2px;white-space:nowrap;}
 #logoutBtn{display:inline-flex;align-items:center;gap:6px;margin:0;padding:7px 12px;border-radius:999px;font-size:.78rem;line-height:1;}
+#mySettingsBtn{align-items:center;justify-content:center;margin:0;padding:0;width:32px;height:32px;border-radius:50%;flex:none;}
 .user-box .ghost:hover{background:rgba(255,255,255,.18);}
 
 /* ---- team chat ---- */
@@ -843,6 +844,7 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
         <div class="user-name" id="userNameLabel"></div>
         <div class="user-role" id="userRoleLabel"></div>
       </div>
+      <button class="ghost" id="mySettingsBtn" title="إعداداتي" aria-label="إعداداتي" style="display:none;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.2 7.5l2 1.2M17.8 15.3l2 1.2M4.2 16.5l2-1.2M17.8 8.7l2-1.2"/></svg></button>
       <button class="ghost" id="logoutBtn" title="خروج" aria-label="خروج"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v8"/><path d="M6.4 6.6a8 8 0 1 0 11.2 0"/></svg><span>خروج</span></button>
     </div>
   </div>
@@ -864,6 +866,7 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
   <button data-tab="afeqad">الافتقاد</button>
   <button data-tab="moves">نقل الأسماء</button>
   <button data-tab="program">برنامج الخدمة</button>
+  <button data-tab="tenmin">فقرة العشر دقايق</button>
   <button data-tab="reports">التقارير</button>
   <button data-tab="settings">الإعدادات</button>
 </nav>
@@ -873,6 +876,11 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
   <div class="card" id="dashboardNextCard" style="display:none;">
     <h2>📖 الاجتماع الجاي</h2>
     <div id="dashboardNext"></div>
+  </div>
+
+  <div class="card" id="dashboardTenCard" style="display:none;">
+    <h2>⏱️ فقرة العشر دقايق الجاية</h2>
+    <div id="dashboardTen"></div>
   </div>
 
   <div class="card" id="dashboardStatsCard">
@@ -933,6 +941,35 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
     </div>
   </div>
   <div id="progList"></div>
+</section>
+
+<!-- 10-MINUTE SEGMENT TAB (same screen as the program, own data) -->
+<section class="panel" id="panel-tenmin">
+  <div class="card">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
+      <div class="prog-tabs" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+        <b style="margin-inline-end:6px;">⏱️ فقرة العشر دقايق</b>
+        <button class="primary prog-day" data-day="friday">اجتماع الجمعة</button>
+        <button class="ghost prog-day" data-day="sunday">اجتماع الأحد</button>
+      </div>
+      <select id="tenYear" style="max-width:220px;"></select>
+    </div>
+    <div id="tenHeader" style="margin-top:14px;"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center;">
+      <select id="tenFilter" style="max-width:220px;">
+        <option value="all">كل السنة</option>
+        <option value="upcoming">من النهارده وجاي</option>
+        <option value="nospeaker">ناقص متكلم</option>
+      </select>
+      <button class="ghost" id="tenPostBtn">🖼️ بوست الشهر</button>
+      <button class="ghost" id="tenPrintBtn">🖨️ طباعة</button>
+      <button class="ghost" id="tenExportBtn">⬇️ تصدير Excel</button>
+      <button class="ghost" id="tenSpeakersBtn" style="display:none;">📇 تقرير المتكلمين</button>
+      <label class="ghost" id="tenImportLabel" for="tenImportFile" style="cursor:pointer;display:none;padding:8px 14px;border-radius:10px;">⬆️ استيراد من Excel</label>
+      <input type="file" id="tenImportFile" accept=".xlsx,.xls" style="display:none;">
+    </div>
+  </div>
+  <div id="tenList"></div>
 </section>
 
 <!-- MOVES TAB -->
@@ -1176,7 +1213,7 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
 <!-- SETTINGS TAB -->
 <section class="panel" id="panel-settings">
   <p class="app-version" style="text-align:center;color:var(--faint);font-size:.75rem;margin:0 0 10px;"></p>
-  <div class="card">
+  <div class="card" id="themeCard">
     <h2>🎨 المظهر</h2>
     <label style="display:block;margin-bottom:6px;">ألوان البرنامج</label>
     <select id="themeSelect" style="max-width:260px;">
@@ -1184,6 +1221,12 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
       <option value="light">فاتح</option>
       <option value="dark">غامق (الوضع الليلي)</option>
     </select>
+  </div>
+  <div class="card" id="faceLoginCard" style="display:none;">
+    <h2>🙂 الدخول بالوش</h2>
+    <div class="empty-note" id="faceLoginStatus" style="margin-bottom:8px;"></div>
+    <button class="primary" id="faceEnableBtn">فعّل الدخول بالوش على الجهاز ده</button>
+    <button class="ghost" id="faceDisableBtn" style="display:none;">إلغاء الدخول بالوش على الجهاز ده</button>
   </div>
   <div class="card" id="notAdminNote" style="display:none;">
     <h2>الإعدادات</h2>
@@ -1204,6 +1247,7 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
         <option value="attendance">حضور وافتقاد</option>
         <option value="viewOnly">يشوف بس</option>
         <option value="program">برنامج الخدمة بس</option>
+        <option value="tenmin">فقرة العشر دقايق بس</option>
         <option value="supervisor">مشرف</option>
         <option value="admin">مدير</option>
       </select>
@@ -1359,6 +1403,7 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
       <input type="text" id="setupKeyInput" placeholder="مفتاح التفعيل (أول مرة بس)">
     </div>
     <button class="primary" id="loginBtn" style="width:100%;margin-top:12px;">دخول</button>
+    <button class="ghost" id="faceLoginBtn" style="display:none;width:100%;margin-top:8px;font-size:1rem;padding:12px;">🙂 ادخل بالوش / البصمة</button>
     <div class="empty-note" id="loginNote" style="margin-top:10px;"></div>
   </div>
   <div class="login-card" id="loadErrorCard" style="display:none;">
@@ -1398,6 +1443,24 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
     <button class="primary" id="photoGateSaveBtn" style="width:100%;margin-top:12px;" disabled>حفظ ودخول</button>
     <div class="empty-note" id="photoGateNote" style="margin-top:10px;"></div>
     <button class="ghost" id="photoGateLogoutBtn" style="margin-top:6px;">خروج</button>
+  </div>
+</div>
+
+<div class="login-overlay" id="mySettingsOverlay" style="display:none;z-index:1001;background:rgba(27,42,74,.6);">
+  <div class="login-card" style="max-width:460px;text-align:start;">
+    <h1 style="text-align:center;">⚙️ إعداداتي</h1>
+    <div id="mySettingsBody"></div>
+    <p class="app-version" style="text-align:center;color:var(--faint);font-size:.75rem;margin:8px 0;"></p>
+    <button class="ghost" id="mySettingsCloseBtn" style="width:100%;">إغلاق</button>
+  </div>
+</div>
+<div class="login-overlay" id="faceOfferOverlay" style="display:none;z-index:1002;">
+  <div class="login-card">
+    <h1>تفتح البرنامج بوشك؟ 🙂</h1>
+    <p>المرة الجاية تقدر تدخل من الموبايل ده بوشك أو بصمتك بدل ما تكتب كلمة السر.</p>
+    <button class="primary" id="faceOfferYesBtn" style="width:100%;margin-top:6px;">أيوه، فعّل الدخول بالوش</button>
+    <button class="ghost" id="faceOfferNoBtn" style="width:100%;margin-top:6px;">مش دلوقتي</button>
+    <div class="empty-note" id="faceOfferNote" style="margin-top:10px;"></div>
   </div>
 </div>
 
@@ -2186,7 +2249,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '15-Oct-2026 A';
+const APP_VERSION = '16-Oct-2026 C';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -2410,6 +2473,7 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
     if(btn.dataset.tab === 'afeqad') renderAfeqadList();
     if(btn.dataset.tab === 'moves') renderMovesPanel();
     if(btn.dataset.tab === 'program') renderProgramPanel();
+    if(btn.dataset.tab === 'tenmin') renderTenMinPanel();
     if(btn.dataset.tab === 'settings' && isAdmin()) loadAuditLog();
   });
 });
@@ -3423,8 +3487,8 @@ function renderDashboard(){
   // ---- how complete everyone's data is ----
   renderDataCompleteness(visibleServants);
 
-  // ---- next meetings from the service program ----
-  renderDashboardNext();
+  // ---- next meetings from the service program and the 10-minute segment ----
+  if(typeof PROGRAM_SCREENS !== 'undefined') Object.values(PROGRAM_SCREENS).forEach(s=>s.dashNext());
 
   // ---- upcoming birthdays (next 30 days) ----
   renderDashboardBirthdays();
@@ -3802,7 +3866,8 @@ let PERMISSIONS = {
   addServant: true, editServant: true,
   editAttendance: true, editAfeqad: true,
   tabMoves: true, editMoves: false,
-  tabProgram: true, editProgram: false
+  tabProgram: true, editProgram: false,
+  tabTenMin: true, editTenMin: false
 };
 
 async function storageGetWithRetry(key, shared, attempts=3, delayMs=350){
@@ -4126,10 +4191,20 @@ function can(permKey){
 function effectivePerm(user, permKey){
   const has = (o,k)=> o && Object.prototype.hasOwnProperty.call(o, k);
   const up = user && user.perms;
+  // "برنامج الخدمة بس" accounts saved before 16-Oct-2026 C had the dashboard off; it is part of that type now
+  // (once an admin saves the account again it has its own tabTenMin key and this stops applying)
+  if(permKey === 'tabDashboard' && up && has(up, 'tabProgram') && !has(up, 'tabTenMin') && up.tabProgram
+     && ['tabDashboard','tabServants','tabAttendance','tabAfeqad','tabReports','tabMoves'].every(k=>has(up, k) && !up[k])) return true;
   // per-user override wins over the global default when explicitly set
   if(has(up, permKey)) return !!up[permKey];
   // settings saved before "الافتقاد" had its own switch followed "تعديل الخدام"
   if(permKey === 'editAfeqad' && has(up, 'editServant')) return !!up.editServant;
+  // accounts saved before "فقرة العشر دقايق" existed follow their program-screen setting,
+  // except "برنامج الخدمة بس" accounts, which keep only the program screen
+  if((permKey === 'tabTenMin' || permKey === 'editTenMin') && up && has(up, 'tabProgram')){
+    const programOnly = ['tabDashboard','tabServants','tabAttendance','tabAfeqad','tabReports','tabMoves'].every(k=>has(up, k) && !up[k]);
+    return programOnly ? false : !!up[permKey === 'tabTenMin' ? 'tabProgram' : 'editProgram'];
+  }
   if(has(PERMISSIONS, permKey)) return !!PERMISSIONS[permKey];
   return false;
 }
@@ -4141,7 +4216,8 @@ const PERM_SCREENS = [
   { label:'الافتقاد',        view:'tabAfeqad',     edit:['editAfeqad'] },
   { label:'التقارير',        view:'tabReports' },
   { label:'نقل الأسماء',     view:'tabMoves',      edit:['editMoves'] },
-  { label:'برنامج الخدمة',   view:'tabProgram',    edit:['editProgram'] }
+  { label:'برنامج الخدمة',   view:'tabProgram',    edit:['editProgram'] },
+  { label:'فقرة العشر دقايق', view:'tabTenMin',    edit:['editTenMin'] }
 ];
 const PERM_DATA = [
   ['phones','يشوف أرقام التليفونات'],
@@ -4159,7 +4235,8 @@ const ALL_PERM_KEYS = Object.keys(PERM_LABELS);
 const PERM_PRESETS = {
   all:     ()=>Object.fromEntries(ALL_PERM_KEYS.map(k=>[k,true])),
   viewOnly:()=>Object.fromEntries(ALL_PERM_KEYS.map(k=>[k, !PERM_SCREENS.some(sc=>(sc.edit||[]).includes(k))])),
-  program: ()=>Object.fromEntries(ALL_PERM_KEYS.map(k=>[k, k==='tabProgram' || k==='editProgram'])),
+  program: ()=>Object.fromEntries(ALL_PERM_KEYS.map(k=>[k, k==='tabDashboard' || k==='tabProgram' || k==='editProgram'])),
+  tenmin:  ()=>Object.fromEntries(ALL_PERM_KEYS.map(k=>[k, k==='tabDashboard' || k==='tabTenMin' || k==='editTenMin'])),
   attendance: ()=>{ const on = ['tabDashboard','tabServants','tabAttendance','editAttendance','tabAfeqad','editAfeqad','phones']; return Object.fromEntries(ALL_PERM_KEYS.map(k=>[k, on.includes(k)])); }
 };
 /* one pick per user: role + ready-made permission set */
@@ -4169,7 +4246,8 @@ const USER_PROFILES = [
   { id:'user',       label:'خادم',              hint:'حسب صلاحيات الخادم العادي (تحت)' },
   { id:'attendance', label:'حضور وافتقاد',      hint:'يسجّل الحضور والافتقاد ويشوف التليفونات' },
   { id:'viewOnly',   label:'يشوف بس',           hint:'يشوف كل حاجة من غير ما يعدّل' },
-  { id:'program',    label:'برنامج الخدمة بس',  hint:'شاشة برنامج الخدمة بس' },
+  { id:'program',    label:'برنامج الخدمة بس',  hint:'لوحة المعلومات + شاشة برنامج الخدمة (يشوف ويعدّل)' },
+  { id:'tenmin',     label:'فقرة العشر دقايق بس', hint:'لوحة المعلومات + شاشة فقرة العشر دقايق (يشوف ويعدّل)' },
   { id:'all',        label:'كل الشاشات',        hint:'يشوف ويعدّل كل الشاشات من غير حذف' },
   { id:'custom',     label:'مخصص',              hint:'' }
 ];
@@ -4177,7 +4255,7 @@ function profileOf(u){
   if(!u) return 'user';
   if(u.role === 'admin' || u.role === 'supervisor') return u.role;
   if(!u.perms) return 'user';
-  const hit = ['attendance','viewOnly','program','all'].find(id=>{
+  const hit = ['attendance','viewOnly','program','tenmin','all'].find(id=>{
     const pr = PERM_PRESETS[id]();
     return ALL_PERM_KEYS.every(k=>effectivePerm(u,k) === !!pr[k]);
   });
@@ -4269,7 +4347,8 @@ function showLoginOverlay(prefillName){
   document.getElementById('setupKeyWrap').style.display = isSetup ? 'block' : 'none';
   document.getElementById('setupKeyInput').value = '';
   document.getElementById('loginNote').textContent = isSetup ? '' : 'لو معندكش حساب، كلّم المدير عشان يضيفلك واحد.';
-  setTimeout(()=>nameInput.focus(), 50);
+  refreshFaceLoginButton();
+  if(!getFaceKey()) setTimeout(()=>nameInput.focus(), 50);
 }
 function hideLoginOverlay(){
   document.getElementById('loginOverlay').style.display = 'none';
@@ -4363,17 +4442,217 @@ async function doLogin(name, password){
     if(user.password !== password){ await registerWrongPassword(user); return; }
     if(user.failedAttempts || user.lockUntil){ delete user.failedAttempts; delete user.lockUntil; await saveUsers(); }
 
-    currentUser = user; auditLastUser = user.name;
-    await setPersonalLogin(name);
-    hideLoginOverlay();
-    try{ applyUserUI(); }catch(uiErr){ console.error('applyUserUI failed after login', uiErr); note.textContent = 'دخلت، لكن حصلت مشكلة في عرض الصفحة: ' + uiErr.message; }
+    await finishLogin(user);
+    maybeOfferFaceLogin();
   }catch(err){
     console.error('doLogin failed', err);
     note.textContent = 'حصل خطأ غير متوقع: ' + (err && err.message ? err.message : err);
   }
 }
 
+async function finishLogin(user){
+  const note = document.getElementById('loginNote');
+  currentUser = user; auditLastUser = user.name;
+  await setPersonalLogin(user.name);
+  hideLoginOverlay();
+  try{ applyUserUI(); }catch(uiErr){ console.error('applyUserUI failed after login', uiErr); note.textContent = 'دخلت، لكن حصلت مشكلة في عرض الصفحة: ' + uiErr.message; }
+}
+
+/* ---------- FACE / FINGERPRINT LOGIN ----------
+   Uses the phone's own screen lock (Face ID, face unlock or fingerprint)
+   through WebAuthn. After a normal password login the user can turn it on
+   for this device: the phone keeps a key, this browser remembers which
+   account it belongs to (FACE_KEY_LS), and the account lists its allowed
+   keys (user.faceKeys). A new password from the admin clears faceKeys, so
+   every device has to sign in with the password again. Needs HTTPS. */
+const FACE_KEY_LS = 'khodam_face_login';
+const FACE_DECLINED_LS = 'khodam_face_declined';
+let faceSupported = false;
+const faceReady = (async ()=>{
+  try{
+    if(window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable && window.isSecureContext)
+      faceSupported = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+  }catch(e){ faceSupported = false; }
+  return faceSupported;
+})();
+function getFaceKey(){ try{ return JSON.parse(localStorage.getItem(FACE_KEY_LS) || 'null'); }catch(e){ return null; } }
+function setFaceKey(v){ try{ if(v) localStorage.setItem(FACE_KEY_LS, JSON.stringify(v)); else localStorage.removeItem(FACE_KEY_LS); }catch(e){} }
+const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const unb64u = str => Uint8Array.from(atob(str.replace(/-/g,'+').replace(/_/g,'/')), c=>c.charCodeAt(0));
+const randomBytes = n => crypto.getRandomValues(new Uint8Array(n));
+function faceKeyValidFor(user, key){
+  return !!(user && key && Array.isArray(user.faceKeys) && user.faceKeys.includes(key.id));
+}
+
+async function enableFaceLogin(){
+  if(!currentUser) throw new Error('no user');
+  const cred = await navigator.credentials.create({ publicKey: {
+    challenge: randomBytes(32),
+    rp: { name: 'برنامج الخدمة' },
+    user: { id: randomBytes(16), name: currentUser.name, displayName: currentUser.name },
+    pubKeyCredParams: [{ type:'public-key', alg:-7 }, { type:'public-key', alg:-257 }],
+    authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required', residentKey:'discouraged' },
+    attestation: 'none',
+    timeout: 60000
+  }});
+  if(!cred) throw new Error('no credential');
+  const id = b64u(cred.rawId);
+  try{ await loadUsers(); }catch(e){}
+  const u = USERS.find(x=>x.name === currentUser.name) || currentUser;
+  u.faceKeys = (u.faceKeys || []).concat(id).slice(-10);
+  await saveUsers();
+  currentUser = u;
+  setFaceKey({ name: u.name, id });
+  try{ localStorage.removeItem(FACE_DECLINED_LS + ':' + u.name); }catch(e){}
+}
+async function disableFaceLogin(){
+  const key = getFaceKey();
+  setFaceKey(null);
+  if(!key) return;
+  try{ await loadUsers(); }catch(e){}
+  const u = USERS.find(x=>x.name === key.name);
+  if(u && Array.isArray(u.faceKeys)){
+    u.faceKeys = u.faceKeys.filter(k=>k !== key.id);
+    if(!u.faceKeys.length) delete u.faceKeys;
+    await saveUsers();
+  }
+}
+function faceErrorText(err){
+  const n = err && err.name || '';
+  if(n === 'NotAllowedError' || n === 'AbortError') return 'اتلغت أو مخلصتش. جرّب تاني.';
+  if(n === 'InvalidStateError') return 'الموبايل ده متسجّل عليه الدخول بالوش قبل كده.';
+  if(n === 'SecurityError') return 'الدخول بالوش محتاج البرنامج يتفتح من اللينك الأصلي (https).';
+  return 'مقدرناش نستخدم الوش/البصمة على الجهاز ده.';
+}
+
+async function refreshFaceLoginButton(){
+  const btn = document.getElementById('faceLoginBtn');
+  btn.style.display = 'none';
+  await faceReady;
+  const key = getFaceKey();
+  if(!faceSupported || !key || USERS.length === 0) return;
+  btn.textContent = '🙂 ادخل بالوش (' + key.name + ')';
+  btn.style.display = 'block';
+}
+async function doFaceLogin(){
+  const note = document.getElementById('loginNote');
+  const btn = document.getElementById('faceLoginBtn');
+  if(!APP_READY){ note.textContent = 'لحظة… البيانات لسه بتتحمّل. استنى ثواني وجرّب تاني.'; return; }
+  const key = getFaceKey();
+  if(!key) return refreshFaceLoginButton();
+  btn.disabled = true; note.textContent = '';
+  try{
+    const cred = await navigator.credentials.get({ publicKey: {
+      challenge: randomBytes(32),
+      allowCredentials: [{ type:'public-key', id: unb64u(key.id), transports:['internal','hybrid'] }],
+      userVerification: 'required',
+      timeout: 60000
+    }});
+    if(!cred || b64u(cred.rawId) !== key.id) throw Object.assign(new Error('mismatch'), { name:'NotAllowedError' });
+    try{ await loadUsers(); }catch(e){}
+    const user = USERS.find(u=>u.name === key.name);
+    if(!user){ setFaceKey(null); refreshFaceLoginButton(); note.textContent = 'الحساب ده مبقاش موجود. كلّم المدير.'; return; }
+    if(user.role !== 'admin' && user.locked){ note.textContent = LOCKED_MSG; return; }
+    if(user.role === 'admin' && (user.lockUntil||0) > Date.now()){ startAdminLockCountdown(user.lockUntil); return; }
+    if(!faceKeyValidFor(user, key)){
+      setFaceKey(null); refreshFaceLoginButton();
+      document.getElementById('loginNameInput').value = user.name;
+      note.textContent = 'كلمة السر بتاعتك اتغيّرت، فادخل بكلمة السر الجديدة مرة واحدة وبعدها فعّل الدخول بالوش تاني.';
+      return;
+    }
+    await finishLogin(user);
+  }catch(err){
+    console.error('face login failed', err);
+    note.textContent = faceErrorText(err) + ' أو ادخل بكلمة السر.';
+  }finally{
+    btn.disabled = false;
+  }
+}
+document.getElementById('faceLoginBtn').addEventListener('click', doFaceLogin);
+
+async function maybeOfferFaceLogin(){
+  await faceReady;
+  if(!faceSupported || !currentUser || !currentUser.photo) return;
+  const key = getFaceKey();
+  if(key && key.name === currentUser.name && faceKeyValidFor(currentUser, key)) return;
+  let declined = null; try{ declined = localStorage.getItem(FACE_DECLINED_LS + ':' + currentUser.name); }catch(e){}
+  if(declined) return;
+  document.getElementById('faceOfferNote').textContent = '';
+  document.getElementById('faceOfferYesBtn').disabled = false;
+  document.getElementById('faceOfferOverlay').style.display = 'flex';
+}
+document.getElementById('faceOfferYesBtn').addEventListener('click', async ()=>{
+  const btn = document.getElementById('faceOfferYesBtn');
+  const note = document.getElementById('faceOfferNote');
+  btn.disabled = true; note.textContent = '';
+  try{
+    await enableFaceLogin();
+    document.getElementById('faceOfferOverlay').style.display = 'none';
+    renderFaceLoginCard();
+    alert('تمام ✓ المرة الجاية دوس "ادخل بالوش" في شاشة الدخول.');
+  }catch(err){
+    console.error('enable face login failed', err);
+    note.textContent = faceErrorText(err);
+    btn.disabled = false;
+  }
+});
+document.getElementById('faceOfferNoBtn').addEventListener('click', ()=>{
+  if(currentUser){ try{ localStorage.setItem(FACE_DECLINED_LS + ':' + currentUser.name, '1'); }catch(e){} }
+  document.getElementById('faceOfferOverlay').style.display = 'none';
+});
+
+/* the settings screen is for the admin only; everyone else gets their own
+   appearance + face-login cards in a small window from the gear in the user bar */
+function placePersonalSettings(){
+  const admin = isAdmin();
+  const home = admin ? document.getElementById('panel-settings') : document.getElementById('mySettingsBody');
+  const before = admin ? document.getElementById('notAdminNote') : null;
+  ['themeCard','faceLoginCard'].forEach(id=>{ const c = document.getElementById(id); if(c && c.parentNode !== home) home.insertBefore(c, before); });
+  document.getElementById('mySettingsBtn').style.display = (currentUser && !admin) ? 'inline-flex' : 'none';
+  if(admin) document.getElementById('mySettingsOverlay').style.display = 'none';
+}
+document.getElementById('mySettingsBtn').addEventListener('click', ()=>{ renderFaceLoginCard(); document.getElementById('mySettingsOverlay').style.display = 'flex'; });
+document.getElementById('mySettingsCloseBtn').addEventListener('click', ()=>{ document.getElementById('mySettingsOverlay').style.display = 'none'; });
+document.getElementById('mySettingsOverlay').addEventListener('click', e=>{ if(e.target.id === 'mySettingsOverlay') e.target.style.display = 'none'; });
+async function renderFaceLoginCard(){
+  const card = document.getElementById('faceLoginCard');
+  await faceReady;
+  if(!faceSupported || !currentUser){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  const key = getFaceKey();
+  const on = !!(key && key.name === currentUser.name && faceKeyValidFor(currentUser, key));
+  document.getElementById('faceLoginStatus').textContent = on
+    ? '✅ مفعّل على الجهاز ده. تقدر تدخل بوشك أو بصمتك من شاشة الدخول.'
+    : (key && key.name !== currentUser.name
+        ? 'الجهاز ده متفعّل عليه الدخول بالوش لـ "' + key.name + '". لو فعّلته ليك هيتشال من عنده.'
+        : 'ادخل من الموبايل ده بوشك أو بصمتك بدل كلمة السر.');
+  document.getElementById('faceEnableBtn').style.display = on ? 'none' : 'inline-block';
+  document.getElementById('faceDisableBtn').style.display = on ? 'inline-block' : 'none';
+}
+document.getElementById('faceEnableBtn').addEventListener('click', async ()=>{
+  const btn = document.getElementById('faceEnableBtn');
+  btn.disabled = true;
+  try{
+    const old = getFaceKey();
+    if(old && old.name !== (currentUser && currentUser.name)) await disableFaceLogin();
+    await enableFaceLogin();
+    alert('تمام ✓ المرة الجاية دوس "ادخل بالوش" في شاشة الدخول.');
+  }catch(err){
+    console.error('enable face login failed', err);
+    alert(faceErrorText(err));
+  }finally{
+    btn.disabled = false;
+    renderFaceLoginCard();
+  }
+});
+document.getElementById('faceDisableBtn').addEventListener('click', async ()=>{
+  if(!confirm('تلغي الدخول بالوش على الجهاز ده؟')) return;
+  try{ await disableFaceLogin(); }catch(e){ console.error(e); }
+  renderFaceLoginCard();
+});
+
 function applyUserUI(){
+  renderFaceLoginCard();
   document.getElementById('userBox').style.display = 'block';
   document.getElementById('userNameLabel').textContent = currentUser.name;
   document.getElementById('userRoleLabel').textContent = currentUser.role === 'admin' ? 'Admin' : roleLabelFor(currentUser.role);
@@ -4389,7 +4668,8 @@ function applyUserUI(){
   document.getElementById('fullBackupCard').style.display = isAdmin() ? 'block' : 'none';
   document.getElementById('auditCard').style.display = isAdmin() ? 'block' : 'none';
   document.getElementById('resetCard').style.display = isAdmin() ? 'block' : 'none';
-  document.getElementById('notAdminNote').style.display = isAdmin() ? 'none' : 'block';
+  document.getElementById('notAdminNote').style.display = 'none';
+  placePersonalSettings();
   renderUsersList();
   applyTabGating();
   document.getElementById('addServantCard').style.display = can('addServant') ? 'block' : 'none';
@@ -4436,11 +4716,15 @@ function startLiveClock(){
 }
 
 function applyTabGating(){
-  const tabMap = { dashboard: 'tabDashboard', servants: 'tabServants', attendance: 'tabAttendance', afeqad: 'tabAfeqad', reports: 'tabReports', moves: 'tabMoves', program: 'tabProgram' };
+  const tabMap = { dashboard: 'tabDashboard', servants: 'tabServants', attendance: 'tabAttendance', afeqad: 'tabAfeqad', reports: 'tabReports', moves: 'tabMoves', program: 'tabProgram', tenmin: 'tabTenMin' };
   let activeHidden = false;
   document.querySelectorAll('nav.tabs button').forEach(btn=>{
     const permKey = tabMap[btn.dataset.tab];
-    if(!permKey){ btn.style.display = ''; return; } // settings tab always visible, gated by content
+    if(!permKey){ // settings: admin only
+      btn.style.display = isAdmin() ? '' : 'none';
+      if(!isAdmin() && btn.classList.contains('active')) activeHidden = true;
+      return;
+    }
     const allowed = can(permKey);
     btn.style.display = allowed ? '' : 'none';
     if(!allowed && btn.classList.contains('active')) activeHidden = true;
@@ -4507,6 +4791,9 @@ async function doLogout(reasonMsg){
   try{ stopTeamChat(); }catch(e){}
   currentUser = null;
   { const pg = document.getElementById('photoGateOverlay'); if(pg) pg.style.display = 'none'; }
+  { const fo = document.getElementById('faceOfferOverlay'); if(fo) fo.style.display = 'none'; }
+  document.getElementById('mySettingsOverlay').style.display = 'none';
+  document.getElementById('mySettingsBtn').style.display = 'none';
   { const bn = document.getElementById('bottomNav'); if(bn) bn.style.display = 'none'; }
   document.getElementById('welcomeBanner').style.display = 'none';
   if(liveClockInterval){ clearInterval(liveClockInterval); liveClockInterval = null; }
@@ -4630,7 +4917,7 @@ function renderUsersList(){
       const u = USERS.find(x=>x.name === name);
       const wasLocked = !!u.locked;
       u.password = newPass;
-      delete u.locked; delete u.lockedAt; delete u.failedAttempts; delete u.lockUntil;
+      delete u.locked; delete u.lockedAt; delete u.failedAttempts; delete u.lockUntil; delete u.faceKeys;
       await saveUsers();
       renderUsersList();
       alert(wasLocked ? 'اتغيرت كلمة السر واتفتح الحساب ✓ بلّغه بكلمة السر الجديدة.' : 'اتغيرت كلمة السر ✓');
@@ -4706,7 +4993,7 @@ document.getElementById('addUserBtn').addEventListener('click', async ()=>{
   const picked = document.getElementById('newUserRole').value;
   const role = (picked === 'admin' || picked === 'supervisor') ? picked : 'user';
   let allowedGroups = Array.from(document.querySelectorAll('#newUserGroups input:checked')).map(c=>c.value);
-  if(picked === 'program' || role !== 'user') allowedGroups = GROUPS.map(g=>g.id);
+  if(picked === 'program' || picked === 'tenmin' || role !== 'user') allowedGroups = GROUPS.map(g=>g.id);
   if(role === 'user' && allowedGroups.length === 0){ alert('اختار اجتماع واحد على الأقل يشوفه المستخدم ده.'); return; }
   const newUser = { name, role, password, allowedGroups, addedBy: currentUser ? currentUser.name : '—', addedAt: todayStr() };
   if(PERM_PRESETS[picked]) newUser.perms = PERM_PRESETS[picked]();
@@ -5074,7 +5361,7 @@ function refreshNewUserRoleHint(){
   const picked = document.getElementById('newUserRole').value;
   const p = USER_PROFILES.find(x=>x.id===picked);
   document.getElementById('newUserRoleHint').textContent = p ? p.hint : '';
-  document.getElementById('newUserGroupsWrap').style.display = (picked === 'admin' || picked === 'supervisor' || picked === 'program') ? 'none' : '';
+  document.getElementById('newUserGroupsWrap').style.display = (picked === 'admin' || picked === 'supervisor' || picked === 'program' || picked === 'tenmin') ? 'none' : '';
 }
 document.getElementById('newUserRole').addEventListener('change', refreshNewUserRoleHint);
 refreshNewUserRoleHint();
@@ -5522,12 +5809,15 @@ function maybeShowBirthdayPopup(){
   wrap.addEventListener('click', e=>{ if(e.target === wrap) close(); });
   document.getElementById('bdayPopupClose').addEventListener('click', close);
 }
+function makeProgramScreen(cfg){
 /* ---------- SERVICE PROGRAM (Friday / Sunday, October → September) ----------
    Stored in its own key: { years: { "2026": { friday: {title, vision, items:{ "2026-10-02": {title, goal, speaker, church} }}, sunday: {...} } },
                             speakers: { <speakerKey>: { name, phone, photoVer } } }  (photo itself in the 'ph' collection as 'spk:<key>')
    Each change re-reads the latest copy and applies just that change, so two
    people editing different days never overwrite each other. */
-const PROGRAM_KEY = 'khodam_service_program';
+const PROGRAM_KEY = cfg.key;
+const $p = s => document.getElementById(cfg.pre + s);
+const panelEl = () => document.getElementById(cfg.panel);
 const PROG_DAYS = { friday: { label:'الجمعة', meeting:'اجتماع الجمعة', dow:5 }, sunday: { label:'الأحد', meeting:'اجتماع الأحد', dow:0 } };
 const PROG_MONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 let PROGRAM = { years: {} };
@@ -5564,7 +5854,7 @@ async function loadProgram(){
     programWatchStarted = true;
     window.storage.watch(PROGRAM_KEY, rev=>{ if(rev !== PROGRAM_REV) loadProgram(); });
   }
-  if(document.getElementById('panel-program').classList.contains('active') && !progEditDate) renderProgramPanel();
+  if(panelEl().classList.contains('active') && !progEditDate) renderProgramPanel();
   try{ renderDashboardNext(); }catch(e){}
 }
 async function saveProgramChange(mutate){
@@ -5586,11 +5876,11 @@ async function saveProgramChange(mutate){
     }
   }catch(e){ console.error('program save failed', e); }
   setSaveStatus('error');
-  alert('مقدرناش نحفظ برنامج الخدمة. اتأكد إن النت شغال وجرّب تاني.');
+  alert('مقدرناش نحفظ ' + cfg.area + '. اتأكد إن النت شغال وجرّب تاني.');
   return false;
 }
 function fillProgYears(){
-  const sel = document.getElementById('progYear');
+  const sel = $p('Year');
   const cur = serviceYearOf(new Date());
   const years = new Set([cur-1, cur, cur+1, ...Object.keys(PROGRAM.years||{}).map(Number)]);
   const sorted = Array.from(years).filter(y=>!isNaN(y)).sort((a,b)=>b-a);
@@ -5598,42 +5888,42 @@ function fillProgYears(){
   sel.innerHTML = sorted.map(y=>`<option value="${y}" ${y===progYear?'selected':''}>${copticYear(y)} ش  (${y} - ${y+1})</option>`).join('');
 }
 function renderProgramPanel(){
-  if(!programLoaded){ document.getElementById('progList').innerHTML = '<div class="card"><div class="empty-note">جاري تحميل البرنامج…</div></div>'; return; }
+  if(!programLoaded){ $p('List').innerHTML = '<div class="card"><div class="empty-note">جاري التحميل…</div></div>'; return; }
   fillProgYears();
-  const canEdit = can('editProgram');
-  document.getElementById('progImportLabel').style.display = canEdit ? 'inline-block' : 'none';
-  document.getElementById('progSpeakersBtn').style.display = canEdit ? 'inline-block' : 'none';
-  document.querySelectorAll('.prog-day').forEach(b=>{ b.className = (b.dataset.day===progDay ? 'primary' : 'ghost') + ' prog-day'; });
+  const canEdit = can(cfg.editPerm);
+  $p('ImportLabel').style.display = canEdit ? 'inline-block' : 'none';
+  $p('SpeakersBtn').style.display = canEdit ? 'inline-block' : 'none';
+  panelEl().querySelectorAll('.prog-day').forEach(b=>{ b.className = (b.dataset.day===progDay ? 'primary' : 'ghost') + ' prog-day'; });
   const sec = progSection(PROGRAM, progYear, progDay, false) || { title:'', vision:'', items:{} };
-  const head = document.getElementById('progHeader');
-  const defaultTitle = `برنامج ${PROG_DAYS[progDay].meeting} السنوي (${copticYear(progYear)} ش / ${progYear}-${progYear+1} م)`;
+  const head = $p('Header');
+  const defaultTitle = `${cfg.title(PROG_DAYS[progDay].meeting)} (${copticYear(progYear)} ش / ${progYear}-${progYear+1} م)`;
   head.innerHTML = `
     <h2 style="margin:0 0 4px;font-family:'Amiri',serif;">${escHtml(sec.title || defaultTitle)}</h2>
     ${sec.vision ? `<div style="color:#7A2E2E;font-weight:700;font-size:.92rem;">🎯 ${escHtml(sec.vision)}</div>` : ''}
-    ${canEdit ? `<button class="ghost" id="progHeadEditBtn" style="margin-top:8px;font-size:.8rem;">✏️ تعديل العنوان والرؤية</button>
-    <div id="progHeadEdit" style="display:none;margin-top:10px;">
-      <label style="display:block;margin-bottom:4px;">عنوان البرنامج</label>
-      <input type="text" id="progTitleInput" value="${escHtml(sec.title)}" placeholder="${escHtml(defaultTitle)}" style="margin-bottom:8px;">
+    ${canEdit ? `<button class="ghost" id="${cfg.pre}HeadEditBtn" style="margin-top:8px;font-size:.8rem;">✏️ تعديل العنوان والرؤية</button>
+    <div id="${cfg.pre}HeadEdit" style="display:none;margin-top:10px;">
+      <label style="display:block;margin-bottom:4px;">${cfg.titleLabel}</label>
+      <input type="text" id="${cfg.pre}TitleInput" value="${escHtml(sec.title)}" placeholder="${escHtml(defaultTitle)}" style="margin-bottom:8px;">
       <label style="display:block;margin-bottom:4px;">الرؤية المركزية</label>
-      <input type="text" id="progVisionInput" value="${escHtml(sec.vision)}" placeholder="مثلًا: علاقة الزوجين وتأثيرها على الأسرة" style="margin-bottom:8px;">
-      <button class="primary" id="progHeadSaveBtn">حفظ</button>
+      <input type="text" id="${cfg.pre}VisionInput" value="${escHtml(sec.vision)}" placeholder="مثلًا: علاقة الزوجين وتأثيرها على الأسرة" style="margin-bottom:8px;">
+      <button class="primary" id="${cfg.pre}HeadSaveBtn">حفظ</button>
     </div>` : ''}`;
   if(canEdit){
-    document.getElementById('progHeadEditBtn').addEventListener('click', ()=>{ const el = document.getElementById('progHeadEdit'); el.style.display = el.style.display==='none' ? 'block' : 'none'; });
-    document.getElementById('progHeadSaveBtn').addEventListener('click', async ()=>{
-      const title = document.getElementById('progTitleInput').value.trim();
-      const vision = document.getElementById('progVisionInput').value.trim();
+    $p('HeadEditBtn').addEventListener('click', ()=>{ const el = $p('HeadEdit'); el.style.display = el.style.display==='none' ? 'block' : 'none'; });
+    $p('HeadSaveBtn').addEventListener('click', async ()=>{
+      const title = $p('TitleInput').value.trim();
+      const vision = $p('VisionInput').value.trim();
       const y = progYear, d = progDay;
       const pch = [];
-      if((sec.title||'') !== title) pch.push({ f:'عنوان البرنامج', from: sec.title || '—', to: title || '—' });
+      if((sec.title||'') !== title) pch.push({ f:cfg.titleLabel, from: sec.title || '—', to: title || '—' });
       if((sec.vision||'') !== vision) pch.push({ f:'الرؤية المركزية', from: sec.vision || '—', to: vision || '—' });
       if(await saveProgramChange(obj=>{ const s2 = progSection(obj, y, d, true); s2.title = title; s2.vision = vision; })){
-        if(pch.length) auditPush({ area:'برنامج الخدمة', action:'تعديل', target:`${PROG_DAYS[d].meeting} — سنة ${copticYear(y)}`, changes: pch, rest: true });
+        if(pch.length) auditPush({ area:cfg.area, action:'تعديل', target:`${PROG_DAYS[d].meeting} — سنة ${copticYear(y)}`, changes: pch, rest: true });
         renderProgramPanel();
       }
     });
   }
-  const filter = document.getElementById('progFilter').value;
+  const filter = $p('Filter').value;
   const todayIso = todayStr();
   const dates = programDates(progYear, progDay);
   const nextIso = (dates.find(d=>isoDate(d) >= todayIso) ? isoDate(dates.find(d=>isoDate(d) >= todayIso)) : null);
@@ -5667,7 +5957,7 @@ function renderProgramPanel(){
       </div>`;
   });
   if(curMonth !== -1) html += '</div>';
-  const listEl = document.getElementById('progList');
+  const listEl = $p('List');
   listEl.innerHTML = shownAny ? html : '<div class="card"><div class="empty-note">مفيش اجتماعات مطابقة للاختيار ده</div></div>';
   if(canEdit){
     listEl.querySelectorAll('.prog-edit-btn').forEach(btn=>btn.addEventListener('click', e=>{
@@ -5681,7 +5971,7 @@ function renderProgramPanel(){
   }
 }
 function openProgEdit(row, it){
-  document.querySelectorAll('.prog-edit').forEach(el=>{ el.style.display='none'; el.innerHTML=''; });
+  panelEl().querySelectorAll('.prog-edit').forEach(el=>{ el.style.display='none'; el.innerHTML=''; });
   const box = row.querySelector('.prog-edit');
   progEditDate = row.dataset.date;
   box.style.display = 'block';
@@ -5724,7 +6014,7 @@ function openProgEdit(row, it){
       if(phoneChanged) setSpeakerPhone(obj, v.speaker, phone);
     });
     if(ok){
-      if(pch.length) auditPush({ area:'برنامج الخدمة', action: it.title || it.speaker ? 'تعديل' : 'إضافة', target:`${PROG_DAYS[d].meeting} — ${dd.getDate()} ${PROG_MONTHS[dd.getMonth()]} ${dd.getFullYear()}`, changes: pch, rest: true });
+      if(pch.length) auditPush({ area:cfg.area, action: it.title || it.speaker ? 'تعديل' : 'إضافة', target:`${PROG_DAYS[d].meeting} — ${dd.getDate()} ${PROG_MONTHS[dd.getMonth()]} ${dd.getFullYear()}`, changes: pch, rest: true });
       progEditDate = null; renderProgramPanel();
     }
   });
@@ -5751,7 +6041,7 @@ function putSpeaker(obj, k, name, change){
 function setSpeakerPhone(obj, name, phone){ putSpeaker(obj, speakerKey(name), name, e=>{ e.phone = phone; }); }
 // photos go to the same small-document store as people's photos; without it (offline copy) they stay inline
 function setSpeakerPhoto(obj, key, name, ver, inline){ putSpeaker(obj, key, name, e=>{ e.photoVer = ver; e.photo = inline; }); }
-const spkPhotoId = key => 'spk:' + key;
+const spkPhotoId = key => cfg.photoPre + key;
 async function speakerPhotoUrl(key){
   const e = (PROGRAM.speakers||{})[key]; if(!e) return '';
   if(e.photo) return e.photo;
@@ -5797,8 +6087,8 @@ function openSpeakersReport(){
   wrap.innerHTML = `
     <div style="background:var(--card);border-radius:16px;max-width:640px;width:100%;max-height:94vh;display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(0,0,0,.25);">
       <div style="padding:16px 18px 10px;border-bottom:1px solid var(--line-soft);">
-        <h2 style="margin:0 0 4px;font-family:'Amiri',serif;color:var(--ink);">📇 تقرير المتكلمين</h2>
-        <div style="font-size:.8rem;color:var(--muted);margin-bottom:10px;">الأسماء وأرقام التليفونات للمرجع. الأرقام دي مش بتظهر في طباعة البرنامج ولا في بوست الشهر.</div>
+        <h2 style="margin:0 0 4px;font-family:'Amiri',serif;color:var(--ink);">📇 ${cfg.spkTitle}</h2>
+        <div style="font-size:.8rem;color:var(--muted);margin-bottom:10px;">الأسماء وأرقام التليفونات للمرجع. الأرقام دي مش بتظهر في الطباعة ولا في بوست الشهر.</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
           <select id="spkScope" style="max-width:220px;">
             <option value="year">سنة ${copticYear(progYear)} ش (${progYear} - ${progYear+1})</option>
@@ -5846,7 +6136,7 @@ function openSpeakersReport(){
     ];
     document.getElementById('spkChips').innerHTML = chips.map(([k,l,n])=>`<button class="${show===k?'primary':'ghost'} spk-chip" data-k="${k}" style="font-size:.78rem;padding:4px 10px;">${l} (${n})</button>`).join('');
     document.querySelectorAll('.spk-chip').forEach(b=>b.addEventListener('click', ()=>{ show = b.dataset.k; render(); }));
-    const canEdit = can('editProgram');
+    const canEdit = can(cfg.editPerm);
     document.getElementById('spkList').innerHTML = rows.length ? rows.map(e=>{
       const wa = waNumber(e.phone);
       const badge = (day, n)=> n ? `<span class="chip" style="font-size:.72rem;">${PROG_DAYS[day].label} × ${n}</span>` : '';
@@ -5877,7 +6167,7 @@ function openSpeakersReport(){
       const phone = v.trim();
       if(phone === (e.phone||'')) return;
       if(await saveProgramChange(obj=>setSpeakerPhone(obj, e.name, phone))){
-        auditPush({ area:'برنامج الخدمة', action:'تعديل', target:'تليفون المتكلم — ' + e.name, changes:[{ f:'تليفون المتكلم', from: e.phone || '—', to: phone || '—' }], rest: true });
+        auditPush({ area:cfg.area, action:'تعديل', target:'تليفون المتكلم — ' + e.name, changes:[{ f:'تليفون المتكلم', from: e.phone || '—', to: phone || '—' }], rest: true });
         render();
       }
     }));
@@ -5898,7 +6188,7 @@ function openSpeakersReport(){
               ok = await saveProgramChange(obj=>setSpeakerPhoto(obj, e.key, e.name, ver, ''));
             } else ok = await saveProgramChange(obj=>setSpeakerPhoto(obj, e.key, e.name, '', dataUrl));
           }catch(err){ console.error(err); alert('مقدرناش نرفع الصورة. اتأكد إن النت شغال وجرّب تاني.'); }
-          if(ok) auditPush({ area:'برنامج الخدمة', action:'تعديل', target:'صورة المتكلم — ' + e.name, changes:[{ f:'الصورة', to: e.hasPhoto ? 'اتغيرت' : 'اتضافت' }], rest: true });
+          if(ok) auditPush({ area:cfg.area, action:'تعديل', target:'صورة المتكلم — ' + e.name, changes:[{ f:'الصورة', to: e.hasPhoto ? 'اتغيرت' : 'اتضافت' }], rest: true });
           render();
         }, 'image/jpeg', 0.82, true);
       });
@@ -5911,7 +6201,7 @@ function openSpeakersReport(){
         const id = spkPhotoId(e.key);
         if(window.storage.photoDelete) window.storage.photoDelete(id).catch(()=>{});
         PHOTO_MEM.delete(id); photoCache.del(id);
-        auditPush({ area:'برنامج الخدمة', action:'حذف', target:'صورة المتكلم — ' + e.name, changes:[{ f:'الصورة', from:'موجودة', to:'—' }], rest: true });
+        auditPush({ area:cfg.area, action:'حذف', target:'صورة المتكلم — ' + e.name, changes:[{ f:'الصورة', from:'موجودة', to:'—' }], rest: true });
         render();
       }
     }));
@@ -5930,7 +6220,7 @@ function openSpeakersReport(){
   document.getElementById('spkExcelBtn').addEventListener('click', ()=>{
     if(typeof XLSX === 'undefined'){ alert('مكتبة Excel مش متحمّلة. اتأكد من النت.'); return; }
     const { rows } = filtered();
-    const aoa = [[`تقرير المتكلمين — ${scopeLabel()}`], ['م','المتكلم','كنيسته','التليفون','بيخدم','عدد الجمعة','عدد الأحد','المواعيد']];
+    const aoa = [[`${cfg.spkTitle} — ${scopeLabel()}`], ['م','المتكلم','كنيسته','التليفون','بيخدم','عدد الجمعة','عدد الأحد','المواعيد']];
     rows.forEach((e,i)=>aoa.push([i+1, e.name, e.church, e.phone, speakerDaysLabel(e), e.days.friday, e.days.sunday, e.talks.map(talkLabel).join('\n')]));
     const ws = XLSX.utils.aoa_to_sheet(aoa);
     ws['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:7} }];
@@ -5939,7 +6229,7 @@ function openSpeakersReport(){
     const wb = XLSX.utils.book_new();
     wb.Workbook = { Views: [{ RTL: true }] };
     XLSX.utils.book_append_sheet(wb, ws, 'المتكلمين');
-    window.saveWorkbookToViewer(wb, `تقرير-المتكلمين-${scope === 'all' ? 'كل-السنين' : copticYear(progYear)}.xlsx`);
+    window.saveWorkbookToViewer(wb, `${cfg.spkFile}-${scope === 'all' ? 'كل-السنين' : copticYear(progYear)}.xlsx`);
   });
   document.getElementById('spkPrintBtn').addEventListener('click', async ()=>{
     const { rows } = filtered();
@@ -5948,7 +6238,7 @@ function openSpeakersReport(){
     w.document.write('<p style="font-family:Cairo,Arial;text-align:center;margin-top:40px;">جاري تجهيز التقرير…</p>');
     const photos = await Promise.all(rows.map(e=>speakerPhotoUrl(e.key)));
     w.document.open();
-    const title = `تقرير المتكلمين — ${scopeLabel()}`;
+    const title = `${cfg.spkTitle} — ${scopeLabel()}`;
     w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${escHtml(title)}</title>
       <style>body{font-family:Cairo,Arial,sans-serif;color:#1B2A4A;margin:24px;} h1{font-size:20px;text-align:center;margin:6px 0 14px;}
       table{width:100%;border-collapse:collapse;font-size:12px;} th,td{border:1px solid #c9b98a;padding:5px 7px;vertical-align:top;text-align:right;} th{background:#1B2A4A;color:#fff;}
@@ -5965,8 +6255,8 @@ function openSpeakersReport(){
   });
   render();
 }
-document.getElementById('progSpeakersBtn').addEventListener('click', ()=>{
-  if(!programLoaded){ alert('البرنامج لسه بيتحمّل، استنى ثانية وجرّب تاني.'); return; }
+$p('SpeakersBtn').addEventListener('click', ()=>{
+  if(!programLoaded){ alert(cfg.area + ' لسه بيتحمّل، استنى ثانية وجرّب تاني.'); return; }
   openSpeakersReport();
 });
 
@@ -5984,13 +6274,14 @@ function speakerIsFemale(name){
 function speakerReminderText(name, day, d, title){
   const f = speakerIsFemale(name), k = f ? 'كِ' : 'ك';
   return `سلام ونعمة يا ${name} 🌿\n`
-    + `يسعدنا ونتشرف نفكّر حضرتك بميعاد كلمت${k} معانا في ${PROG_DAYS[day].meeting}، يوم ${PROG_DAYS[day].label} ${d.getDate()} ${PROG_MONTHS[d.getMonth()]}${title ? ` بعنوان «${title}»` : ''}.\n`
+    + `يسعدنا ونتشرف نفكّر حضرتك بميعاد ${cfg.talkWord(k)} معانا في ${PROG_DAYS[day].meeting}، يوم ${PROG_DAYS[day].label} ${d.getDate()} ${PROG_MONTHS[d.getMonth()]}${title ? ` بعنوان «${title}»` : ''}.\n`
     + `وجود حضرتك وسطنا بركة كبيرة، ومنتظرين${k} بكل محبة وشوق.\n`
     + `ربنا يبارك خدمت${k} ويعوّض تعب محبت${k} 🙏`;
 }
 function renderDashboardNext(){
-  const card = document.getElementById('dashboardNextCard'), el = document.getElementById('dashboardNext');
+  const card = document.getElementById(cfg.dashCard), el = document.getElementById(cfg.dashBody);
   if(!card || !el || !programLoaded) return;
+  if(!can(cfg.viewPerm)){ card.style.display = 'none'; return; }
   const todayIso = todayStr();
   const rows = [];
   ['friday','sunday'].forEach(day=>{
@@ -6004,7 +6295,7 @@ function renderDashboardNext(){
   if(rows.length === 0){ card.style.display = 'none'; return; }
   card.style.display = 'block';
   // speaker photo (initials when none) + call / WhatsApp reminder; phones only for program editors, like the program screen
-  const canCall = can('editProgram');
+  const canCall = can(cfg.editPerm);
   el.innerHTML = rows.map(r=>{
     const d = new Date(r.iso + 'T00:00:00');
     const sp = (r.it.speaker || '').trim(), key = sp ? speakerKey(sp) : '';
@@ -6043,12 +6334,12 @@ function progExcelDate(v){
   if(a > 31) return new Date(a, b-1, c);          // yyyy-mm-dd
   return new Date(c < 100 ? 2000 + c : c, b-1, a); // dd-mm-yyyy
 }
-document.querySelectorAll('.prog-day').forEach(b=>b.addEventListener('click', ()=>{ progDay = b.dataset.day; progEditDate = null; renderProgramPanel._scrolled = false; renderProgramPanel(); }));
-document.getElementById('progYear').addEventListener('change', e=>{ progYear = +e.target.value; progEditDate = null; renderProgramPanel._scrolled = false; renderProgramPanel(); });
-document.getElementById('progFilter').addEventListener('change', ()=>{ progEditDate = null; renderProgramPanel(); });
-document.getElementById('progImportFile').addEventListener('change', e=>{
+panelEl().querySelectorAll('.prog-day').forEach(b=>b.addEventListener('click', ()=>{ progDay = b.dataset.day; progEditDate = null; renderProgramPanel._scrolled = false; renderProgramPanel(); }));
+$p('Year').addEventListener('change', e=>{ progYear = +e.target.value; progEditDate = null; renderProgramPanel._scrolled = false; renderProgramPanel(); });
+$p('Filter').addEventListener('change', ()=>{ progEditDate = null; renderProgramPanel(); });
+$p('ImportFile').addEventListener('change', e=>{
   const file = e.target.files[0]; e.target.value = '';
-  if(!file || !can('editProgram')) return;
+  if(!file || !can(cfg.editPerm)) return;
   if(typeof XLSX === 'undefined'){ alert('مكتبة Excel مش متحمّلة. اتأكد من النت.'); return; }
   const reader = new FileReader();
   reader.onload = async ev=>{
@@ -6097,7 +6388,7 @@ document.getElementById('progImportFile').addEventListener('change', e=>{
           let diff = (dow - p.d.getDay() + 7) % 7; if(diff > 3) diff -= 7;
           if(diff !== 0) p.d = new Date(p.d.getFullYear(), p.d.getMonth(), p.d.getDate() + diff);
         });
-        if(mismatch) notes.push(`⚠️ التواريخ اللي في الملف أغلبها أيام ${PROG_DAYS[fileLooksLike].label}، وانت فاتح برنامج ${PROG_DAYS[day].label}. كل اجتماع هيتحط على أقرب ${PROG_DAYS[day].label} لتاريخه.\nلو الملف ده بتاع ${PROG_DAYS[fileLooksLike].label}، دوس Cancel وافتح تبويب ${PROG_DAYS[fileLooksLike].meeting} الأول.`);
+        if(mismatch) notes.push(`⚠️ التواريخ اللي في الملف أغلبها أيام ${PROG_DAYS[fileLooksLike].label}، وانت فاتح ${cfg.word} ${PROG_DAYS[day].label}. كل اجتماع هيتحط على أقرب ${PROG_DAYS[day].label} لتاريخه.\nلو الملف ده بتاع ${PROG_DAYS[fileLooksLike].label}، دوس Cancel وافتح تبويب ${PROG_DAYS[fileLooksLike].meeting} الأول.`);
         if(yearFixed) notes.push(`ملحوظة: ${yearFixed} تاريخ كان مكتوب بسنة غلط في الملف واتصلّح تلقائيًا.`);
       } else {
         // ---- file with months only: meetings go in file order onto this year's meeting days,
@@ -6120,9 +6411,9 @@ document.getElementById('progImportFile').addEventListener('change', e=>{
         if(moved.length) notes.push(`${moved.length} موضوع اتنقل لأول ${PROG_DAYS[day].label} في الشهر اللي بعده، لأن شهره فيه مواضيع أكتر من أيام ${PROG_DAYS[day].label}:\n` + moved.map(p=>`• ${p.title} ← ${p.d.getDate()} ${PROG_MONTHS[p.d.getMonth()]}`).join('\n'));
         if(left.length) notes.push(`⚠️ ${left.length} موضوع مش هيتحط لأن السنة خلصت: ${left.map(p=>p.title).join('، ')}`);
       }
-      const msg = `هيتم استيراد ${parsed.length} اجتماع في برنامج ${PROG_DAYS[day].meeting} لسنة ${copticYear(year)} ش (${year}-${year+1}).`
+      const msg = `هيتم استيراد ${parsed.length} اجتماع في ${cfg.word} ${PROG_DAYS[day].meeting} لسنة ${copticYear(year)} ش (${year}-${year+1}).`
         + notes.map(n=>'\n\n' + n).join('')
-        + `\n\nالأيام اللي في الملف هتستبدل اللي في برنامج ${PROG_DAYS[day].label} لنفس التاريخ. تكمّل؟`;
+        + `\n\nالأيام اللي في الملف هتستبدل اللي في ${cfg.word} ${PROG_DAYS[day].label} لنفس التاريخ. تكمّل؟`;
       if(!confirm(msg)) return;
 
       const ok = await saveProgramChange(obj=>{
@@ -6138,7 +6429,7 @@ document.getElementById('progImportFile').addEventListener('change', e=>{
         });
       });
       if(ok){
-        auditPush({ area:'برنامج الخدمة', action:'استيراد من Excel', target:`${PROG_DAYS[day].meeting} — سنة ${copticYear(year)}`, changes:[{ f:'عدد الاجتماعات', to: String(parsed.length) }, { f:'الملف', to: file.name }] });
+        auditPush({ area:cfg.area, action:'استيراد من Excel', target:`${PROG_DAYS[day].meeting} — سنة ${copticYear(year)}`, changes:[{ f:'عدد الاجتماعات', to: String(parsed.length) }, { f:'الملف', to: file.name }] });
         progYear = year; progDay = day; renderProgramPanel._scrolled = false; renderProgramPanel(); alert('تم الاستيراد ✓');
       }
     }catch(err){ console.error(err); alert('مقدرناش نقرا الملف: ' + err.message); }
@@ -6147,7 +6438,7 @@ document.getElementById('progImportFile').addEventListener('change', e=>{
 });
 function progRowsForOutput(){
   const sec = progSection(PROGRAM, progYear, progDay, false) || { title:'', vision:'', items:{} };
-  const title = sec.title || `برنامج ${PROG_DAYS[progDay].meeting} السنوي (${copticYear(progYear)} ش / ${progYear}-${progYear+1} م)`;
+  const title = sec.title || `${cfg.title(PROG_DAYS[progDay].meeting)} (${copticYear(progYear)} ش / ${progYear}-${progYear+1} م)`;
   const months = [];
   programDates(progYear, progDay).forEach(d=>{
     if(!months.length || months[months.length-1].m !== d.getMonth()) months.push({ m: d.getMonth(), rows: [] });
@@ -6156,7 +6447,7 @@ function progRowsForOutput(){
   });
   return { title, vision: sec.vision, months };
 }
-document.getElementById('progExportBtn').addEventListener('click', ()=>{
+$p('ExportBtn').addEventListener('click', ()=>{
   if(typeof XLSX === 'undefined'){ alert('مكتبة Excel مش متحمّلة. اتأكد من النت.'); return; }
   const { title, vision, months } = progRowsForOutput();
   const aoa = [[title], [vision ? 'الرؤية المركزية: ' + vision : ''], ['م','التاريخ','الشهر','العنوان','الهدف والمحتوى','المتكلم','كنيسته']];
@@ -6172,10 +6463,10 @@ document.getElementById('progExportBtn').addEventListener('click', ()=>{
   ws['!views'] = [{ RTL: true }];
   const wb = XLSX.utils.book_new();
   wb.Workbook = { Views: [{ RTL: true }] };
-  XLSX.utils.book_append_sheet(wb, ws, 'البرنامج');
-  window.saveWorkbookToViewer(wb, `برنامج-${PROG_DAYS[progDay].label}-${copticYear(progYear)}.xlsx`);
+  XLSX.utils.book_append_sheet(wb, ws, cfg.sheet);
+  window.saveWorkbookToViewer(wb, `${cfg.file}-${PROG_DAYS[progDay].label}-${copticYear(progYear)}.xlsx`);
 });
-document.getElementById('progPrintBtn').addEventListener('click', ()=>{
+$p('PrintBtn').addEventListener('click', ()=>{
   const { title, vision, months } = progRowsForOutput();
   const logo = (document.querySelector('.halo-mark') || {}).src || '';
   const body = months.map(mo=>`
@@ -6306,7 +6597,7 @@ function postLayout(ctx, m, data, logo){
   ctx.font = postFont(600, 27); ctx.fillStyle = POST_C.goldSoft;
   ctx.fillText('اجتماع الأنبا بولا والعائلة المقدسة', W/2, y + 28); y += 40;
   ctx.font = postFont(700, 62, 'amiri'); ctx.fillStyle = '#ffffff';
-  ctx.fillText('برنامج ' + PROG_DAYS[postDay].meeting, W/2, y + 60); y += 78;
+  ctx.fillText(cfg.postTitle(PROG_DAYS[postDay].meeting), W/2, y + 60); y += 78;
   y += 26;
   const pill = `شهر ${PROG_MONTHS[m]} ${calYear(m)}`;
   ctx.font = postFont(700, 36); const pw = ctx.measureText(pill).width + 80;
@@ -6382,7 +6673,7 @@ async function renderMonthPost(){
   const img = document.getElementById('postPreview');
   if(img) img.src = c.toDataURL('image/png');
 }
-function postFileName(){ return `برنامج-${POST_DAY_NAMES[postDay]}-${PROG_MONTHS[postMonth]}-${postMonth >= 9 ? progYear : progYear+1}.png`; }
+function postFileName(){ return `${cfg.file}-${POST_DAY_NAMES[postDay]}-${PROG_MONTHS[postMonth]}-${postMonth >= 9 ? progYear : progYear+1}.png`; }
 function postBlob(){ return new Promise(res=>postCanvas.toBlob(res, 'image/png')); }
 
 function openMonthPost(){
@@ -6448,10 +6739,33 @@ function openMonthPost(){
   });
   renderMonthPost();
 }
-document.getElementById('progPostBtn').addEventListener('click', ()=>{
-  if(!programLoaded){ alert('البرنامج لسه بيتحمّل، استنى ثانية وجرّب تاني.'); return; }
+$p('PostBtn').addEventListener('click', ()=>{
+  if(!programLoaded){ alert(cfg.area + ' لسه بيتحمّل، استنى ثانية وجرّب تاني.'); return; }
   openMonthPost();
 });
+
+return { render: renderProgramPanel, load: loadProgram, dashNext: renderDashboardNext };
+}
+
+/* The service program and the 10-minute segment are the same screen with their own data,
+   permissions and labels: one copy of makeProgramScreen per screen. */
+const PROGRAM_SCREENS = {
+  program: makeProgramScreen({
+    key:'khodam_service_program', pre:'prog', panel:'panel-program', viewPerm:'tabProgram', editPerm:'editProgram',
+    area:'برنامج الخدمة', word:'برنامج', title: m=>`برنامج ${m} السنوي`, postTitle: m=>'برنامج ' + m, titleLabel:'عنوان البرنامج',
+    sheet:'البرنامج', file:'برنامج', spkTitle:'تقرير المتكلمين', spkFile:'تقرير-المتكلمين', photoPre:'spk:',
+    talkWord: k=>`كلمت${k}`, dashCard:'dashboardNextCard', dashBody:'dashboardNext'
+  }),
+  tenmin: makeProgramScreen({
+    key:'khodam_ten_min', pre:'ten', panel:'panel-tenmin', viewPerm:'tabTenMin', editPerm:'editTenMin',
+    area:'فقرة العشر دقايق', word:'فقرة العشر دقايق', title: m=>`فقرة العشر دقايق — ${m}`, postTitle: m=>'فقرة ١٠ دقايق — ' + m, titleLabel:'العنوان العام',
+    sheet:'فقرة العشر دقايق', file:'فقرة-العشر-دقايق', spkTitle:'تقرير متكلمين فقرة العشر دقايق', spkFile:'تقرير-متكلمين-العشر-دقايق', photoPre:'ten:',
+    talkWord: k=>`فقرة العشر دقايق بتاعت${k}`, dashCard:'dashboardTenCard', dashBody:'dashboardTen'
+  })
+};
+function renderProgramPanel(){ PROGRAM_SCREENS.program.render(); }
+function renderTenMinPanel(){ PROGRAM_SCREENS.tenmin.render(); }
+function loadProgram(){ PROGRAM_SCREENS.program.load(); PROGRAM_SCREENS.tenmin.load(); }
 
 let AUDIT_ENTRIES = [], auditLimit = 100, auditPeriod = '7';
 async function loadAuditLog(){
@@ -6654,12 +6968,13 @@ const TAB_ICONS = {
   afeqad:'<path d="M3 11 12 4l9 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M12 17.5s-3-1.9-3-3.9a1.6 1.6 0 0 1 3-.8 1.6 1.6 0 0 1 3 .8c0 2-3 3.9-3 3.9z"/>',
   reports:'<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M21 20H3"/>',
   moves:'<path d="M4 8h13l-3-3"/><path d="M20 16H7l3 3"/>',
+  tenmin:'<circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 1.8"/><path d="M9.5 3h5"/>',
   program:'<path d="M4 5.5C4 4.7 4.7 4 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M20 5.5c0-.8-.7-1.5-1.5-1.5H13v16h5.5c.8 0 1.5-.7 1.5-1.5z"/>',
   settings:'<circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.2 7.5l2 1.2M17.8 15.3l2 1.2M4.2 16.5l2-1.2M17.8 8.7l2-1.2"/>',
   more:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>'
 };
-const TAB_SHORT = { dashboard:'الرئيسية', servants:'الخدام', attendance:'الحضور', afeqad:'الافتقاد', reports:'التقارير', moves:'النقل', program:'البرنامج', settings:'الإعدادات' };
-const BOTTOM_PRIORITY = ['dashboard','attendance','servants','program','afeqad','reports','moves','settings'];
+const TAB_SHORT = { dashboard:'الرئيسية', servants:'الخدام', attendance:'الحضور', afeqad:'الافتقاد', reports:'التقارير', moves:'النقل', program:'البرنامج', tenmin:'فقرة ١٠ ق', settings:'الإعدادات' };
+const BOTTOM_PRIORITY = ['dashboard','attendance','servants','program','tenmin','afeqad','reports','moves','settings'];
 const tabIcon = k=>`<svg class="tab-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TAB_ICONS[k]||''}</svg>`;
 function decorateTopTabs(){
   document.querySelectorAll('nav.tabs button[data-tab]').forEach(b=>{
@@ -6750,6 +7065,7 @@ document.getElementById('photoGateSaveBtn').addEventListener('click', async ()=>
     currentUser = u;
     document.getElementById('photoGateOverlay').style.display = 'none';
     updateUserAvatar();
+    maybeOfferFaceLogin();
   }catch(err){
     note.textContent = 'محصلش حفظ، جرّب تاني.';
     btn.disabled = false;
