@@ -2249,7 +2249,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '16-Oct-2026 C';
+const APP_VERSION = '16-Oct-2026 E';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -3484,8 +3484,9 @@ function renderDashboard(){
     `).join('');
   }
 
-  // ---- how complete everyone's data is ----
-  renderDataCompleteness(visibleServants);
+  // ---- how complete everyone's data is (only for people who work on the servants' data) ----
+  document.getElementById('dataCompleteCard').style.display = can('tabServants') ? '' : 'none';
+  if(can('tabServants')) renderDataCompleteness(visibleServants);
 
   // ---- next meetings from the service program and the 10-minute segment ----
   if(typeof PROGRAM_SCREENS !== 'undefined') Object.values(PROGRAM_SCREENS).forEach(s=>s.dashNext());
@@ -5818,6 +5819,8 @@ function makeProgramScreen(cfg){
 const PROGRAM_KEY = cfg.key;
 const $p = s => document.getElementById(cfg.pre + s);
 const panelEl = () => document.getElementById(cfg.panel);
+// speaker phones only for editors of this screen who may also see phone numbers
+const canPhones = () => can(cfg.editPerm) && can('phones');
 const PROG_DAYS = { friday: { label:'الجمعة', meeting:'اجتماع الجمعة', dow:5 }, sunday: { label:'الأحد', meeting:'اجتماع الأحد', dow:0 } };
 const PROG_MONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 let PROGRAM = { years: {} };
@@ -5892,7 +5895,7 @@ function renderProgramPanel(){
   fillProgYears();
   const canEdit = can(cfg.editPerm);
   $p('ImportLabel').style.display = canEdit ? 'inline-block' : 'none';
-  $p('SpeakersBtn').style.display = canEdit ? 'inline-block' : 'none';
+  $p('SpeakersBtn').style.display = canPhones() ? 'inline-block' : 'none';
   panelEl().querySelectorAll('.prog-day').forEach(b=>{ b.className = (b.dataset.day===progDay ? 'primary' : 'ghost') + ' prog-day'; });
   const sec = progSection(PROGRAM, progYear, progDay, false) || { title:'', vision:'', items:{} };
   const head = $p('Header');
@@ -5949,7 +5952,7 @@ function renderProgramPanel(){
         <div style="font-weight:700;margin-top:4px;">${it.title ? escHtml(it.title) : '<span style="color:var(--faint);font-weight:400;">لسه مفيش موضوع</span>'}</div>
         ${it.goal ? `<div style="font-size:.82rem;color:var(--text-2);margin-top:2px;">${escHtml(it.goal)}</div>` : ''}
         <div style="font-size:.82rem;margin-top:6px;color:var(--ink);">
-          ${it.speaker ? `🎤 ${escHtml(it.speaker)}` : '<span style="color:var(--faint);">🎤 لسه محدش اتحدد</span>'}${canEdit && it.speaker && speakerPhone(it.speaker) ? ` <a href="tel:${escHtml(speakerPhone(it.speaker).replace(/[^\d+]/g,''))}" title="${escHtml(speakerPhone(it.speaker))}" style="text-decoration:none;font-size:.78rem;">📞</a>` : ''}
+          ${it.speaker ? `🎤 ${escHtml(it.speaker)}` : '<span style="color:var(--faint);">🎤 لسه محدش اتحدد</span>'}${canPhones() && it.speaker && speakerPhone(it.speaker) ? ` <a href="tel:${escHtml(speakerPhone(it.speaker).replace(/[^\d+]/g,''))}" title="${escHtml(speakerPhone(it.speaker))}" style="text-decoration:none;font-size:.78rem;">📞</a>` : ''}
           ${it.church ? ` &nbsp;—&nbsp; ⛪ ${escHtml(it.church)}` : ''}
         </div>
         ${canEdit ? `<div style="margin-top:8px;"><button class="ghost prog-edit-btn" style="font-size:.8rem;padding:4px 12px;">✏️ تعديل</button></div>
@@ -5982,8 +5985,8 @@ function openProgEdit(row, it){
     <textarea class="pe-goal" rows="2" style="margin-bottom:8px;width:100%;">${escHtml(it.goal||'')}</textarea>
     <label style="display:block;margin-bottom:4px;">المتكلم</label>
     <input type="text" class="pe-speaker" value="${escHtml(it.speaker||'')}" placeholder="مثلًا: القس / انطونيوس فوزي" style="margin-bottom:8px;">
-    <label style="display:block;margin-bottom:4px;">📞 تليفون المتكلم <span style="font-size:.75rem;color:var(--muted);">(للمرجع بس، مش بيظهر في الطباعة ولا البوست)</span></label>
-    <input type="tel" class="pe-phone" dir="ltr" inputmode="tel" value="${escHtml(speakerPhone(it.speaker))}" placeholder="01xxxxxxxxx" style="margin-bottom:8px;">
+    ${canPhones() ? `<label style="display:block;margin-bottom:4px;">📞 تليفون المتكلم <span style="font-size:.75rem;color:var(--muted);">(للمرجع بس، مش بيظهر في الطباعة ولا البوست)</span></label>
+    <input type="tel" class="pe-phone" dir="ltr" inputmode="tel" value="${escHtml(speakerPhone(it.speaker))}" placeholder="01xxxxxxxxx" style="margin-bottom:8px;">` : ''}
     <label style="display:block;margin-bottom:4px;">كنيسته</label>
     <input type="text" class="pe-church" value="${escHtml(it.church||'')}" style="margin-bottom:10px;">
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -5992,7 +5995,7 @@ function openProgEdit(row, it){
     </div>`;
   box.querySelector('.pe-cancel').addEventListener('click', ()=>{ progEditDate = null; box.style.display='none'; box.innerHTML=''; });
   // typing a known speaker's name fills in the number already saved for them
-  box.querySelector('.pe-speaker').addEventListener('change', e=>{ const ph = box.querySelector('.pe-phone'); if(!ph.value.trim()) ph.value = speakerPhone(e.target.value); });
+  box.querySelector('.pe-speaker').addEventListener('change', e=>{ const ph = box.querySelector('.pe-phone'); if(ph && !ph.value.trim()) ph.value = speakerPhone(e.target.value); });
   box.querySelector('.pe-save').addEventListener('click', async ()=>{
     const v = {
       title: box.querySelector('.pe-title').value.trim(),
@@ -6003,8 +6006,9 @@ function openProgEdit(row, it){
     const iso = row.dataset.date, y = progYear, d = progDay;
     const PF = { title:'العنوان', goal:'الهدف والمحتوى', speaker:'المتكلم', church:'كنيسته' };
     const pch = Object.keys(PF).filter(k=>(it[k]||'') !== v[k]).map(k=>({ f: PF[k], from: it[k] || '—', to: v[k] || '—' }));
-    const phone = box.querySelector('.pe-phone').value.trim(), oldPhone = speakerPhone(v.speaker);
-    const phoneChanged = !!v.speaker && phone !== oldPhone;
+    const phEl = box.querySelector('.pe-phone'), oldPhone = speakerPhone(v.speaker);
+    const phone = phEl ? phEl.value.trim() : oldPhone;
+    const phoneChanged = !!phEl && !!v.speaker && phone !== oldPhone;
     if(phoneChanged) pch.push({ f:'تليفون المتكلم', from: oldPhone || '—', to: phone || '—' });
     const dd = new Date(iso + 'T00:00:00');
     const ok = await saveProgramChange(obj=>{
@@ -6292,10 +6296,17 @@ function renderDashboardNext(){
       if(next){ rows.push({ day, iso: next, it: sec.items[next] }); break; }
     }
   });
-  if(rows.length === 0){ card.style.display = 'none'; return; }
+  if(rows.length === 0){
+    // the 10-minute card stays on the dashboard even before anything is planned
+    if(!cfg.showEmpty){ card.style.display = 'none'; return; }
+    card.style.display = 'block';
+    el.innerHTML = `<div class="empty-note">لسه مفيش فقرة جاية متسجلة.</div>
+      <button class="ghost" type="button" style="margin-top:8px;" onclick="document.querySelector('nav.tabs button[data-tab=&quot;${cfg.panel.replace('panel-','')}&quot;]').click()">افتح ${cfg.area}</button>`;
+    return;
+  }
   card.style.display = 'block';
   // speaker photo (initials when none) + call / WhatsApp reminder; phones only for program editors, like the program screen
-  const canCall = can(cfg.editPerm);
+  const canCall = canPhones();
   el.innerHTML = rows.map(r=>{
     const d = new Date(r.iso + 'T00:00:00');
     const sp = (r.it.speaker || '').trim(), key = sp ? speakerKey(sp) : '';
@@ -6760,7 +6771,7 @@ const PROGRAM_SCREENS = {
     key:'khodam_ten_min', pre:'ten', panel:'panel-tenmin', viewPerm:'tabTenMin', editPerm:'editTenMin',
     area:'فقرة العشر دقايق', word:'فقرة العشر دقايق', title: m=>`فقرة العشر دقايق — ${m}`, postTitle: m=>'فقرة ١٠ دقايق — ' + m, titleLabel:'العنوان العام',
     sheet:'فقرة العشر دقايق', file:'فقرة-العشر-دقايق', spkTitle:'تقرير متكلمين فقرة العشر دقايق', spkFile:'تقرير-متكلمين-العشر-دقايق', photoPre:'ten:',
-    talkWord: k=>`فقرة العشر دقايق بتاعت${k}`, dashCard:'dashboardTenCard', dashBody:'dashboardTen'
+    talkWord: k=>`فقرة العشر دقايق بتاعت${k}`, dashCard:'dashboardTenCard', dashBody:'dashboardTen', showEmpty:true
   })
 };
 function renderProgramPanel(){ PROGRAM_SCREENS.program.render(); }
