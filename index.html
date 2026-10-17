@@ -392,6 +392,25 @@ html[data-theme="dark"] .follow-row .why b{color:#f08a84;}
 .follow-acts{display:flex;gap:6px;flex:none;}
 .follow-acts a{display:inline-flex;align-items:center;justify-content:center;min-width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--card);text-decoration:none;font-size:1.05rem;}
 .follow-more{display:block;width:100%;margin-top:8px;}
+.kf-lock{font-size:.72rem;background:var(--gold-soft);color:var(--chip-ink);border-radius:999px;padding:2px 10px;margin-inline-start:8px;vertical-align:middle;font-family:'Cairo',sans-serif;font-weight:600;}
+.kf-seg{display:flex;gap:6px;background:var(--cream);border:1px solid var(--line);border-radius:14px;padding:4px;margin:4px 0 14px;}
+.kf-seg button{flex:1;border:none;background:transparent;font-family:inherit;font-weight:600;padding:9px 4px;border-radius:10px;color:var(--ink-soft);font-size:.86rem;cursor:pointer;}
+.kf-seg button.on{background:var(--card);box-shadow:var(--shadow);color:var(--ink);}
+.kf-seg .n{display:inline-block;min-width:20px;font-size:.72rem;background:var(--cream-dark);border-radius:999px;padding:0 6px;margin-inline-start:4px;}
+.kf-sec{font-size:.92rem;margin:14px 0 2px;color:var(--wine);font-weight:700;}
+html[data-theme="dark"] .kf-sec{color:#f08a84;}
+.kf-ok{color:var(--sage);font-weight:700;}
+html[data-theme="dark"] .kf-ok{color:#86c4a2;}
+.follow-acts button.kf-act{min-width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--card);font-size:1rem;cursor:pointer;padding:0 8px;font-family:inherit;color:var(--ink);}
+.follow-acts button.kf-act.on{background:var(--sage);border-color:var(--sage);color:#fff;}
+.kf-form{background:var(--cream);border:1px solid var(--line);border-radius:12px;padding:12px;margin:2px 0 10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.kf-form label{font-size:.75rem;color:var(--muted);display:block;margin-bottom:2px;}
+.kf-form input,.kf-form textarea{width:100%;margin:0;}
+.kf-form .full{grid-column:1/-1;}
+.kf-hist{font-size:.76rem;color:var(--text-2);margin-top:6px;border-inline-start:3px solid var(--gold-soft);padding-inline-start:8px;}
+.kf-hist div{margin:2px 0;}
+.kf-note{font-size:.76rem;color:var(--notice-ink);background:var(--notice-bg);border-radius:8px;padding:3px 8px;margin-top:4px;display:inline-block;}
+@media(max-width:560px){ .kf-form{grid-template-columns:1fr;} .kf-seg button{font-size:.78rem;} }
 .follow-all{margin-top:16px;}
 .dc-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
 .dc-summary .dash-stat{padding:12px 8px;}
@@ -613,6 +632,38 @@ html[data-theme="dark"] .chat-msg .bub{background:#222d42;}
 }
 .pw-toggle-btn:hover{opacity:1;}
 
+/* ---- settings: sections list ---- */
+.set-hub{display:grid;grid-template-columns:1fr;gap:10px;}
+.set-tile{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;background:var(--card);border:1px solid var(--line-soft);border-radius:16px;box-shadow:var(--shadow);cursor:pointer;text-align:start;font-family:inherit;color:var(--ink);}
+.set-tile:hover{border-color:var(--gold);}
+.set-ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:1.3rem;flex:none;background:var(--cream-dark);}
+.set-tile .set-t{font-weight:700;font-size:1rem;}
+.set-tile .set-s{font-size:.78rem;color:var(--muted);margin-top:2px;}
+.set-tile.set-danger .set-t{color:var(--wine);}
+.set-chev{margin-inline-start:auto;color:var(--faint);font-size:1.3rem;}
+.set-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.set-back{border-radius:999px;padding:6px 14px;}
+.set-title{font-size:1.1rem;font-weight:700;}
+.set-pane .card.set-off{display:none !important;}
+.set-split.picked .set-hub{display:none;}
+.set-split:not(.picked) .set-pane{display:none;}
+@media (min-width:900px){
+  .set-split{display:grid;grid-template-columns:280px 1fr;gap:18px;align-items:start;}
+  .set-split .set-hub{display:grid !important;position:sticky;top:10px;}
+  .set-split .set-pane{display:block !important;min-width:0;}
+  .set-head{display:none;}
+  .set-tile.on{border-color:var(--gold);background:var(--hi);}
+}
+.set-usertools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
+.set-usertools input{flex:1;min-width:140px;}
+.set-newuser{background:var(--cream-dark);border-radius:12px;padding:12px;margin-bottom:12px;}
+.user-row > .avatar, .user-row > img{flex:none;}
+.user-row > .user-info{flex:1;min-width:0;}
+.user-mini{font-size:.76rem;color:var(--muted);margin-top:3px;}
+.user-row:not(.open) .row-actions, .user-row:not(.open) .perm-sum, .user-row:not(.open) .chips, .user-row:not(.open) .added-by{display:none !important;}
+.user-row.open .user-mini{display:none;}
+.user-toggle{flex:none;}
+
 /* ---- users list ---- */
 .user-row{
   display:flex;
@@ -676,7 +727,7 @@ html[data-theme="dark"] .chat-msg .bub{background:#222d42;}
 @media print{
   body{background:var(--input);}
   header, nav.tabs, .notice, #reportsToolbar, #importCard,
-  #panel-dashboard, #panel-servants, #panel-attendance, #panel-afeqad, #panel-settings,
+  #panel-dashboard, #panel-servants, #panel-attendance, #panel-afeqad, #panel-kfollow, #panel-settings,
   .user-box, .login-overlay, button{display:none !important;}
   #panel-reports{display:block !important;}
   .wrap{max-width:100%;padding:0;}
@@ -864,6 +915,7 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
   <button data-tab="servants">الخدام</button>
   <button data-tab="attendance">تسجيل الحضور</button>
   <button data-tab="afeqad">الافتقاد</button>
+  <button data-tab="kfollow">متابعة الخدام</button>
   <button data-tab="moves">نقل الأسماء</button>
   <button data-tab="program">برنامج الخدمة</button>
   <button data-tab="tenmin">فقرة العشر دقايق</button>
@@ -1118,6 +1170,16 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
   <datalist id="visitTypeOptionsList"></datalist>
 </section>
 
+<!-- SERVANTS FOLLOW-UP TAB (admin only) -->
+<section class="panel" id="panel-kfollow">
+  <div class="card">
+    <h2>متابعة الخدام <span class="kf-lock">🔒 للأدمن بس</span></h2>
+    <div class="follow-hint">الخدام بس (خدام الاجتماع). متابعتهم وأعياد ميلادهم وافتقادهم هنا، ومش بيظهروا لحد غيرك في الافتقاد وأعياد الميلاد.</div>
+    <div class="kf-seg" id="kfSeg"></div>
+    <div id="kfBody"></div>
+  </div>
+</section>
+
 <!-- REPORTS TAB -->
 <section class="panel" id="panel-reports">
   <div class="card" id="reportsToolbar">
@@ -1220,6 +1282,10 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
 <!-- SETTINGS TAB -->
 <section class="panel" id="panel-settings">
   <p class="app-version" style="text-align:center;color:var(--faint);font-size:.75rem;margin:0 0 10px;"></p>
+  <div class="set-split" id="settingsSplit">
+  <div class="set-hub" id="settingsHub"></div>
+  <div class="set-pane" id="settingsPane">
+  <div class="set-head"><button type="button" class="ghost set-back" id="settingsBackBtn">› رجوع</button><span class="set-title" id="settingsTitle"></span></div>
   <div class="card" id="themeCard">
     <h2>🎨 المظهر</h2>
     <label style="display:block;margin-bottom:6px;">ألوان البرنامج</label>
@@ -1242,6 +1308,11 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
 
   <div class="card" id="usersCard" style="display:none;">
     <h2>المستخدمين (<span id="userCount">0</span>)</h2>
+    <div class="set-usertools">
+      <button type="button" class="primary" id="newUserToggleBtn">＋ مستخدم جديد</button>
+      <input type="text" id="userSearch" placeholder="🔍 دوّر على اسم">
+    </div>
+    <div class="set-newuser" id="newUserForm" hidden>
     <p style="font-size:.82rem;color:var(--ink-soft);margin-top:0;">إنت بس اللي تقدر تضيف مستخدمين وتديهم كلمة سر. محدش غيرك يقدر يسجّل نفسه.</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
       <input type="text" id="newUserName" placeholder="اسم مستخدم جديد" style="flex:1;min-width:140px;">
@@ -1265,6 +1336,7 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
     <div class="group-grid" id="newUserGroups" style="margin-bottom:12px;"></div>
     </div>
     <button class="primary" id="addUserBtn">إضافة</button>
+    </div>
     <div id="usersList"></div>
   </div>
 
@@ -1382,6 +1454,8 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
       <button class="ghost danger" id="resetAllBtn">تصفير كل حاجة (يشمل المستخدمين)</button>
     </div>
     <span class="saved-msg" id="resetSavedMsg">تم التصفير ✓</span>
+  </div>
+  </div>
   </div>
 </section>
 
@@ -2254,6 +2328,7 @@ function refreshScreensAfterRemoteChange(){
   try{ if(currentGroupId){ renderAttendList(); renderHistory(); } }catch(e){}
   try{ if(document.getElementById('panel-moves').classList.contains('active') && !moveSelectedId) renderMovesPanel(); }catch(e){}
   try{ if(document.getElementById('panel-dashboard').classList.contains('active')) renderDashboard(); }catch(e){}
+  try{ const kp = document.getElementById('panel-kfollow'); if(kp.classList.contains('active') && !kfOpenVisit && !kp.contains(document.activeElement)) renderKFollow(); }catch(e){}
 }
 async function pullRemoteData(){
   if(dataSaving || !window.storage.getWithRev) return;
@@ -2279,7 +2354,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '17-Oct-2026 B';
+const APP_VERSION = '17-Oct-2026 D';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -2502,10 +2577,11 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
     if(btn.dataset.tab === 'reports') renderReports();
     if(btn.dataset.tab === 'dashboard') renderDashboard();
     if(btn.dataset.tab === 'afeqad') renderAfeqadList();
+    if(btn.dataset.tab === 'kfollow') renderKFollow();
     if(btn.dataset.tab === 'moves') renderMovesPanel();
     if(btn.dataset.tab === 'program') renderProgramPanel();
     if(btn.dataset.tab === 'tenmin') renderTenMinPanel();
-    if(btn.dataset.tab === 'settings' && isAdmin()) loadAuditLog();
+    if(btn.dataset.tab === 'settings' && isAdmin()){ loadAuditLog(); if(!settingsWideMq.matches) settingsSection = ''; renderSettingsHub(); }
   });
 });
 
@@ -2606,7 +2682,8 @@ function renderAfeqadList(){
   refreshAreaChurchDatalists();
   const list = document.getElementById('afeqadList');
   const visible = visibleGroupIds();
-  let people = activeServants().filter(s=>s.groups.some(g=>visible.includes(g)));
+  // servants of the servants' meeting are visited from the admin-only "متابعة الخدام" screen
+  let people = activeServants().filter(s=>!s.groups.includes(SERVANTS_GID) && s.groups.some(g=>visible.includes(g)));
   if(afeqadSearchTerm){
     people = people.filter(s=>s.name.includes(afeqadSearchTerm));
   }
@@ -2659,6 +2736,7 @@ function renderAfeqadList(){
           if(!date){ alert('اختار تاريخ الافتقاد.'); return; }
           s.lastVisitDate = date;
           s.lastVisitType = type;
+          s.visits = (s.visits||[]).concat({ date, type, by: currentUser ? currentUser.name : '—', at: new Date().toISOString() });
           s.lastEditedBy = currentUser ? currentUser.name : '—';
           s.lastEditedAt = new Date().toLocaleString('ar-EG-u-nu-latn');
           await saveData();
@@ -3813,9 +3891,11 @@ function followWaLink(s){
   const text = `إزيك يا ${first} 🙏\nوحشتنا في الاجتماع، طمّنا عليك.\nاجتماع الأنبا بولا والعائلة المقدسة`;
   return waUrl(num, text);
 }
-function renderFollowUp(people, visible){
-  const statsEl = document.getElementById('followStats');
-  const listEl = document.getElementById('followList');
+const reportFollowUI = { stats:'followStats', list:'followList', get filter(){ return followFilter; }, set filter(v){ followFilter = v; }, get showAll(){ return followShowAll; }, set showAll(v){ followShowAll = v; } };
+function renderFollowUp(people, visible, ui){
+  ui = ui || reportFollowUI;
+  const statsEl = document.getElementById(ui.stats);
+  const listEl = document.getElementById(ui.list);
   if(!statsEl || !listEl) return;
   const items = people.map(s=>({ s, f: personFollowInfo(s, visible) })).filter(x=>x.f);
   const by = { red: [], amber: [], green: [] };
@@ -3825,19 +3905,19 @@ function renderFollowUp(people, visible){
   by.green.sort((a,b)=> a.s.name.localeCompare(b.s.name,'ar'));
   const labels = { red:'غايبين ورا بعض', amber:'تحت الملاحظة', green:'منتظمين' };
   statsEl.innerHTML = ['red','amber','green'].map(k=>`
-    <button type="button" class="follow-stat ${k} ${followFilter===k?'active':''}" data-k="${k}">
+    <button type="button" class="follow-stat ${k} ${ui.filter===k?'active':''}" data-k="${k}">
       <div class="num">${by[k].length}</div><div class="label">${labels[k]}</div>
     </button>`).join('');
   statsEl.querySelectorAll('.follow-stat').forEach(b=>b.addEventListener('click', ()=>{
-    followFilter = b.dataset.k; followShowAll = false; renderFollowUp(people, visible);
+    ui.filter = b.dataset.k; ui.showAll = false; renderFollowUp(people, visible, ui);
   }));
-  const list = by[followFilter];
+  const list = by[ui.filter];
   if(list.length === 0){
-    listEl.innerHTML = `<div class="empty-note">${followFilter==='red' ? 'الحمد لله، مفيش حد غايب اجتماعين ورا بعض 🙏' : 'مفيش حد هنا'}</div>`;
+    listEl.innerHTML = `<div class="empty-note">${ui.filter==='red' ? 'الحمد لله، مفيش حد غايب اجتماعين ورا بعض 🙏' : 'مفيش حد هنا'}</div>`;
     return;
   }
   const LIMIT = 15;
-  const shown = followShowAll ? list : list.slice(0, LIMIT);
+  const shown = ui.showAll ? list : list.slice(0, LIMIT);
   const showPhones = can('phones');
   listEl.innerHTML = shown.map(({s,f})=>{
     let why;
@@ -3862,11 +3942,13 @@ function renderFollowUp(people, visible){
       <div class="follow-acts">
         ${tel ? `<a href="tel:${tel}" title="اتصال">📞</a>` : ''}
         ${wa ? `<a href="${wa}" target="_blank" rel="noopener" title="رسالة واتساب">💬</a>` : ''}
+        ${ui.onVisit ? `<button type="button" class="kf-act" data-visit="${s.id}" title="تسجيل افتقاد">🏠</button>` : ''}
       </div>
     </div>`;
-  }).join('') + (list.length > LIMIT && !followShowAll ? `<button type="button" class="ghost follow-more" id="followMoreBtn">اعرض الباقي (${list.length - LIMIT})</button>` : '');
-  const more = document.getElementById('followMoreBtn');
-  if(more) more.addEventListener('click', ()=>{ followShowAll = true; renderFollowUp(people, visible); });
+  }).join('') + (list.length > LIMIT && !ui.showAll ? `<button type="button" class="ghost follow-more">اعرض الباقي (${list.length - LIMIT})</button>` : '');
+  const more = listEl.querySelector('.follow-more');
+  if(more) more.addEventListener('click', ()=>{ ui.showAll = true; renderFollowUp(people, visible, ui); });
+  if(ui.onVisit) listEl.querySelectorAll('[data-visit]').forEach(b=>b.addEventListener('click', ()=>ui.onVisit(b.dataset.visit)));
 }
 
 function renderReports(){
@@ -3903,7 +3985,8 @@ function renderReports(){
     return;
   }
   emptyNote.style.display='none';
-  renderFollowUp(visibleServants, visible);
+  // the servants' meeting is followed up from the admin-only "متابعة الخدام" screen
+  renderFollowUp(visibleServants, visible.filter(g=>g!==SERVANTS_GID));
   const rows = visibleServants.map(s=>{
     const { possible, pct, days } = personAttendance(s, visible);
     return {name:s.name, possible, pct, days};
@@ -4234,13 +4317,14 @@ function renderBackupStatus(){
       statusEl.textContent = `آخر نسخة احتياطية: ${lastBackupDate} (من ${days} يوم)`;
       statusEl.style.color = days > 7 ? 'var(--wine)' : 'var(--sage)';
     }
+    if(typeof renderSettingsHub === 'function' && document.getElementById('settingsHub')) renderSettingsHub();
   }
   const banner = document.getElementById('backupReminderBanner');
   if(banner){
     if(isAdmin() && days > 7){
       banner.style.display = 'block';
       banner.textContent = !lastBackupDate ? '💾 مفيش نسخة احتياطية لسه — دوس هنا تعمل واحدة' : `💾 آخر نسخة احتياطية من ${days} يوم — دوس هنا تعمل واحدة`;
-      banner.onclick = ()=>{ const b = document.querySelector('nav.tabs button[data-tab="settings"]'); if(b) b.click(); setTimeout(()=>{ const c = document.getElementById('fullBackupCard'); if(c) c.scrollIntoView({behavior:'smooth'}); }, 150); };
+      banner.onclick = ()=>{ const b = document.querySelector('nav.tabs button[data-tab="settings"]'); if(b) b.click(); setTimeout(()=>{ openSettingsSection('data'); const c = document.getElementById('fullBackupCard'); if(c) c.scrollIntoView({behavior:'smooth'}); }, 150); };
     } else {
       banner.style.display = 'none';
     }
@@ -4684,12 +4768,58 @@ document.getElementById('faceOfferNoBtn').addEventListener('click', ()=>{
    appearance + face-login cards in a small window from the gear in the user bar */
 function placePersonalSettings(){
   const admin = isAdmin();
-  const home = admin ? document.getElementById('panel-settings') : document.getElementById('mySettingsBody');
+  const home = admin ? document.getElementById('settingsPane') : document.getElementById('mySettingsBody');
   const before = admin ? document.getElementById('notAdminNote') : null;
   ['themeCard','faceLoginCard'].forEach(id=>{ const c = document.getElementById(id); if(c && c.parentNode !== home) home.insertBefore(c, before); });
   document.getElementById('mySettingsBtn').style.display = (currentUser && !admin) ? 'inline-flex' : 'none';
   if(admin) document.getElementById('mySettingsOverlay').style.display = 'none';
 }
+/* settings screen: a short list of sections, one open at a time
+   (on wide screens the list sits beside the open section) */
+const SETTINGS_SECTIONS = [
+  { k:'users', ic:'👥', bg:'var(--g-makhdomeen-had-soft)', t:'المستخدمين والصلاحيات', cards:['usersCard','permissionsCard'] },
+  { k:'look', ic:'🎨', bg:'var(--g-anba-boula-soft)', t:'الشكل واسم الاجتماع', s:'الألوان · الاسم · الشعار · الآيات', cards:['themeCard','faceLoginCard','brandingCard'] },
+  { k:'audit', ic:'📝', bg:'var(--cream-dark)', t:'سجل التعديلات', s:'مين عدّل إيه وإمتى', cards:['auditCard'] },
+  { k:'data', ic:'💾', bg:'var(--g-makhdomeen-gomaa-soft)', t:'النسخ الاحتياطي والبيانات', cards:['fullBackupCard','bulkDataCard'] },
+  { k:'reset', ic:'🧨', bg:'rgba(179,38,30,.14)', t:'تصفير البرنامج', s:'للتجربة بس · مفيش تراجع', cards:['resetCard'], danger:true },
+];
+let settingsSection = '';
+const settingsWideMq = window.matchMedia('(min-width:900px)');
+function settingsSubtitle(sec){
+  if(sec.k === 'users'){
+    const locked = USERS.filter(u=>u.locked).length;
+    return `${USERS.length} مستخدم` + (locked ? ` · 🔒 ${locked} مقفول` : ' · نوع كل واحد وشاشاته');
+  }
+  if(sec.k === 'data'){
+    const st = document.getElementById('lastBackupStatus');
+    return (st && st.textContent) || 'نسخة احتياطية · Excel';
+  }
+  return sec.s || '';
+}
+function renderSettingsHub(){
+  const hub = document.getElementById('settingsHub');
+  const sel = settingsSection || (settingsWideMq.matches ? 'users' : '');
+  hub.innerHTML = SETTINGS_SECTIONS.map(sec=>`<button type="button" class="set-tile${sec.danger ? ' set-danger' : ''}${sec.k === sel ? ' on' : ''}" data-k="${sec.k}">
+      <span class="set-ic" style="background:${sec.bg}">${sec.ic}</span>
+      <span><div class="set-t">${sec.t}</div><div class="set-s">${escHtml(settingsSubtitle(sec))}</div></span>
+      <span class="set-chev">‹</span></button>`).join('');
+  hub.querySelectorAll('.set-tile').forEach(b=>b.addEventListener('click', ()=>openSettingsSection(b.dataset.k)));
+  document.getElementById('settingsSplit').classList.toggle('picked', !!settingsSection);
+  const cur = SETTINGS_SECTIONS.find(x=>x.k === sel);
+  document.getElementById('settingsTitle').textContent = cur ? cur.ic + ' ' + cur.t : '';
+  document.querySelectorAll('#settingsPane > .card').forEach(c=>c.classList.toggle('set-off', !cur || !cur.cards.includes(c.id)));
+}
+function openSettingsSection(k){
+  settingsSection = k || '';
+  renderSettingsHub();
+  if(!settingsWideMq.matches){
+    const top = document.getElementById('panel-settings').getBoundingClientRect().top + window.scrollY - 70;
+    if(window.scrollY > top) window.scrollTo({ top, behavior:'smooth' });
+  }
+}
+document.getElementById('settingsBackBtn').addEventListener('click', ()=>openSettingsSection(''));
+try{ settingsWideMq.addEventListener('change', renderSettingsHub); }catch(e){}
+renderSettingsHub();
 document.getElementById('mySettingsBtn').addEventListener('click', ()=>{ renderFaceLoginCard(); document.getElementById('mySettingsOverlay').style.display = 'flex'; });
 document.getElementById('mySettingsCloseBtn').addEventListener('click', ()=>{ document.getElementById('mySettingsOverlay').style.display = 'none'; });
 document.getElementById('mySettingsOverlay').addEventListener('click', e=>{ if(e.target.id === 'mySettingsOverlay') e.target.style.display = 'none'; });
@@ -4762,6 +4892,7 @@ function applyUserUI(){
   if(document.getElementById('panel-reports').classList.contains('active')) renderReports();
   if(document.getElementById('panel-dashboard').classList.contains('active')) renderDashboard();
   if(document.getElementById('panel-afeqad').classList.contains('active')) renderAfeqadList();
+  if(document.getElementById('panel-kfollow').classList.contains('active')) renderKFollow();
   if(document.getElementById('panel-moves').classList.contains('active')) renderMovesPanel();
   setTimeout(maybeShowBirthdayPopup, 600);
 }
@@ -4904,18 +5035,38 @@ function allowedGroupsFor(user){
   return user.allowedGroups && user.allowedGroups.length ? user.allowedGroups : GROUPS.map(g=>g.id);
 }
 
+// users whose row is expanded in the settings list (kept across re-renders)
+const USER_ROWS_OPEN = new Set();
+function applyUserSearch(){
+  const q = (document.getElementById('userSearch').value || '').trim();
+  document.querySelectorAll('#usersList .user-row').forEach(row=>{
+    const hide = q && row.dataset.name.indexOf(q) === -1;
+    row.style.display = hide ? 'none' : '';
+    const p = row.nextElementSibling;
+    if(hide && p && p.classList.contains('edit-panel')) p.style.display = 'none';
+  });
+}
+document.getElementById('userSearch').addEventListener('input', applyUserSearch);
+document.getElementById('newUserToggleBtn').addEventListener('click', ()=>{
+  const f = document.getElementById('newUserForm');
+  f.hidden = !f.hidden;
+  if(!f.hidden) document.getElementById('newUserName').focus();
+});
+
 function renderUsersList(){
   const list = document.getElementById('usersList');
   document.getElementById('userCount').textContent = USERS.length;
   list.innerHTML = USERS.map(u=>`
-    <div class="user-row" data-name="${u.name}">
-      <div>
+    <div class="user-row${USER_ROWS_OPEN.has(u.name) ? ' open' : ''}" data-name="${u.name}">
+      ${avatarHtml(u, 38)}
+      <div class="user-info">
         <b>${u.name}</b>
         <span class="role-tag ${u.role}">${profileLabel(profileOf(u))}</span>
         ${u.locked ? `<span class="role-tag locked" title="اتقفل بعد ٣ محاولات غلط">🔒 مقفول</span>` : ''}
         <div class="perm-sum">${userSummaryHtml(u)}</div>
         ${u.role === 'user' ? `<div class="chips" style="margin-top:6px;">${allowedGroupsFor(u).map(gid=>`<span class="chip g-${gid}">${groupName(gid)}</span>`).join('')}</div>` : ''}
         <div class="added-by">أضافه: ${u.addedBy || '—'}</div>
+        <div class="user-mini">${u.role === 'user' ? allowedGroupsFor(u).map(groupName).join('، ') : ''}</div>
       </div>
       <div class="row-actions">
         <select class="profile-select" title="نوع المستخدم وصلاحياته">
@@ -4927,9 +5078,26 @@ function renderUsersList(){
         <button class="ghost change-pass">${u.locked ? 'كلمة سر جديدة' : 'كلمة السر'}</button>
         <button class="ghost danger del-user">حذف</button>
       </div>
+      <button type="button" class="ghost user-toggle">${USER_ROWS_OPEN.has(u.name) ? 'إخفاء' : 'تعديل'}</button>
     </div>
     <div class="edit-panel" data-user-edit-for="${u.name}" style="display:none;padding:10px 0;"></div>
   `).join('');
+  list.querySelectorAll('.user-toggle').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const row = e.target.closest('.user-row');
+      const name = row.dataset.name;
+      const open = row.classList.toggle('open');
+      if(open) USER_ROWS_OPEN.add(name);
+      else {
+        USER_ROWS_OPEN.delete(name);
+        const p = list.querySelector(`.edit-panel[data-user-edit-for="${name}"]`);
+        if(p) p.style.display = 'none';
+      }
+      btn.textContent = open ? 'إخفاء' : 'تعديل';
+    });
+  });
+  applyUserSearch();
+  renderSettingsHub();
   list.querySelectorAll('.edit-user-groups').forEach(btn=>{
     btn.addEventListener('click', (e)=>{
       const name = e.target.closest('.user-row').dataset.name;
@@ -5553,7 +5721,8 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
     title = `أعياد ميلاد شهر ${monthNames[month]}`;
     const columns = ['اليوم','الاسم','التليفون'];
     // separate section per selected group, so each meeting's birthdays are listed on their own
-    selectedGroups.forEach(gid=>{
+    // (the servants' meeting birthdays are the admin's, in "متابعة الخدام")
+    selectedGroups.filter(gid=>isAdmin() || gid !== SERVANTS_GID).forEach(gid=>{
       const members = activeServants().filter(s=>s.groups.includes(gid) && s.birthDate);
       const withDay = members.map(s=>{
         const parts = s.birthDate.split('/').map(p=>parseInt(p,10));
@@ -5796,10 +5965,11 @@ function parseDM(dm){
   const parts = String(dm||'').split('/').map(p=>parseInt(p,10));
   return (parts[0] && parts[1]) ? { day: parts[0], month: parts[1] } : null;
 }
-function upcomingBirthdays(days){
+// servantsOnly: the servants' meeting only (admin screen); otherwise everyone else
+function upcomingBirthdays(days, servantsOnly){
   const today = new Date(); today.setHours(0,0,0,0);
   const out = [];
-  activeServants().filter(personVisible).forEach(s=>{
+  activeServants().filter(s=>servantsOnly ? s.groups.includes(SERVANTS_GID) : (personVisible(s) && !s.groups.includes(SERVANTS_GID))).forEach(s=>{
     const dm = parseDM(s.birthDate); if(!dm) return;
     let next = new Date(today.getFullYear(), dm.month-1, dm.day);
     if(next < today) next = new Date(today.getFullYear()+1, dm.month-1, dm.day);
@@ -5873,7 +6043,8 @@ function maybeShowBirthdayPopup(){
   if(!currentUser) return;
   if(!(can('tabDashboard') || can('tabServants'))) return;
   const list = upcomingBirthdays(7);
-  if(list.length === 0) return;
+  const kfList = isAdmin() ? upcomingBirthdays(7, true) : [];
+  if(list.length === 0 && kfList.length === 0) return;
   const key = 'khodam_bday_popup_' + currentUser.name;
   let seen = null; try{ seen = localStorage.getItem(key); }catch(e){}
   if(seen === todayStr()) return;
@@ -5887,14 +6058,151 @@ function maybeShowBirthdayPopup(){
       <h2 style="margin:0 0 6px;font-family:'Amiri',serif;color:var(--ink);">🎂 أعياد ميلاد</h2>
       ${today.length ? `<h3 style="margin:12px 0 4px;font-size:1rem;color:#7A2E2E;">النهارده</h3>${today.map(birthdayRowHtml).join('')}` : ''}
       ${week.length ? `<h3 style="margin:14px 0 4px;font-size:1rem;color:var(--ink);">الأسبوع ده</h3>${week.map(birthdayRowHtml).join('')}` : ''}
+      ${kfList.length ? `<h3 style="margin:14px 0 4px;font-size:1rem;color:var(--ink);">من الخدام 🔒</h3><div class="meta">${kfList.map(u=>escHtml(u.s.name) + (u.diffDays===0 ? ' (النهارده)' : '')).join('، ')}</div>` : ''}
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;">
         <button class="primary" id="bdayPopupClose">تمام</button>
+        ${kfList.length ? '<button class="ghost" id="bdayPopupKF">هنّي الخدام</button>' : ''}
       </div>
     </div>`;
   document.body.appendChild(wrap);
   const close = ()=>wrap.remove();
   wrap.addEventListener('click', e=>{ if(e.target === wrap) close(); });
   document.getElementById('bdayPopupClose').addEventListener('click', close);
+  const kfBtn = document.getElementById('bdayPopupKF');
+  if(kfBtn) kfBtn.addEventListener('click', ()=>{ close(); kfSection = 'bdays'; const b = document.querySelector('nav.tabs button[data-tab="kfollow"]'); if(b) b.click(); });
+}
+/* ---------- SERVANTS FOLLOW-UP (admin only): attendance, birthdays and visits of the servants' meeting ---------- */
+let kfSection = 'follow';
+let kfOpenVisit = null;   // id whose "record a visit" form is open
+let kfOpenHist = null;
+let kfVisitSearch = '';
+const kfFollowUI = { stats:'kfStats', list:'kfList', filter:'red', showAll:false,
+  onVisit: id=>{ kfSection = 'visits'; kfOpenVisit = id; renderKFollow(); } };
+function kfServants(){ return activeServants().filter(s=>(s.groups||[]).includes(SERVANTS_GID)); }
+// every visit of a person, newest first; older records only had the last visit
+function visitsOf(s){
+  const list = (s.visits||[]).slice();
+  if(!list.length && s.lastVisitDate) list.push({ date: s.lastVisitDate, type: s.lastVisitType||'' });
+  return list.sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+}
+function kfVisitLine(v){
+  return `${escHtml(prettyDate(v.date,false))}${v.type ? ' — '+escHtml(v.type) : ''}${v.by ? ' — بواسطة '+escHtml(v.by) : ''}`;
+}
+function renderKFollow(){
+  if(!isAdmin()) return;
+  const seg = document.getElementById('kfSeg'), body = document.getElementById('kfBody');
+  const people = kfServants();
+  const bdays = upcomingBirthdays(30, true);
+  const counts = {
+    follow: people.filter(s=>{ const f = personFollowInfo(s, [SERVANTS_GID]); return f && f.level === 'red'; }).length,
+    bdays: bdays.filter(u=>u.diffDays <= 7).length,
+    visits: people.filter(s=>!visitsOf(s).length).length
+  };
+  const labels = { follow:'❗ محتاجين سؤال', bdays:'🎂 أعياد الميلاد', visits:'🏠 الافتقاد' };
+  seg.innerHTML = Object.keys(labels).map(k=>`<button type="button" data-k="${k}" class="${kfSection===k?'on':''}">${labels[k]}${counts[k] ? `<span class="n">${counts[k]}</span>` : ''}</button>`).join('');
+  seg.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{ kfSection = b.dataset.k; kfOpenVisit = null; renderKFollow(); }));
+  if(people.length === 0){ body.innerHTML = '<div class="empty-note">مفيش خدام في اجتماع الخدام لسه</div>'; return; }
+  if(kfSection === 'follow'){
+    body.innerHTML = '<div class="follow-hint">مرتبين حسب مين محتاج سؤال دلوقتي. النقط بتوري آخر ٦ اجتماعات (الأحدث على اليمين): ● حضر ○ غاب.</div><div class="follow-stats" id="kfStats"></div><div id="kfList"></div>';
+    renderFollowUp(people, [SERVANTS_GID], kfFollowUI);
+  } else if(kfSection === 'bdays') renderKFBirthdays(body, bdays);
+  else renderKFVisits(body, people);
+}
+function renderKFBirthdays(body, list){
+  if(!list.length){ body.innerHTML = '<div class="empty-note">مفيش أعياد ميلاد لخدام في الـ٣٠ يوم الجايين (أو تاريخ الميلاد مش متسجّل)</div>'; return; }
+  const parts = [['النهارده', list.filter(u=>u.diffDays===0)], ['الأسبوع ده', list.filter(u=>u.diffDays>0 && u.diffDays<=7)], ['باقي الشهر', list.filter(u=>u.diffDays>7)]];
+  const row = u=>{
+    const s = u.s, y = u.date.getFullYear();
+    const g = s.bdGreet && s.bdGreet.y === y ? s.bdGreet : null;
+    const wa = waBirthdayLink(s);
+    const tel = s.phone ? String(s.phone).replace(/[^\d+]/g,'') : '';
+    const when = `${AR_DAYS[u.date.getDay()]} ${u.date.getDate()} ${AR_MONTHS[u.date.getMonth()+1]}` + (u.diffDays===1 ? ' · بكرة' : (u.diffDays>1 ? ` · بعد ${u.diffDays} يوم` : ''));
+    return `<div class="follow-row">
+      <div class="who" style="display:flex;gap:10px;align-items:center;">${avatarHtml(s, 36)}<div>
+        <div class="nm">${escHtml(s.name)}</div>
+        <div class="why">${when}${g ? ` · <span class="kf-ok">✓ اتبعتت تهنئة${g.by ? ' ('+escHtml(g.by)+')' : ''}</span>` : ''}</div>
+      </div></div>
+      <div class="follow-acts">
+        ${tel ? `<a href="tel:${tel}" title="اتصال">📞</a>` : ''}
+        ${wa ? `<a href="${wa}" target="_blank" rel="noopener" title="تهنئة على واتساب" data-greet="${s.id}" data-y="${y}">💬</a>` : ''}
+        <button type="button" class="kf-act ${g?'on':''}" data-greet-toggle="${s.id}" data-y="${y}" title="${g?'شيل علامة التهنئة':'علّم إن التهنئة اتبعتت'}">✓</button>
+      </div>
+    </div>`;
+  };
+  body.innerHTML = '<div class="follow-hint">💬 بيفتح واتساب برسالة التهنئة ويعلّم عليه إنه اتبعتله. ✓ لو هنّيته بطريقة تانية.</div>'
+    + parts.filter(p=>p[1].length).map(([t,l])=>`<div class="kf-sec">${t}</div>${l.map(row).join('')}`).join('');
+  const mark = async (id, y, on)=>{
+    const s = DATA.servants.find(x=>x.id===id); if(!s) return;
+    s.bdGreet = on ? { y: +y, by: currentUser ? currentUser.name : '', at: new Date().toISOString() } : null;
+    await saveData();
+    renderKFollow();
+  };
+  body.querySelectorAll('[data-greet]').forEach(a=>a.addEventListener('click', ()=>setTimeout(()=>mark(a.dataset.greet, a.dataset.y, true), 300)));
+  body.querySelectorAll('[data-greet-toggle]').forEach(b=>b.addEventListener('click', ()=>{
+    const s = DATA.servants.find(x=>x.id===b.dataset.greetToggle);
+    mark(b.dataset.greetToggle, b.dataset.y, !(s && s.bdGreet && s.bdGreet.y === +b.dataset.y));
+  }));
+}
+function renderKFVisits(body, people){
+  refreshAreaChurchDatalists();
+  let list = people.map(s=>({ s, v: visitsOf(s) }));
+  if(kfVisitSearch) list = list.filter(x=>x.s.name.includes(kfVisitSearch));
+  // never visited first, then the oldest visit
+  list.sort((a,b)=>{
+    const ad = a.v[0] ? a.v[0].date : '', bd = b.v[0] ? b.v[0].date : '';
+    if(ad !== bd) return ad.localeCompare(bd);
+    return a.s.name.localeCompare(b.s.name,'ar');
+  });
+  if(kfOpenVisit){ const i = list.findIndex(x=>x.s.id===kfOpenVisit); if(i > 0) list.unshift(list.splice(i,1)[0]); }
+  const me = currentUser ? currentUser.name : '';
+  body.innerHTML = `<input type="text" id="kfVisitSearch" placeholder="🔍 دوّر على اسم..." value="${escHtml(kfVisitSearch)}" style="margin-bottom:10px;">`
+    + (list.length ? list.map(({s,v})=>{
+      const last = v[0];
+      const tel = s.phone ? String(s.phone).replace(/[^\d+]/g,'') : '';
+      return `<div class="follow-row">
+        <div class="who">
+          <div class="nm">${escHtml(s.name)}</div>
+          <div class="why">${last ? '🏠 آخر افتقاد: ' + kfVisitLine(last) : '<b>⚠️ لسه ما اتافتقدش</b>'}${s.area ? ' · '+escHtml(s.area) : ''}</div>
+          ${last && last.note ? `<div class="kf-note">📝 ${escHtml(last.note)}</div>` : ''}
+          ${v.length > 1 ? `<div><button type="button" class="ghost" data-hist="${s.id}" style="padding:2px 10px;font-size:.74rem;margin-top:4px;">📜 السجل (${v.length})</button></div>` : ''}
+          ${kfOpenHist === s.id ? `<div class="kf-hist">${v.map(x=>`<div>${kfVisitLine(x)}${x.note ? ' · 📝 '+escHtml(x.note) : ''}</div>`).join('')}</div>` : ''}
+        </div>
+        <div class="follow-acts">
+          ${tel ? `<a href="tel:${tel}" title="اتصال">📞</a>` : ''}
+          <button type="button" class="kf-act" data-open="${s.id}">تسجيل افتقاد</button>
+        </div>
+      </div>
+      ${kfOpenVisit === s.id ? `<div class="kf-form" data-form="${s.id}">
+        <div><label>التاريخ</label><input type="date" class="kf-date" value="${todayStr()}"></div>
+        <div><label>النوع</label><input type="text" class="kf-type" list="visitTypeOptionsList" placeholder="زيارة، تليفون…"></div>
+        <div class="full"><label>مين افتقد</label><input type="text" class="kf-by" value="${escHtml(me)}"></div>
+        <div class="full"><label>ملاحظة (بتظهر هنا بس)</label><textarea class="kf-note-in" rows="2"></textarea></div>
+        <div class="full" style="display:flex;gap:8px;"><button type="button" class="primary kf-save">حفظ</button><button type="button" class="ghost kf-cancel">إلغاء</button></div>
+      </div>` : ''}`;
+    }).join('') : '<div class="empty-note">مفيش اسم مطابق</div>');
+  const search = document.getElementById('kfVisitSearch');
+  let t = null;
+  search.addEventListener('input', ()=>{ clearTimeout(t); t = setTimeout(()=>{ kfVisitSearch = search.value.trim(); renderKFollow(); const el = document.getElementById('kfVisitSearch'); el.focus(); el.setSelectionRange(el.value.length, el.value.length); }, 250); });
+  body.querySelectorAll('[data-hist]').forEach(b=>b.addEventListener('click', ()=>{ kfOpenHist = kfOpenHist === b.dataset.hist ? null : b.dataset.hist; renderKFollow(); }));
+  body.querySelectorAll('[data-open]').forEach(b=>b.addEventListener('click', ()=>{ kfOpenVisit = kfOpenVisit === b.dataset.open ? null : b.dataset.open; renderKFollow(); }));
+  const form = body.querySelector('.kf-form');
+  if(form){
+    form.querySelector('.kf-cancel').addEventListener('click', ()=>{ kfOpenVisit = null; renderKFollow(); });
+    form.querySelector('.kf-save').addEventListener('click', async ()=>{
+      const s = DATA.servants.find(x=>x.id===form.dataset.form); if(!s) return;
+      const date = form.querySelector('.kf-date').value;
+      if(!date){ alert('اختار تاريخ الافتقاد.'); return; }
+      const entry = { date, type: form.querySelector('.kf-type').value.trim(), by: form.querySelector('.kf-by').value.trim(), note: form.querySelector('.kf-note-in').value.trim(), at: new Date().toISOString() };
+      s.visits = (s.visits && s.visits.length ? s.visits : visitsOf(s)).concat(entry);
+      const newest = visitsOf(s)[0];
+      s.lastVisitDate = newest.date; s.lastVisitType = newest.type || '';
+      s.lastEditedBy = me || '—';
+      s.lastEditedAt = new Date().toLocaleString('ar-EG-u-nu-latn');
+      kfOpenVisit = null;
+      await saveData();
+      renderKFollow();
+    });
+  }
 }
 function makeProgramScreen(cfg){
 /* ---------- SERVICE PROGRAM (Friday / Sunday, October → September) ----------
@@ -7062,6 +7370,7 @@ const TAB_ICONS = {
   dashboard:'<path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
   servants:'<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.9-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.2c2.4-.3 4.4 1.2 5 4.3"/>',
   attendance:'<rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/>',
+  kfollow:'<circle cx="12" cy="8" r="3.4"/><path d="M5.5 20c.7-3.6 3.3-5.6 6.5-5.6s5.8 2 6.5 5.6"/><path d="m15.5 4.5 1.2 1.2 2.3-2.4"/>',
   afeqad:'<path d="M3 11 12 4l9 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M12 17.5s-3-1.9-3-3.9a1.6 1.6 0 0 1 3-.8 1.6 1.6 0 0 1 3 .8c0 2-3 3.9-3 3.9z"/>',
   reports:'<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M21 20H3"/>',
   moves:'<path d="M4 8h13l-3-3"/><path d="M20 16H7l3 3"/>',
@@ -7070,8 +7379,8 @@ const TAB_ICONS = {
   settings:'<circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.2 7.5l2 1.2M17.8 15.3l2 1.2M4.2 16.5l2-1.2M17.8 8.7l2-1.2"/>',
   more:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>'
 };
-const TAB_SHORT = { dashboard:'الرئيسية', servants:'الخدام', attendance:'الحضور', afeqad:'الافتقاد', reports:'التقارير', moves:'النقل', program:'البرنامج', tenmin:'فقرة ١٠ ق', settings:'الإعدادات' };
-const BOTTOM_PRIORITY = ['dashboard','attendance','servants','program','tenmin','afeqad','reports','moves','settings'];
+const TAB_SHORT = { dashboard:'الرئيسية', servants:'الخدام', attendance:'الحضور', afeqad:'الافتقاد', kfollow:'متابعة الخدام', reports:'التقارير', moves:'النقل', program:'البرنامج', tenmin:'فقرة ١٠ ق', settings:'الإعدادات' };
+const BOTTOM_PRIORITY = ['dashboard','attendance','servants','program','tenmin','afeqad','kfollow','reports','moves','settings'];
 const tabIcon = k=>`<svg class="tab-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TAB_ICONS[k]||''}</svg>`;
 function decorateTopTabs(){
   document.querySelectorAll('nav.tabs button[data-tab]').forEach(b=>{
