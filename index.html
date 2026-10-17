@@ -1032,7 +1032,7 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
         <option value="upcoming">من النهارده وجاي</option>
         <option value="nospeaker">ناقص متكلم</option>
       </select>
-      <button class="ghost" id="progPostBtn">🖼️ بوست الشهر</button>
+      <button class="ghost" id="progPostBtn">🖼️ البوستر</button>
       <button class="ghost" id="progPrintBtn">🖨️ طباعة</button>
       <button class="ghost" id="progExportBtn">⬇️ تصدير Excel</button>
       <button class="ghost" id="progSpeakersBtn" style="display:none;">📇 تقرير المتكلمين</button>
@@ -1061,7 +1061,7 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
         <option value="upcoming">من النهارده وجاي</option>
         <option value="nospeaker">ناقص متكلم</option>
       </select>
-      <button class="ghost" id="tenPostBtn">🖼️ بوست الشهر</button>
+      <button class="ghost" id="tenPostBtn">🖼️ البوستر</button>
       <button class="ghost" id="tenPrintBtn">🖨️ طباعة</button>
       <button class="ghost" id="tenExportBtn">⬇️ تصدير Excel</button>
       <button class="ghost" id="tenSpeakersBtn" style="display:none;">📇 تقرير المتكلمين</button>
@@ -2402,7 +2402,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '17-Oct-2026 I';
+const APP_VERSION = '17-Oct-2026 J';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -6434,8 +6434,8 @@ function renderProgramPanel(){
           ${it.speaker ? `🎤 ${escHtml(it.speaker)}` : '<span style="color:var(--faint);">🎤 لسه محدش اتحدد</span>'}${canPhones() && it.speaker && speakerPhone(it.speaker) ? ` <a href="tel:${escHtml(speakerPhone(it.speaker).replace(/[^\d+]/g,''))}" title="${escHtml(speakerPhone(it.speaker))}" style="text-decoration:none;font-size:.78rem;">📞</a>` : ''}
           ${it.church ? ` &nbsp;—&nbsp; ⛪ ${escHtml(it.church)}` : ''}
         </div>
-        ${canEdit ? `<div style="margin-top:8px;"><button class="ghost prog-edit-btn" style="font-size:.8rem;padding:4px 12px;">✏️ تعديل</button></div>
-        <div class="prog-edit" style="display:none;margin-top:10px;"></div>` : ''}
+        ${canEdit || it.title || it.speaker ? `<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">${canEdit ? '<button class="ghost prog-edit-btn" style="font-size:.8rem;padding:4px 12px;">✏️ تعديل</button>' : ''}${it.title || it.speaker ? '<button class="ghost prog-post-btn" style="font-size:.8rem;padding:4px 12px;">🖼️ بوستر</button>' : ''}</div>` : ''}
+        ${canEdit ? '<div class="prog-edit" style="display:none;margin-top:10px;"></div>' : ''}
       </div>`;
   });
   if(curMonth !== -1) html += '</div>';
@@ -6447,6 +6447,7 @@ function renderProgramPanel(){
       openProgEdit(row, sec.items[row.dataset.date] || {});
     }));
   }
+  listEl.querySelectorAll('.prog-post-btn').forEach(btn=>btn.addEventListener('click', e=>openMonthPost(e.target.closest('.prog-row').dataset.date)));
   if(nextIso && filter === 'all'){
     const nr = listEl.querySelector(`.prog-row[data-date="${nextIso}"]`);
     if(nr && !renderProgramPanel._scrolled){ renderProgramPanel._scrolled = true; setTimeout(()=>nr.scrollIntoView({block:'center'}), 50); }
@@ -6975,14 +6976,22 @@ $p('PrintBtn').addEventListener('click', ()=>{
   w.document.close();
 });
 
-/* ---------- MONTHLY POST (one month of Friday or Sunday as a shareable image) ----------
-   Drawn straight onto a canvas (no extra library), so the Arabic text and the
-   logo come out exactly as on screen, ready to save, share on WhatsApp or print. */
+/* ---------- POSTERS (the month's program, or one meeting, as a shareable image) ----------
+   Drawn straight onto a canvas (no extra library), so the Arabic text, the logo and the
+   speakers' photos (from the speakers report) come out exactly as on screen, ready to save,
+   share on WhatsApp or print. Light themes take turns by themselves (a different one each
+   month and each meeting), or one can be picked in the window. */
 const POST_W = 1080;
-const POST_C = { navy:'#1B2A4A', navy2:'#2b3d66', gold:'#C9A227', goldSoft:'#e8d8a3', cream:'#F7F1E3', card:'#fffdf7',
-  line:'#d9cba3', wine:'#7A2E2E', sage:'#3f6152', text2:'#5a5140', faint:'#9a8d68' };
+const POST_THEMES = [
+  { id:'ivory', name:'عاجي ذهبي', bg:'#FBF7EE', bg2:'#F2E8D5', ink:'#3B2F22', accent:'#B8892B', accent2:'#8C3B3B', soft:'#F3E9D2', line:'#E5D5B0', muted:'#8A7A5C', shape:'arch',    layout:'cards',    orn:'arches'  },
+  { id:'sky',   name:'سماوي',     bg:'#F6FAFD', bg2:'#E2EEF9', ink:'#1F3A57', accent:'#3B7DC0', accent2:'#A9822A', soft:'#E1EDF9', line:'#CDDFF0', muted:'#6A8099', shape:'circle',  layout:'timeline', orn:'rays'    },
+  { id:'sage',  name:'زيتوني',    bg:'#F7F9F2', bg2:'#E5EDDA', ink:'#2E3D2B', accent:'#6A8D58', accent2:'#A8743A', soft:'#E4ECD8', line:'#D2DDC3', muted:'#77866A', shape:'rounded', layout:'cards',    orn:'leaves'  },
+  { id:'blush', name:'وردي هادي', bg:'#FDF8F5', bg2:'#F7E6DE', ink:'#4A2D2A', accent:'#C27A6B', accent2:'#9A7A3C', soft:'#F6E3DB', line:'#EED7CD', muted:'#9A7B73', shape:'arch',    layout:'timeline', orn:'dots'    },
+  { id:'lilac', name:'ليلكي',     bg:'#F9F7FC', bg2:'#ECE6F6', ink:'#34294B', accent:'#7C66AA', accent2:'#A9822A', soft:'#EAE4F5', line:'#DCD2EC', muted:'#857A9B', shape:'circle',  layout:'cards',    orn:'crosses' }
+];
 const POST_DAY_NAMES = { friday:'الجمعة', sunday:'الأحد' };
-let postDay = 'friday', postMonth = 9, postCanvas = null;
+let postDay = 'friday', postMonth = 9, postOneIso = '', postTheme = 'auto', postCanvas = null, postUsedTheme = null, postRenderToken = 0;
+const postPhotoCache = new Map();
 
 function postFont(weight, size, family){ return `${weight} ${size}px ${family === 'amiri' ? "'Amiri', serif" : "'Cairo', sans-serif"}`; }
 function postWrap(ctx, text, maxW, maxLines){
@@ -7017,6 +7026,11 @@ function postMonthRows(year, day, month){
 function postLoadImage(src){
   return new Promise(res=>{ if(!src) return res(null); const im = new Image(); im.onload = ()=>res(im); im.onerror = ()=>res(null); im.src = src; });
 }
+function postSpeakerImage(name){
+  const key = speakerKey(name || ''); if(!key) return Promise.resolve(null);
+  if(!postPhotoCache.has(key)) postPhotoCache.set(key, speakerPhotoUrl(key).then(postLoadImage).catch(()=>null));
+  return postPhotoCache.get(key);
+}
 async function postFontsReady(){
   if(!document.fonts || !document.fonts.load) return;
   const sample = 'برنامج الخدمة 2026';
@@ -7027,149 +7041,362 @@ async function postFontsReady(){
     ]);
   }catch(e){}
 }
+// 'auto' gives each month (seed = year*12+month) and each meeting (seed = week number) its own theme
+function postThemeFor(seed){
+  const picked = POST_THEMES.find(t=>t.id === postTheme);
+  return picked || POST_THEMES[((seed % POST_THEMES.length) + POST_THEMES.length) % POST_THEMES.length];
+}
+function postA(hex, a){ const n = parseInt(hex.slice(1), 16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; }
+function postShape(ctx, shape, x, y, w, h){
+  if(shape === 'rounded'){ postRoundRect(ctx, x, y, w, h, Math.min(w, h) * 0.2); return; }
+  ctx.beginPath();
+  if(shape === 'arch'){ const r = w/2; ctx.moveTo(x, y+h); ctx.lineTo(x, y+r); ctx.arc(x+r, y+r, r, Math.PI, 0); ctx.lineTo(x+w, y+h); }
+  else ctx.ellipse(x+w/2, y+h/2, w/2, h/2, 0, 0, Math.PI*2);
+  ctx.closePath();
+}
+function postCover(ctx, img, x, y, w, h){
+  const s = Math.max(w / img.width, h / img.height), dw = img.width * s, dh = img.height * s;
+  ctx.drawImage(img, x + (w - dw)/2, y - (dh - h) * 0.25, dw, dh);  // keep faces: 25% from the top
+}
+function postCross(ctx, cx, cy, s, color){
+  const a = s * 0.16;
+  ctx.fillStyle = color;
+  ctx.fillRect(cx - a, cy - s, 2*a, 2*s); ctx.fillRect(cx - s, cy - a, 2*s, 2*a);
+  [[0,-s],[0,s],[-s,0],[s,0]].forEach(([dx,dy])=>{ ctx.beginPath(); ctx.arc(cx+dx, cy+dy, a*1.5, 0, Math.PI*2); ctx.fill(); });
+}
+function postDiamond(ctx, cx, cy, r, color){
+  ctx.beginPath(); ctx.moveTo(cx, cy-r); ctx.lineTo(cx+r, cy); ctx.lineTo(cx, cy+r); ctx.lineTo(cx-r, cy); ctx.closePath();
+  ctx.fillStyle = color; ctx.fill();
+}
+// a thin line with a diamond in the middle, or around a word when text is given
+function postDivider(ctx, t, cx, y, half, text){
+  let gap = 16;
+  if(text){ ctx.textAlign = 'center'; ctx.fillStyle = t.accent; ctx.fillText(text, cx, y + 12); gap = ctx.measureText(text).width/2 + 26; }
+  ctx.strokeStyle = postA(t.accent, .7); ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(cx - half, y); ctx.lineTo(cx - gap, y); ctx.moveTo(cx + gap, y); ctx.lineTo(cx + half, y); ctx.stroke();
+  if(text){ postDiamond(ctx, cx - half - 10, y, 6, t.accent); postDiamond(ctx, cx + half + 10, y, 6, t.accent); }
+  else postDiamond(ctx, cx, y, 7, t.accent);
+}
+// the speaker's first name stands in for a missing photo (titles like "أبونا" or "د." are skipped)
+function postFirstName(name){
+  const skip = /^(أبونا|ابونا|الأب|الاب|القس|القمص|الأنبا|الانبا|نيافة|د\.?|دكتور|الدكتور|م\.?|المهندس|أ\.?|الأستاذ|الاستاذ|أستاذ|الشماس|الأخ|الاخ|الأخت|الاخت|تاسوني|الراهب|الخادم|الخادمة)$/;
+  return String(name || '').replace(/\s+/g,' ').trim().split(' ').find(w=>!skip.test(w)) || '';
+}
+function postPhoto(ctx, t, img, name, logo, x, y, w, h, big){
+  ctx.save();
+  if(big){  // an offset outline behind the photo
+    postShape(ctx, t.shape, x + 22, y - 22, w, h); ctx.strokeStyle = postA(t.accent, .55); ctx.lineWidth = 3; ctx.stroke();
+  }
+  ctx.shadowColor = postA(t.ink, big ? .16 : .12); ctx.shadowBlur = big ? 30 : 14; ctx.shadowOffsetY = big ? 12 : 5;
+  postShape(ctx, t.shape, x - 6, y - 6, w + 12, h + 12); ctx.fillStyle = '#ffffff'; ctx.fill();
+  ctx.restore();
+  ctx.save();
+  postShape(ctx, t.shape, x, y, w, h); ctx.clip();
+  if(img) postCover(ctx, img, x, y, w, h);
+  else {
+    const g = ctx.createLinearGradient(x, y, x, y + h); g.addColorStop(0, t.soft); g.addColorStop(1, t.bg2);
+    ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+    const first = postFirstName(name);
+    if(first){
+      ctx.textAlign = 'center'; ctx.fillStyle = t.accent;
+      let fs = w * 0.3; ctx.font = postFont(700, fs, 'amiri');
+      while(fs > 14 && ctx.measureText(first).width > w * 0.8){ fs -= 2; ctx.font = postFont(700, fs, 'amiri'); }
+      ctx.fillText(first, x + w/2, y + h/2 + fs * 0.32);
+    } else if(logo){
+      const d = Math.min(w, h) * 0.6; ctx.globalAlpha = .9; ctx.drawImage(logo, x + (w-d)/2, y + (h-d)/2, d, d);
+    } else postCross(ctx, x + w/2, y + h/2, w * 0.16, postA(t.accent, .6));
+  }
+  ctx.restore();
+  postShape(ctx, t.shape, x, y, w, h); ctx.strokeStyle = postA(t.accent, .8); ctx.lineWidth = big ? 3 : 2; ctx.stroke();
+}
+function postLogo(ctx, t, logo, cx, cy, d){
+  ctx.beginPath(); ctx.arc(cx, cy, d/2 + 11, 0, Math.PI*2); ctx.strokeStyle = postA(t.accent, .45); ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, cy, d/2 + 4, 0, Math.PI*2); ctx.fillStyle = '#ffffff'; ctx.fill();
+  ctx.strokeStyle = t.accent; ctx.lineWidth = 2.5; ctx.stroke();
+  ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, d/2 - 2, 0, Math.PI*2); ctx.clip();
+  ctx.drawImage(logo, cx - d/2 + 2, cy - d/2 + 2, d - 4, d - 4); ctx.restore();
+}
+// light background, the theme's quiet ornament, and a thin double frame
+function postBackground(ctx, t, W, H){
+  const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, t.bg); g.addColorStop(1, t.bg2);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  const glow = ctx.createRadialGradient(W/2, 120, 20, W/2, 120, 640);
+  glow.addColorStop(0, 'rgba(255,255,255,.9)'); glow.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, Math.min(H, 900));
+  ctx.save();
+  if(t.orn === 'arches'){
+    ctx.strokeStyle = postA(t.accent, .13); ctx.lineWidth = 2;
+    const fade = ctx.createLinearGradient(0, 0, 0, 900); fade.addColorStop(0, postA(t.accent, .16)); fade.addColorStop(1, postA(t.accent, 0));
+    ctx.strokeStyle = fade;
+    for(let i = 0; i < 4; i++){ const w = 960 - i*90, r = w/2, x = W/2 - r, y = 46 + i*45; ctx.beginPath(); ctx.moveTo(x, 900); ctx.lineTo(x, y + r); ctx.arc(x + r, y + r, r, Math.PI, 0); ctx.lineTo(x + w, 900); ctx.stroke(); }
+    postCross(ctx, W/2, 74, 13, postA(t.accent, .35));
+  } else if(t.orn === 'rays'){
+    ctx.strokeStyle = postA(t.accent, .07); ctx.lineWidth = 2;
+    for(let i = 0; i <= 28; i++){ const a = Math.PI * (0.05 + 0.9 * i / 28); ctx.beginPath(); ctx.moveTo(W/2, -60); ctx.lineTo(W/2 - Math.cos(a)*1400, -60 + Math.sin(a)*1400); ctx.stroke(); }
+    [260, 420, 600].forEach((r, i)=>{ ctx.beginPath(); ctx.arc(W/2, -60, r, 0, Math.PI); ctx.strokeStyle = postA(t.accent, .10 - i*0.025); ctx.stroke(); });
+  } else if(t.orn === 'leaves'){
+    const branch = (sx, sy, ex, ey, flip)=>{
+      ctx.strokeStyle = postA(t.accent, .28); ctx.lineWidth = 3;
+      const mx = (sx+ex)/2 + 60*flip, my = (sy+ey)/2 - 40;
+      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(mx, my, ex, ey); ctx.stroke();
+      for(let i = 1; i < 9; i++){
+        const k = i/9, px = (1-k)*(1-k)*sx + 2*(1-k)*k*mx + k*k*ex, py = (1-k)*(1-k)*sy + 2*(1-k)*k*my + k*k*ey;
+        const ang = Math.atan2(ey - sy, ex - sx);
+        [1,-1].forEach(side=>{
+          ctx.save(); ctx.translate(px, py); ctx.rotate(ang + side*0.9);
+          ctx.beginPath(); ctx.ellipse(18, 0, 20 - i, 8 - i*0.4, 0, 0, Math.PI*2);
+          ctx.fillStyle = postA(t.accent, .20); ctx.fill(); ctx.restore();
+        });
+      }
+    };
+    branch(W - 40, 40, W - 330, 300, -1); branch(40, 40, 330, 300, 1);
+    branch(W - 40, H - 40, W - 300, H - 230, 1); branch(40, H - 40, 300, H - 230, -1);
+  } else if(t.orn === 'dots'){
+    ctx.fillStyle = postA(t.accent, .22);
+    for(let r = 0; r < 9; r++) for(let c = 0; c < 9 - r; c++){
+      ctx.beginPath(); ctx.arc(W - 60 - c*26, 60 + r*26, 3, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(60 + c*26, H - 60 - r*26, 3, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.strokeStyle = postA(t.accent, .10); ctx.lineWidth = 2;
+    [120, 190].forEach(r=>{ ctx.beginPath(); ctx.arc(70, 70, r, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(W - 70, H - 70, r, 0, Math.PI*2); ctx.stroke(); });
+  } else if(t.orn === 'crosses'){
+    for(let yy = 90; yy < H; yy += 150) for(let xx = (yy/150 % 2 ? 90 : 165); xx < W; xx += 150) postCross(ctx, xx, yy, 11, postA(t.accent, .07));
+  }
+  ctx.restore();
+  ctx.strokeStyle = postA(t.accent, .6); ctx.lineWidth = 2; ctx.strokeRect(22, 22, W - 44, H - 44);
+  ctx.strokeStyle = postA(t.accent, .3); ctx.lineWidth = 1; ctx.strokeRect(32, 32, W - 64, H - 64);
+  [[22,22],[W-22,22],[22,H-22],[W-22,H-22]].forEach(([x,y])=>postDiamond(ctx, x, y, 9, t.accent));
+}
+function postFooter(ctx, t, W, fy, line1){
+  postDivider(ctx, t, W/2, fy + 20, 160);
+  ctx.textAlign = 'center';
+  ctx.font = postFont(700, 36, 'amiri'); ctx.fillStyle = t.ink; ctx.fillText(line1, W/2, fy + 76);
+  ctx.font = postFont(400, 22); ctx.fillStyle = t.muted;
+  ctx.fillText(`سنة ${copticYear(progYear)} للشهداء  •  ${progYear} - ${progYear+1}`, W/2, fy + 114);
+}
 
-/* Lays the post out; with ctx === null it only measures and returns the height. */
-function postLayout(ctx, m, data, logo){
-  const W = POST_W, P = 56;
+/* The month's program. With ctx === null it only measures and returns the height. */
+function postMonthLayout(ctx, m, data, logo, photos, t){
+  const W = POST_W, P = 64;
   const { sec, rows } = data;
   const calYear = month => month >= 9 ? progYear : progYear + 1;
   const mctx = ctx || postMeasureCtx();
   mctx.direction = 'rtl';
+  const timeline = t.layout === 'timeline';
 
   // ----- header -----
-  let y = 0;
-  const headTop = 44, logoD = 128;
-  let hy = headTop + (logo ? logoD + 22 : 0);
-  hy += 40;                 // church line
-  hy += 78;                 // big title
-  hy += 26 + 64;            // month pill
+  const logoD = 120;
+  let hy = 74 + (logo ? logoD + 30 : 0) + 40 + 84 + 64;
   let visionLines = [];
-  if(sec.vision){ mctx.font = postFont(600, 27); visionLines = postWrap(mctx, '🎯 ' + sec.vision, W - 2*P - 40, 2); hy += 18 + visionLines.length * 42; }
-  const headH = hy + 40;
+  if(sec.vision){ mctx.font = postFont(600, 27); visionLines = postWrap(mctx, sec.vision, W - 2*P - 140, 2); hy += 20 + visionLines.length*40 + 30; }
+  const headH = hy + 30;
 
-  // ----- cards -----
-  const dateW = 176, gap = 22, innerP = 28;
-  const textW = W - 2*P - dateW - innerP*2 - gap;
-  const cards = rows.map(r=>{
+  // ----- meetings -----
+  const pw = timeline ? 124 : 138, ph = t.shape === 'arch' ? Math.round(pw * 1.22) : pw;
+  const pad = 30, dateW = 118, railW = 150;
+  const textW = timeline ? W - 2*P - railW - pw - 34 : W - 2*P - 2*pad - pw - 26 - dateW - 30;
+  const items = rows.map((r, i)=>{
     const it = r.it;
-    mctx.font = postFont(700, 35); const tl = postWrap(mctx, it.title || 'الموضوع لسه هيتحدد', textW, 3);
-    mctx.font = postFont(400, 25); const gl = it.goal ? postWrap(mctx, it.goal, textW, 3) : [];
-    mctx.font = postFont(600, 28); const sp = postWrap(mctx, '🎤  ' + (it.speaker || 'المتكلم لسه هيتحدد'), textW, 2);
-    mctx.font = postFont(400, 25); const ch = it.church ? postWrap(mctx, '⛪  ' + it.church, textW, 2) : [];
-    const contentH = tl.length*52 + (gl.length ? 8 + gl.length*38 : 0) + 14 + sp.length*42 + ch.length*36;
-    return { r, tl, gl, sp, ch, h: Math.max(196, contentH + innerP*2) };
+    mctx.font = postFont(700, 34); const tl = postWrap(mctx, it.title || 'الموضوع لسه هيتحدد', textW, 3);
+    mctx.font = postFont(400, 24); const gl = it.goal ? postWrap(mctx, it.goal, textW, 2) : [];
+    mctx.font = postFont(700, 27); const sp = postWrap(mctx, it.speaker || 'المتكلم لسه هيتحدد', textW, 2);
+    mctx.font = postFont(400, 23); const ch = it.church ? postWrap(mctx, it.church, textW, 1) : [];
+    const contentH = tl.length*50 + (gl.length ? 6 + gl.length*36 : 0) + 16 + sp.length*40 + ch.length*34;
+    return { r, img: photos[i], tl, gl, sp, ch, contentH, h: Math.max(ph, contentH) + 2*pad };
   });
-  const cardsH = cards.length ? cards.reduce((s,c)=>s + c.h, 0) + (cards.length-1)*22 : 120;
-  const footH = 120;
-  const H = headH + 40 + cardsH + 30 + footH;
+  const itemGap = timeline ? 0 : 24;
+  const listH = items.length ? items.reduce((s,c)=>s + c.h, 0) + (items.length-1)*itemGap : 120;
+  const footH = 140;
+  const H = headH + listH + 40 + footH + 30;
   if(!ctx) return H;
 
-  // background
-  ctx.fillStyle = POST_C.cream; ctx.fillRect(0, 0, W, H);
-  const hg = ctx.createLinearGradient(0, 0, W, headH);
-  hg.addColorStop(0, POST_C.navy2); hg.addColorStop(1, POST_C.navy);
-  ctx.fillStyle = hg; ctx.fillRect(0, 0, W, headH);
-  const glow = ctx.createRadialGradient(W-120, 40, 10, W-120, 40, 420);
-  glow.addColorStop(0, 'rgba(201,162,39,.30)'); glow.addColorStop(1, 'rgba(201,162,39,0)');
-  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, headH);
-  ctx.fillStyle = POST_C.gold; ctx.fillRect(0, headH - 8, W, 8);
-
-  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-  y = headTop;
-  if(logo){
-    const cx = W/2, cy = y + logoD/2;
-    ctx.beginPath(); ctx.arc(cx, cy, logoD/2 + 7, 0, Math.PI*2); ctx.fillStyle = POST_C.gold; ctx.fill();
-    ctx.beginPath(); ctx.arc(cx, cy, logoD/2, 0, Math.PI*2); ctx.fillStyle = '#fdf8ec'; ctx.fill();
-    ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, logoD/2 - 4, 0, Math.PI*2); ctx.clip();
-    ctx.drawImage(logo, cx - logoD/2 + 4, cy - logoD/2 + 4, logoD - 8, logoD - 8); ctx.restore();
-    y += logoD + 22;
-  }
-  ctx.font = postFont(600, 27); ctx.fillStyle = POST_C.goldSoft;
+  postBackground(ctx, t, W, H);
+  ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'center';
+  let y = 74;
+  if(logo){ postLogo(ctx, t, logo, W/2, y + logoD/2, logoD); y += logoD + 30; }
+  ctx.font = postFont(600, 26); ctx.fillStyle = t.accent;
   ctx.fillText('اجتماع الأنبا بولا والعائلة المقدسة', W/2, y + 28); y += 40;
-  ctx.font = postFont(700, 62, 'amiri'); ctx.fillStyle = '#ffffff';
-  ctx.fillText(cfg.postTitle(PROG_DAYS[postDay].meeting), W/2, y + 60); y += 78;
-  y += 26;
-  const pill = `شهر ${PROG_MONTHS[m]} ${calYear(m)}`;
-  ctx.font = postFont(700, 36); const pw = ctx.measureText(pill).width + 80;
-  postRoundRect(ctx, W/2 - pw/2, y, pw, 64, 32); ctx.fillStyle = POST_C.gold; ctx.fill();
-  ctx.fillStyle = POST_C.navy; ctx.fillText(pill, W/2, y + 45); y += 64;
+  ctx.font = postFont(700, 66, 'amiri'); ctx.fillStyle = t.ink;
+  ctx.fillText(cfg.postTitle(PROG_DAYS[postDay].meeting), W/2, y + 64); y += 84;
+  ctx.font = postFont(700, 34);
+  postDivider(ctx, t, W/2, y + 30, 250, `شهر ${PROG_MONTHS[m]} ${calYear(m)}`); y += 64;
   if(visionLines.length){
-    y += 18; ctx.font = postFont(600, 27); ctx.fillStyle = POST_C.goldSoft;
-    visionLines.forEach(l=>{ ctx.fillText(l, W/2, y + 32); y += 42; });
+    y += 20;
+    ctx.font = postFont(600, 27);
+    const vw = Math.max(...visionLines.map(l=>ctx.measureText(l).width)) + 90, vh = visionLines.length*40 + 30;
+    postRoundRect(ctx, W/2 - vw/2, y, vw, vh, vh/2 > 40 ? 30 : vh/2); ctx.fillStyle = postA(t.soft, .9); ctx.fill();
+    ctx.strokeStyle = t.line; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = t.accent2; ctx.textAlign = 'center';
+    visionLines.forEach((l, i)=>ctx.fillText(l, W/2, y + 15 + 30 + i*40));
   }
 
-  // cards
-  y = headH + 40;
-  if(!cards.length){
-    ctx.font = postFont(600, 30); ctx.fillStyle = POST_C.faint; ctx.fillText('مفيش اجتماعات في الشهر ده', W/2, y + 70);
+  y = headH;
+  if(!items.length){
+    ctx.font = postFont(600, 30); ctx.fillStyle = t.muted; ctx.textAlign = 'center'; ctx.fillText('مفيش اجتماعات في الشهر ده', W/2, y + 70);
   }
-  cards.forEach(c=>{
-    const x = P, w = W - 2*P, h = c.h;
-    ctx.save(); ctx.shadowColor = 'rgba(27,42,74,.10)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 6;
-    postRoundRect(ctx, x, y, w, h, 24); ctx.fillStyle = POST_C.card; ctx.fill(); ctx.restore();
-    postRoundRect(ctx, x, y, w, h, 24); ctx.lineWidth = 2; ctx.strokeStyle = POST_C.line; ctx.stroke();
-
-    // date block on the right
-    const dx = x + w - dateW - 14, dy = y + 14, dh = h - 28;
-    postRoundRect(ctx, dx, dy, dateW, dh, 18);
-    const dg = ctx.createLinearGradient(dx, dy, dx, dy + dh); dg.addColorStop(0, POST_C.navy2); dg.addColorStop(1, POST_C.navy);
-    ctx.fillStyle = dg; ctx.fill();
-    const mid = dy + dh/2;
-    ctx.textAlign = 'center';
-    ctx.font = postFont(600, 26); ctx.fillStyle = POST_C.gold; ctx.fillText(POST_DAY_NAMES[postDay], dx + dateW/2, mid - 38);
-    ctx.font = postFont(700, 66); ctx.fillStyle = '#ffffff'; ctx.fillText(String(c.r.d.getDate()), dx + dateW/2, mid + 30);
-    ctx.font = postFont(500, 24); ctx.fillStyle = POST_C.goldSoft; ctx.fillText(PROG_MONTHS[c.r.d.getMonth()], dx + dateW/2, mid + 66);
-
-    // text, right-aligned next to the date block
+  const drawText = (c, tx, top)=>{
     ctx.textAlign = 'right';
-    const tx = dx - gap;
-    const contentH = c.tl.length*52 + (c.gl.length ? 8 + c.gl.length*38 : 0) + 14 + c.sp.length*42 + c.ch.length*36;
-    let ty = y + Math.max(innerP, (h - contentH)/2);
-    ctx.font = postFont(700, 35); ctx.fillStyle = c.r.it.title ? POST_C.navy : POST_C.faint;
-    c.tl.forEach(l=>{ ctx.fillText(l, tx, ty + 40); ty += 52; });
-    if(c.gl.length){ ty += 8; ctx.font = postFont(400, 25); ctx.fillStyle = POST_C.text2; c.gl.forEach(l=>{ ctx.fillText(l, tx, ty + 28); ty += 38; }); }
-    ty += 14;
-    ctx.font = postFont(600, 28); ctx.fillStyle = c.r.it.speaker ? POST_C.wine : POST_C.faint;
-    c.sp.forEach(l=>{ ctx.fillText(l, tx, ty + 32); ty += 42; });
-    ctx.font = postFont(400, 25); ctx.fillStyle = POST_C.sage;
-    c.ch.forEach(l=>{ ctx.fillText(l, tx, ty + 28); ty += 36; });
-    y += h + 22;
+    let ty = top;
+    ctx.font = postFont(700, 34); ctx.fillStyle = c.r.it.title ? t.ink : t.muted;
+    c.tl.forEach(l=>{ ctx.fillText(l, tx, ty + 38); ty += 50; });
+    if(c.gl.length){ ty += 6; ctx.font = postFont(400, 24); ctx.fillStyle = t.muted; c.gl.forEach(l=>{ ctx.fillText(l, tx, ty + 27); ty += 36; }); }
+    ty += 16;
+    ctx.font = postFont(700, 27); ctx.fillStyle = c.r.it.speaker ? t.accent2 : t.muted;
+    c.sp.forEach(l=>{ ctx.fillText(l, tx, ty + 30); ty += 40; });
+    ctx.font = postFont(400, 23); ctx.fillStyle = t.muted;
+    c.ch.forEach(l=>{ ctx.fillText(l, tx, ty + 26); ty += 34; });
+  };
+  if(timeline && items.length){
+    const railX = W - P - railW/2;
+    ctx.strokeStyle = postA(t.accent, .35); ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(railX, y + items[0].h/2); ctx.lineTo(railX, y + listH - items[items.length-1].h/2); ctx.stroke();
+  }
+  items.forEach((c, i)=>{
+    const h = c.h;
+    if(timeline){
+      const railX = W - P - railW/2, cy = y + h/2;
+      ctx.beginPath(); ctx.arc(railX, cy, 60, 0, Math.PI*2); ctx.fillStyle = '#ffffff'; ctx.fill();
+      ctx.strokeStyle = t.accent; ctx.lineWidth = 3; ctx.stroke();
+      ctx.beginPath(); ctx.arc(railX, cy, 52, 0, Math.PI*2); ctx.strokeStyle = postA(t.accent, .3); ctx.lineWidth = 1; ctx.stroke();
+      ctx.textAlign = 'center';
+      ctx.font = postFont(600, 17); ctx.fillStyle = t.muted; ctx.fillText(POST_DAY_NAMES[postDay], railX, cy - 22);
+      ctx.font = postFont(700, 42); ctx.fillStyle = t.accent; ctx.fillText(String(c.r.d.getDate()), railX, cy + 16);
+      ctx.font = postFont(600, 17); ctx.fillStyle = t.accent2; ctx.fillText(PROG_MONTHS[c.r.d.getMonth()], railX, cy + 40);
+      const px = W - P - railW - pw;
+      postPhoto(ctx, t, c.img, c.r.it.speaker, logo, px, y + (h - ph)/2, pw, ph, false);
+      drawText(c, px - 34, y + (h - c.contentH)/2);
+      if(i < items.length - 1){
+        ctx.strokeStyle = t.line; ctx.lineWidth = 1.5; ctx.setLineDash([6, 8]);
+        ctx.beginPath(); ctx.moveTo(P + 10, y + h); ctx.lineTo(px + pw, y + h); ctx.stroke(); ctx.setLineDash([]);
+      }
+    } else {
+      const x = P, w = W - 2*P;
+      ctx.save(); ctx.shadowColor = postA(t.ink, .08); ctx.shadowBlur = 24; ctx.shadowOffsetY = 8;
+      postRoundRect(ctx, x, y, w, h, 28); ctx.fillStyle = 'rgba(255,255,255,.94)'; ctx.fill(); ctx.restore();
+      postRoundRect(ctx, x, y, w, h, 28); ctx.lineWidth = 1.5; ctx.strokeStyle = t.line; ctx.stroke();
+      const px = x + w - pad - pw;
+      postPhoto(ctx, t, c.img, c.r.it.speaker, logo, px, y + (h - ph)/2, pw, ph, false);
+      // the date sits on the left, behind a thin rule
+      const dx = x + pad, mid = y + h/2;
+      ctx.strokeStyle = t.line; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(dx + dateW + 15, y + 28); ctx.lineTo(dx + dateW + 15, y + h - 28); ctx.stroke();
+      ctx.textAlign = 'center';
+      ctx.font = postFont(600, 22); ctx.fillStyle = t.muted; ctx.fillText(POST_DAY_NAMES[postDay], dx + dateW/2, mid - 36);
+      ctx.font = postFont(700, 60); ctx.fillStyle = t.accent; ctx.fillText(String(c.r.d.getDate()), dx + dateW/2, mid + 22);
+      ctx.font = postFont(600, 22); ctx.fillStyle = t.accent2; ctx.fillText(PROG_MONTHS[c.r.d.getMonth()], dx + dateW/2, mid + 56);
+      drawText(c, px - 26, y + (h - c.contentH)/2);
+    }
+    y += h + itemGap;
   });
 
-  // footer
-  const fy = H - footH;
-  ctx.fillStyle = POST_C.navy; ctx.fillRect(0, fy, W, footH);
-  ctx.fillStyle = POST_C.gold; ctx.fillRect(0, fy, W, 6);
+  postFooter(ctx, t, W, H - footH - 30, 'مستنيينكم كل ' + POST_DAY_NAMES[postDay]);
+  return H;
+}
+
+/* One meeting: the speaker's photo large, the date, the topic. Measures with ctx === null. */
+function postOneLayout(ctx, r, logo, img, t){
+  const W = POST_W, P = 80, it = r.it;
+  const mctx = ctx || postMeasureCtx();
+  mctx.direction = 'rtl';
+  const logoD = 92;
+  const headH = 70 + (logo ? logoD + 24 : 0) + 38 + 66;
+  const pw = t.shape === 'circle' ? 470 : 440, ph = t.shape === 'circle' ? 470 : t.shape === 'arch' ? 540 : 500;
+  const textW = W - 2*P - 40;
+  mctx.font = postFont(700, 58, 'amiri'); const tl = postWrap(mctx, it.title || 'الموضوع لسه هيتحدد', textW, 3);
+  mctx.font = postFont(400, 27); const gl = it.goal ? postWrap(mctx, it.goal, textW, 3) : [];
+  mctx.font = postFont(700, 36); const sp = postWrap(mctx, it.speaker || 'المتكلم لسه هيتحدد', textW, 2);
+  mctx.font = postFont(500, 26); const ch = it.church ? postWrap(mctx, it.church, textW, 2) : [];
+  const textH = tl.length*76 + (gl.length ? 8 + gl.length*40 : 0) + 56 + sp.length*50 + ch.length*38;
+  const footH = 140;
+  const need = headH + 50 + ph + 60 + textH + 40 + footH + 30;
+  const H = Math.max(1350, need), extra = (H - need)/3;
+  if(!ctx) return H;
+
+  postBackground(ctx, t, W, H);
+  ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'center';
+  let y = 70;
+  if(logo){ postLogo(ctx, t, logo, W/2, y + logoD/2, logoD); y += logoD + 24; }
+  ctx.font = postFont(600, 25); ctx.fillStyle = t.accent;
+  ctx.fillText('اجتماع الأنبا بولا والعائلة المقدسة', W/2, y + 27); y += 38;
+  ctx.font = postFont(700, 50, 'amiri'); ctx.fillStyle = t.ink;
+  ctx.fillText(cfg.postOne(PROG_DAYS[postDay].meeting), W/2, y + 50); y += 66;
+
+  y += 50 + extra;
+  const px = W/2 - pw/2;
+  postPhoto(ctx, t, img, it.speaker, logo, px, y, pw, ph, true);
+  // date medallion on the photo's lower left
+  const mx = px + 16, my = y + ph - 70, mr = 90;
+  ctx.save(); ctx.shadowColor = postA(t.ink, .2); ctx.shadowBlur = 20; ctx.shadowOffsetY = 6;
+  ctx.beginPath(); ctx.arc(mx, my, mr, 0, Math.PI*2); ctx.fillStyle = t.accent; ctx.fill(); ctx.restore();
+  ctx.beginPath(); ctx.arc(mx, my, mr, 0, Math.PI*2); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 6; ctx.stroke();
+  ctx.beginPath(); ctx.arc(mx, my, mr - 12, 0, Math.PI*2); ctx.strokeStyle = 'rgba(255,255,255,.45)'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.textAlign = 'center'; ctx.fillStyle = '#ffffff';
+  ctx.font = postFont(600, 24); ctx.fillText(POST_DAY_NAMES[postDay], mx, my - 32);
+  ctx.font = postFont(700, 64); ctx.fillText(String(r.d.getDate()), mx, my + 26);
+  ctx.font = postFont(600, 24); ctx.fillText(PROG_MONTHS[r.d.getMonth()], mx, my + 60);
+  y += ph + 60 + extra;
+
   ctx.textAlign = 'center';
-  ctx.font = postFont(700, 30, 'amiri'); ctx.fillStyle = '#ffffff';
-  ctx.fillText('مستنيينكم كل ' + POST_DAY_NAMES[postDay] + ' 🙏', W/2, fy + 52);
-  ctx.font = postFont(400, 22); ctx.fillStyle = POST_C.goldSoft;
-  ctx.fillText(`سنة ${copticYear(progYear)} للشهداء  •  ${progYear} - ${progYear+1}`, W/2, fy + 92);
+  ctx.font = postFont(700, 58, 'amiri'); ctx.fillStyle = it.title ? t.ink : t.muted;
+  tl.forEach(l=>{ ctx.fillText(l, W/2, y + 56); y += 76; });
+  if(gl.length){ y += 8; ctx.font = postFont(400, 27); ctx.fillStyle = t.muted; gl.forEach(l=>{ ctx.fillText(l, W/2, y + 30); y += 40; }); }
+  postDivider(ctx, t, W/2, y + 28, 120); y += 56;
+  ctx.font = postFont(700, 36); ctx.fillStyle = it.speaker ? t.accent2 : t.muted; ctx.textAlign = 'center';
+  sp.forEach(l=>{ ctx.fillText(l, W/2, y + 38); y += 50; });
+  ctx.font = postFont(500, 26); ctx.fillStyle = t.muted;
+  ch.forEach(l=>{ ctx.fillText(l, W/2, y + 29); y += 38; });
+
+  postFooter(ctx, t, W, H - footH - 30, 'مستنيينكم 🙏');
   return H;
 }
 let _postMeasure = null;
 function postMeasureCtx(){ if(!_postMeasure) _postMeasure = document.createElement('canvas').getContext('2d'); return _postMeasure; }
 
 async function renderMonthPost(){
+  const token = ++postRenderToken;
   await postFontsReady();
   const logo = await postLoadImage((document.querySelector('.halo-mark') || {}).src || '');
   const data = postMonthRows(progYear, postDay, postMonth);
-  const H = postLayout(null, postMonth, data, logo);
+  const one = postOneIso ? data.rows.find(r=>isoDate(r.d) === postOneIso) : null;
+  let draw, t;
+  if(one){
+    const img = await postSpeakerImage(one.it.speaker);
+    t = postThemeFor(Math.round(one.d.getTime() / 864e5 / 7));
+    draw = c=>postOneLayout(c, one, logo, img, t);
+  } else {
+    const photos = await Promise.all(data.rows.map(r=>postSpeakerImage(r.it.speaker)));
+    t = postThemeFor(progYear * 12 + postMonth);
+    draw = c=>postMonthLayout(c, postMonth, data, logo, photos, t);
+  }
+  if(token !== postRenderToken) return;  // a newer choice was made meanwhile
   const c = document.createElement('canvas');
-  c.width = POST_W; c.height = H;
+  c.width = POST_W; c.height = draw(null);
   const ctx = c.getContext('2d'); ctx.direction = 'rtl';
-  postLayout(ctx, postMonth, data, logo);
-  postCanvas = c;
+  draw(ctx);
+  postCanvas = c; postUsedTheme = t;
   const img = document.getElementById('postPreview');
   if(img) img.src = c.toDataURL('image/png');
+  const lbl = document.getElementById('postThemeLbl');
+  if(lbl) lbl.textContent = 'التصميم: ' + t.name + (postTheme === 'auto' ? ' (بيتغيّر لوحده)' : '');
+  document.querySelectorAll('#postModal .post-theme').forEach(b=>{
+    const on = b.dataset.t === postTheme;
+    b.style.outline = on ? '3px solid var(--ink)' : (postTheme === 'auto' && b.dataset.t === t.id ? '2px dashed var(--ink)' : 'none');
+  });
 }
-function postFileName(){ return `${cfg.file}-${POST_DAY_NAMES[postDay]}-${PROG_MONTHS[postMonth]}-${postMonth >= 9 ? progYear : progYear+1}.png`; }
+function postFileName(){
+  const y = postMonth >= 9 ? progYear : progYear+1;
+  if(postOneIso){ const d = new Date(postOneIso + 'T00:00:00'); return `${cfg.file}-${POST_DAY_NAMES[postDay]}-${d.getDate()}-${PROG_MONTHS[d.getMonth()]}-${d.getFullYear()}.png`; }
+  return `${cfg.file}-${POST_DAY_NAMES[postDay]}-${PROG_MONTHS[postMonth]}-${y}.png`;
+}
 function postBlob(){ return new Promise(res=>postCanvas.toBlob(res, 'image/png')); }
 
-function openMonthPost(){
+// iso: open straight on one meeting's poster
+function openMonthPost(iso){
   const now = new Date();
   postDay = progDay;
-  postMonth = serviceYearOf(now) === progYear ? now.getMonth() : 9;
+  postPhotoCache.clear();
+  if(iso){ postMonth = new Date(iso + 'T00:00:00').getMonth(); postOneIso = iso; }
+  else { postMonth = serviceYearOf(now) === progYear ? now.getMonth() : 9; postOneIso = ''; }
   const order = [9,10,11,0,1,2,3,4,5,6,7,8];
   const wrap = document.createElement('div');
   wrap.id = 'postModal';
@@ -7177,15 +7404,21 @@ function openMonthPost(){
   wrap.innerHTML = `
     <div style="background:var(--card);border-radius:16px;max-width:560px;width:100%;max-height:94vh;display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(0,0,0,.25);">
       <div style="padding:16px 18px 10px;">
-        <h2 style="margin:0 0 10px;font-family:'Amiri',serif;color:var(--ink);">🖼️ بوست الشهر</h2>
+        <h2 style="margin:0 0 10px;font-family:'Amiri',serif;color:var(--ink);">🖼️ البوستر</h2>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
           <button class="post-day" data-day="friday">الجمعة</button>
           <button class="post-day" data-day="sunday">الأحد</button>
-          <select id="postMonthSel" style="max-width:200px;">${order.map(mo=>`<option value="${mo}" ${mo===postMonth?'selected':''}>${PROG_MONTHS[mo]} ${mo >= 9 ? progYear : progYear+1}</option>`).join('')}</select>
+          <select id="postMonthSel" style="max-width:170px;">${order.map(mo=>`<option value="${mo}" ${mo===postMonth?'selected':''}>${PROG_MONTHS[mo]} ${mo >= 9 ? progYear : progYear+1}</option>`).join('')}</select>
+          <select id="postOneSel" style="max-width:100%;flex:1 1 200px;"></select>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px;">
+          <button class="ghost post-theme" data-t="auto" style="font-size:.8rem;padding:4px 10px;">🎲 تلقائي</button>
+          ${POST_THEMES.map(t=>`<button class="post-theme" data-t="${t.id}" title="${escHtml(t.name)}" aria-label="${escHtml(t.name)}" style="width:30px;height:30px;padding:0;border-radius:50%;border:5px solid ${t.accent};background:${t.bg};cursor:pointer;outline-offset:2px;"></button>`).join('')}
+          <span id="postThemeLbl" style="font-size:.78rem;color:var(--muted);"></span>
         </div>
       </div>
       <div style="flex:1;overflow:auto;padding:0 18px;background:var(--cream-dark);">
-        <img id="postPreview" alt="معاينة البوست" style="display:block;width:100%;max-width:420px;margin:12px auto;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.18);">
+        <img id="postPreview" alt="معاينة البوستر" style="display:block;width:100%;max-width:420px;margin:12px auto;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.18);">
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;padding:12px 18px 16px;">
         <button class="primary" id="postShareBtn" style="display:none;">📤 مشاركة</button>
@@ -7196,12 +7429,21 @@ function openMonthPost(){
     </div>`;
   document.body.appendChild(wrap);
   const paintDays = ()=>wrap.querySelectorAll('.post-day').forEach(b=>{ b.className = (b.dataset.day===postDay ? 'primary' : 'ghost') + ' post-day'; });
-  paintDays();
+  // "the whole month" or one of the month's meetings
+  const fillOne = ()=>{
+    const { rows } = postMonthRows(progYear, postDay, postMonth);
+    if(!rows.some(r=>isoDate(r.d) === postOneIso)) postOneIso = '';
+    document.getElementById('postOneSel').innerHTML = `<option value="">📅 بوستر الشهر كله</option>` +
+      rows.map(r=>{ const iso = isoDate(r.d); return `<option value="${iso}" ${iso===postOneIso?'selected':''}>🎤 اجتماع ${r.d.getDate()} ${PROG_MONTHS[r.d.getMonth()]}${r.it.title ? ' — ' + escHtml(r.it.title) : ''}</option>`; }).join('');
+  };
+  paintDays(); fillOne();
   const close = ()=>wrap.remove();
   wrap.addEventListener('click', e=>{ if(e.target === wrap) close(); });
   document.getElementById('postCloseBtn').addEventListener('click', close);
-  wrap.querySelectorAll('.post-day').forEach(b=>b.addEventListener('click', ()=>{ postDay = b.dataset.day; paintDays(); renderMonthPost(); }));
-  document.getElementById('postMonthSel').addEventListener('change', e=>{ postMonth = Number(e.target.value); renderMonthPost(); });
+  wrap.querySelectorAll('.post-day').forEach(b=>b.addEventListener('click', ()=>{ postDay = b.dataset.day; postOneIso = ''; paintDays(); fillOne(); renderMonthPost(); }));
+  document.getElementById('postMonthSel').addEventListener('change', e=>{ postMonth = Number(e.target.value); postOneIso = ''; fillOne(); renderMonthPost(); });
+  document.getElementById('postOneSel').addEventListener('change', e=>{ postOneIso = e.target.value; renderMonthPost(); });
+  wrap.querySelectorAll('.post-theme').forEach(b=>b.addEventListener('click', ()=>{ postTheme = b.dataset.t; renderMonthPost(); }));
   try{
     if(navigator.canShare && navigator.canShare({ files: [new File([new Blob(['x'])], 'x.png', { type:'image/png' })] }))
       document.getElementById('postShareBtn').style.display = 'inline-block';
@@ -7242,13 +7484,13 @@ return { render: renderProgramPanel, load: loadProgram, dashNext: renderDashboar
 const PROGRAM_SCREENS = {
   program: makeProgramScreen({
     key:'khodam_service_program', pre:'prog', panel:'panel-program', viewPerm:'tabProgram', editPerm:'editProgram',
-    area:'برنامج الخدمة', word:'برنامج', title: m=>`برنامج ${m} السنوي`, postTitle: m=>'برنامج ' + m, titleLabel:'عنوان البرنامج',
+    area:'برنامج الخدمة', word:'برنامج', title: m=>`برنامج ${m} السنوي`, postTitle: m=>'برنامج ' + m, postOne: m=>m, titleLabel:'عنوان البرنامج',
     sheet:'البرنامج', file:'برنامج', spkTitle:'تقرير المتكلمين', spkFile:'تقرير-المتكلمين', photoPre:'spk:',
     talkWord: k=>`كلمت${k}`, dashCard:'dashboardNextCard', dashBody:'dashboardNext'
   }),
   tenmin: makeProgramScreen({
     key:'khodam_ten_min', pre:'ten', panel:'panel-tenmin', viewPerm:'tabTenMin', editPerm:'editTenMin',
-    area:'فقرة العشر دقايق', word:'فقرة العشر دقايق', title: m=>`فقرة العشر دقايق — ${m}`, postTitle: m=>'فقرة ١٠ دقايق — ' + m, titleLabel:'العنوان العام',
+    area:'فقرة العشر دقايق', word:'فقرة العشر دقايق', title: m=>`فقرة العشر دقايق — ${m}`, postTitle: m=>'فقرة ١٠ دقايق — ' + m, postOne: m=>'فقرة ١٠ دقايق — ' + m, titleLabel:'العنوان العام',
     sheet:'فقرة العشر دقايق', file:'فقرة-العشر-دقايق', spkTitle:'تقرير متكلمين فقرة العشر دقايق', spkFile:'تقرير-متكلمين-العشر-دقايق', photoPre:'ten:',
     talkWord: k=>`فقرة العشر دقايق بتاعت${k}`, dashCard:'dashboardTenCard', dashBody:'dashboardTen', showEmpty:true
   })
