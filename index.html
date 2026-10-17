@@ -803,6 +803,38 @@ input, select, textarea{background:var(--input);color:var(--ink);}
   .verse-ticker{padding:10px 18px !important;}
   .verse-current{font-size:1.05rem !important;}
 }
+/* top tab bar (tablet/desktop): even columns, icon above a short label, soft active pill */
+nav.tabs .tab-short{display:none;}
+@media (min-width:761px){
+  nav.tabs{gap:2px;padding:6px;border-radius:18px;overflow:visible;}
+  nav.tabs button{flex:1 1 0;min-width:0;flex-direction:column;gap:5px;padding:10px 2px 9px;font-size:.78rem;font-weight:600;line-height:1.2;
+    border-radius:13px;color:var(--muted);position:relative;}
+  nav.tabs button .tab-full{display:none;}
+  nav.tabs button .tab-short{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  nav.tabs button:hover{background:var(--cream);color:var(--ink);}
+  nav.tabs button.active{background:rgba(122,46,46,.09);color:var(--wine);box-shadow:none;}
+  nav.tabs button.active::after{content:'';position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:22px;height:3px;border-radius:3px;background:var(--gold);}
+  html[data-theme="dark"] nav.tabs button.active{background:rgba(201,162,39,.13);color:var(--gold);}
+}
+/* colourful icon tiles for the screen tabs (top bar, bottom bar, "more" sheet) */
+[data-tab="dashboard"],[data-go="dashboard"]{--tc1:#FF9A5A;--tc2:#E5533D;}
+[data-tab="servants"],[data-go="servants"]{--tc1:#5AA9FF;--tc2:#2F6FE4;}
+[data-tab="attendance"],[data-go="attendance"]{--tc1:#34D399;--tc2:#0E9F6E;}
+[data-tab="afeqad"],[data-go="afeqad"]{--tc1:#F78FC6;--tc2:#DB2777;}
+[data-tab="kfollow"],[data-go="kfollow"]{--tc1:#B794F6;--tc2:#7C3AED;}
+[data-tab="moves"],[data-go="moves"]{--tc1:#4FD8E8;--tc2:#0891B2;}
+[data-tab="program"],[data-go="program"]{--tc1:#FCC94B;--tc2:#E08A0B;}
+[data-tab="tenmin"],[data-go="tenmin"]{--tc1:#FF7A7A;--tc2:#DC2626;}
+[data-tab="reports"],[data-go="reports"]{--tc1:#8B93FF;--tc2:#4F46E5;}
+[data-tab="settings"],[data-go="settings"]{--tc1:#A3B1C6;--tc2:#5B6B84;}
+[data-more]{--tc1:#A3B1C6;--tc2:#5B6B84;}
+:is(nav.tabs,.bottom-nav,.more-sheet) button .tab-ic{color:#fff;stroke-width:2;border-radius:30%;
+  background:linear-gradient(140deg,var(--tc1,#A3B1C6),var(--tc2,#5B6B84));box-shadow:0 3px 8px -3px var(--tc2,#5B6B84),inset 0 1px 0 rgba(255,255,255,.35);transition:transform .18s;}
+:is(nav.tabs,.bottom-nav,.more-sheet) button:hover .tab-ic, :is(nav.tabs,.bottom-nav,.more-sheet) button.active .tab-ic{transform:translateY(-1px) scale(1.06);}
+nav.tabs button .tab-ic{width:34px;height:34px;padding:7px;}
+.bottom-nav button .tab-ic{width:30px;height:30px;padding:6px;}
+.more-sheet button .tab-ic{width:42px;height:42px;padding:9px;}
+.bottom-nav button:not(.active) .tab-ic{filter:saturate(.75);}
 .bottom-nav, .more-sheet{display:none;}
 @media (max-width:760px){
   .sticky-top-bar{position:static !important;padding-top:calc(10px + env(safe-area-inset-top,0px)) !important;}
@@ -2354,7 +2386,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '17-Oct-2026 D';
+const APP_VERSION = '17-Oct-2026 G';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -2441,13 +2473,15 @@ async function flushAudit(){
 }
 const FIELD_LABELS = { name:'الاسم', phone:'التليفون', birthDate:'تاريخ الميلاد', area:'المنطقة', address:'العنوان', groups:'الاجتماعات',
   church:'الكنيسة', confessionFather:'أب الاعتراف', occupation:'الوظيفة', workplace:'مكان العمل', spouseName:'اسم الزوج/الزوجة', children:'الأبناء',
-  status:'الحالة', statusDate:'تاريخ النقل', statusNote:'ملاحظة النقل', lastVisitDate:'تاريخ آخر افتقاد', lastVisitType:'نوع الافتقاد', servDays:'مطلوب يحضر اجتماع الخدام' };
+  status:'الحالة', statusDate:'تاريخ النقل', statusNote:'ملاحظة النقل', lastVisitDate:'تاريخ آخر افتقاد', lastVisitType:'نوع الافتقاد', visits:'سجل الافتقاد', bdGreet:'تهنئة عيد الميلاد', servDays:'مطلوب يحضر اجتماع الخدام' };
 const AUDIT_IGNORE = new Set(['id','photo','photoVer','personCode','code','lastEditedBy','lastEditedAt','statusBy','addedBy','addedAt']);
 function auditVal(k, v){
   if(v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0)) return '—';
   if(k === 'groups') return v.map(groupName).join(' + ');
   if(k === 'status') return (MOVE_REASONS[v] || {}).label || v;
   if(k === 'servDays') return SERV_DAYS[v] || v;
+  if(k === 'visits' && Array.isArray(v)){ const n = v.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0]; return `${v.length} افتقاد · آخرهم ${n.date}${n.type ? ' — '+n.type : ''}`; }
+  if(k === 'bdGreet') return v.y ? `اتبعتت ${v.y}${v.by ? ' ('+v.by+')' : ''}` : '—';
   if(typeof v === 'object') return JSON.stringify(v);
   return String(v);
 }
@@ -2471,7 +2505,7 @@ function diffData(base, local){
     if(!changed.length) return;
     let area = 'الخدام', action = 'تعديل';
     if(changed.includes('status')){ area = 'نقل الأسماء'; action = l.status ? 'نقل' : 'رجوع للقائمة'; }
-    else if(changed.every(k=>k==='lastVisitDate' || k==='lastVisitType')){ area = 'الافتقاد'; action = 'تسجيل افتقاد'; }
+    else if(changed.every(k=>k==='lastVisitDate' || k==='lastVisitType' || k==='visits')){ area = 'الافتقاد'; action = 'تسجيل افتقاد'; }
     out.push({ area, action, target: l.name, changes: changed.map(k=>({ f: FIELD_LABELS[k]||k, from: auditVal(k,b[k]), to: auditVal(k,l[k]) })), rest: action === 'تعديل' });
   });
   bm.forEach((b,id)=>{ if(!lm.has(id)) out.push({ area: b.status ? 'نقل الأسماء' : 'الخدام', action:'حذف نهائي', target:b.name, changes: [] }); });
@@ -2576,8 +2610,8 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
     document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
     if(btn.dataset.tab === 'reports') renderReports();
     if(btn.dataset.tab === 'dashboard') renderDashboard();
-    if(btn.dataset.tab === 'afeqad') renderAfeqadList();
-    if(btn.dataset.tab === 'kfollow') renderKFollow();
+    if(btn.dataset.tab === 'afeqad'){ afeqadJustSaved = null; renderAfeqadList(); }
+    if(btn.dataset.tab === 'kfollow'){ kfJustSaved = null; renderKFollow(); }
     if(btn.dataset.tab === 'moves') renderMovesPanel();
     if(btn.dataset.tab === 'program') renderProgramPanel();
     if(btn.dataset.tab === 'tenmin') renderTenMinPanel();
@@ -2678,12 +2712,13 @@ function moreButtonHtml(shownCount, total, kind){
   return `<div style="text-align:center;margin:14px 0;"><button class="ghost show-more" data-kind="${kind}">عرض ${next} كمان (باقي ${total - shownCount})</button></div>`;
 }
 
+let afeqadJustSaved = null;
 function renderAfeqadList(){
   refreshAreaChurchDatalists();
   const list = document.getElementById('afeqadList');
   const visible = visibleGroupIds();
   // servants of the servants' meeting are visited from the admin-only "متابعة الخدام" screen
-  let people = activeServants().filter(s=>!s.groups.includes(SERVANTS_GID) && s.groups.some(g=>visible.includes(g)));
+  let people = activeServants().filter(s=>!(s.groups||[]).includes(SERVANTS_GID) && (s.groups||[]).some(g=>visible.includes(g)));
   if(afeqadSearchTerm){
     people = people.filter(s=>s.name.includes(afeqadSearchTerm));
   }
@@ -2700,12 +2735,15 @@ function renderAfeqadList(){
     if(!bd) return 1;
     return ad.localeCompare(bd);
   });
+  // the person just recorded stays on top for a moment, so the save is visible
+  const justI = afeqadJustSaved ? people.findIndex(s=>s.id===afeqadJustSaved) : -1;
+  if(justI > 0) people.unshift(people.splice(justI,1)[0]);
   const totalPeople = people.length;
   people = people.slice(0, afeqadListLimit);
   list.innerHTML = people.map(s=>`
     <div class="servant-row" data-id="${s.id}">
       <div>
-        <div class="servant-name">${s.name}</div>
+        <div class="servant-name">${s.name}${s.id===afeqadJustSaved ? ' <span class="kf-ok" style="font-size:.78rem;">✓ اتسجل الافتقاد</span>' : ''}</div>
         ${s.lastVisitDate ? `<div style="font-size:.78rem;color:var(--muted);margin-top:2px;">🏠 آخر افتقاد: ${s.lastVisitDate}${s.lastVisitType?' — '+s.lastVisitType:''}</div>` : '<div class="meta" style="font-size:.78rem;color:var(--wine);margin-top:2px;">⚠️ لسه ما اتافتقدش</div>'}
       </div>
       <div class="row-actions">
@@ -2725,20 +2763,22 @@ function renderAfeqadList(){
       if(editPanel.style.display === 'none'){
         editPanel.innerHTML = `
           <label style="display:block;margin-bottom:4px;">تاريخ الافتقاد</label>
-          <input type="date" class="visit-date" value="${s.lastVisitDate || todayStr()}" style="margin-bottom:10px;">
+          <input type="date" class="visit-date" value="${todayStr()}" style="margin-bottom:10px;">
+          ${s.lastVisitDate ? `<div style="font-size:.78rem;color:var(--muted);margin:-4px 0 10px;">آخر افتقاد كان ${s.lastVisitDate}${s.lastVisitType?' — '+s.lastVisitType:''}</div>` : ''}
           <label style="display:block;margin-bottom:4px;">نوع الافتقاد</label>
-          <input type="text" class="visit-type" list="visitTypeOptionsList" value="${s.lastVisitType||''}" placeholder="اختار من القائمة أو اكتب نوع جديد" style="margin-bottom:10px;">
+          <input type="text" class="visit-type" list="visitTypeOptionsList" value="" placeholder="اختار من القائمة أو اكتب نوع جديد" style="margin-bottom:10px;">
           <button class="primary" data-save-visit="${id}">حفظ</button>`;
         editPanel.style.display = 'block';
         editPanel.querySelector('[data-save-visit]').addEventListener('click', async ()=>{
           const date = editPanel.querySelector('.visit-date').value;
           const type = editPanel.querySelector('.visit-type').value.trim();
           if(!date){ alert('اختار تاريخ الافتقاد.'); return; }
-          s.lastVisitDate = date;
-          s.lastVisitType = type;
-          s.visits = (s.visits||[]).concat({ date, type, by: currentUser ? currentUser.name : '—', at: new Date().toISOString() });
+          s.visits = (s.visits && s.visits.length ? s.visits : visitsOf(s)).concat({ date, type, by: currentUser ? currentUser.name : '—', at: new Date().toISOString() });
+          const newest = visitsOf(s)[0];   // recording an older visit doesn't hide a newer one
+          s.lastVisitDate = newest.date; s.lastVisitType = newest.type || '';
           s.lastEditedBy = currentUser ? currentUser.name : '—';
           s.lastEditedAt = new Date().toLocaleString('ar-EG-u-nu-latn');
+          afeqadJustSaved = id;
           await saveData();
           renderAfeqadList();
         });
@@ -3472,6 +3512,7 @@ function renderAttendList(){
   if(canMark) list.querySelectorAll('.attend-item').forEach(item=>{
     item.addEventListener('click', (e)=>{
       if(e.target.tagName !== 'INPUT'){
+        e.preventDefault();   // otherwise the label also clicks the checkbox and undoes this toggle
         const cb = item.querySelector('input');
         cb.checked = !cb.checked;
       }
@@ -4094,13 +4135,37 @@ function diffUsers(before, after){
   bm.forEach((b,name)=>{ if(!am.has(name)) out.push({ area:'المستخدمين', action:'حذف مستخدم', target:name, changes:[] }); });
   return out;
 }
+// Re-reads the latest list and applies only this device's changes (by name), so an
+// older copy left open on another phone can't undo a newer change.
 async function saveUsers(){
+  let changes = [];
+  try{ changes = diffUsers(JSON.parse(USERS_BASE), USERS); }catch(e){ console.error('users audit failed', e); }
   try{
-    await window.storage.set(USERS_KEY, JSON.stringify(USERS), true);
-    try{ diffUsers(JSON.parse(USERS_BASE), USERS).forEach(auditPush); }catch(e){ console.error('users audit failed', e); }
+    if(!window.storage.setIfRev){
+      await window.storage.set(USERS_KEY, JSON.stringify(USERS), true);
+    } else {
+      let ok = false;
+      for(let attempt=0; attempt<5 && !ok; attempt++){
+        const r = await window.storage.getWithRev(USERS_KEY);
+        const remote = r.exists ? JSON.parse(r.value) : [];
+        const merged = mergeList(JSON.parse(USERS_BASE), USERS, remote, u=>u.name, threeWayPick);
+        const res = await window.storage.setIfRev(USERS_KEY, JSON.stringify(merged), r.rev || 0);
+        if(res.ok){
+          ok = true;
+          // keep the same objects (currentUser points at one of them)
+          const mine = new Map(USERS.map(u=>[u.name, u]));
+          const next = merged.map(m=>{ const o = mine.get(m.name); if(!o || o === m) return m; Object.keys(o).forEach(k=>{ if(!(k in m)) delete o[k]; }); return Object.assign(o, m); });
+          USERS.splice(0, USERS.length, ...next);
+          if(currentUser && !USERS.includes(currentUser)){ const u = USERS.find(x=>x.name === currentUser.name); if(u) currentUser = u; }
+        } else await new Promise(x=>setTimeout(x, 150 + Math.random()*300));
+      }
+      if(!ok) throw new Error('users list changed too often');
+    }
     USERS_BASE = JSON.stringify(USERS);
+    changes.forEach(auditPush);
+    return true;
   }
-  catch(e){ console.error('users save error', e); }
+  catch(e){ console.error('users save error', e); alert('⚠️ التعديل على المستخدمين ما اتحفظش. اتأكد من النت وجرّب تاني.'); return false; }
 }
 async function loadPermissions(){
   try{
@@ -6075,6 +6140,7 @@ function maybeShowBirthdayPopup(){
 let kfSection = 'follow';
 let kfOpenVisit = null;   // id whose "record a visit" form is open
 let kfOpenHist = null;
+let kfJustSaved = null;   // last person a visit was recorded for (shown on top)
 let kfVisitSearch = '';
 const kfFollowUI = { stats:'kfStats', list:'kfList', filter:'red', showAll:false,
   onVisit: id=>{ kfSection = 'visits'; kfOpenVisit = id; renderKFollow(); } };
@@ -6153,7 +6219,8 @@ function renderKFVisits(body, people){
     if(ad !== bd) return ad.localeCompare(bd);
     return a.s.name.localeCompare(b.s.name,'ar');
   });
-  if(kfOpenVisit){ const i = list.findIndex(x=>x.s.id===kfOpenVisit); if(i > 0) list.unshift(list.splice(i,1)[0]); }
+  const pin = kfOpenVisit || kfJustSaved;
+  if(pin){ const i = list.findIndex(x=>x.s.id===pin); if(i > 0) list.unshift(list.splice(i,1)[0]); }
   const me = currentUser ? currentUser.name : '';
   body.innerHTML = `<input type="text" id="kfVisitSearch" placeholder="🔍 دوّر على اسم..." value="${escHtml(kfVisitSearch)}" style="margin-bottom:10px;">`
     + (list.length ? list.map(({s,v})=>{
@@ -6161,7 +6228,7 @@ function renderKFVisits(body, people){
       const tel = s.phone ? String(s.phone).replace(/[^\d+]/g,'') : '';
       return `<div class="follow-row">
         <div class="who">
-          <div class="nm">${escHtml(s.name)}</div>
+          <div class="nm">${escHtml(s.name)}${s.id===kfJustSaved ? ' <span class="kf-ok" style="font-size:.78rem;">✓ اتسجل الافتقاد</span>' : ''}</div>
           <div class="why">${last ? '🏠 آخر افتقاد: ' + kfVisitLine(last) : '<b>⚠️ لسه ما اتافتقدش</b>'}${s.area ? ' · '+escHtml(s.area) : ''}</div>
           ${last && last.note ? `<div class="kf-note">📝 ${escHtml(last.note)}</div>` : ''}
           ${v.length > 1 ? `<div><button type="button" class="ghost" data-hist="${s.id}" style="padding:2px 10px;font-size:.74rem;margin-top:4px;">📜 السجل (${v.length})</button></div>` : ''}
@@ -6198,7 +6265,7 @@ function renderKFVisits(body, people){
       s.lastVisitDate = newest.date; s.lastVisitType = newest.type || '';
       s.lastEditedBy = me || '—';
       s.lastEditedAt = new Date().toLocaleString('ar-EG-u-nu-latn');
-      kfOpenVisit = null;
+      kfOpenVisit = null; kfJustSaved = s.id;
       await saveData();
       renderKFollow();
     });
@@ -7384,7 +7451,10 @@ const BOTTOM_PRIORITY = ['dashboard','attendance','servants','program','tenmin',
 const tabIcon = k=>`<svg class="tab-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TAB_ICONS[k]||''}</svg>`;
 function decorateTopTabs(){
   document.querySelectorAll('nav.tabs button[data-tab]').forEach(b=>{
-    if(!b.querySelector('.tab-ic')) b.insertAdjacentHTML('afterbegin', tabIcon(b.dataset.tab));
+    if(b.querySelector('.tab-ic')) return;
+    const full = b.textContent.trim(), k = b.dataset.tab;
+    b.title = full;
+    b.innerHTML = tabIcon(k) + `<span class="tab-full">${full}</span><span class="tab-short">${TAB_SHORT[k]||full}</span>`;
   });
 }
 function buildBottomNav(){
@@ -7467,7 +7537,7 @@ document.getElementById('photoGateSaveBtn').addEventListener('click', async ()=>
     try{ await loadUsers(); }catch(e){}
     const u = USERS.find(x=>x.name === currentUser.name) || currentUser;
     u.photo = photoGatePending;
-    await saveUsers();
+    if(!(await saveUsers())) throw new Error('not saved');
     currentUser = u;
     document.getElementById('photoGateOverlay').style.display = 'none';
     updateUserAvatar();
