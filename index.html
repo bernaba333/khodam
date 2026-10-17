@@ -2402,7 +2402,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '17-Oct-2026 J';
+const APP_VERSION = '17-Oct-2026 K';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -6983,11 +6983,11 @@ $p('PrintBtn').addEventListener('click', ()=>{
    month and each meeting), or one can be picked in the window. */
 const POST_W = 1080;
 const POST_THEMES = [
-  { id:'ivory', name:'عاجي ذهبي', bg:'#FBF7EE', bg2:'#F2E8D5', ink:'#3B2F22', accent:'#B8892B', accent2:'#8C3B3B', soft:'#F3E9D2', line:'#E5D5B0', muted:'#8A7A5C', shape:'arch',    layout:'cards',    orn:'arches'  },
-  { id:'sky',   name:'سماوي',     bg:'#F6FAFD', bg2:'#E2EEF9', ink:'#1F3A57', accent:'#3B7DC0', accent2:'#A9822A', soft:'#E1EDF9', line:'#CDDFF0', muted:'#6A8099', shape:'circle',  layout:'timeline', orn:'rays'    },
-  { id:'sage',  name:'زيتوني',    bg:'#F7F9F2', bg2:'#E5EDDA', ink:'#2E3D2B', accent:'#6A8D58', accent2:'#A8743A', soft:'#E4ECD8', line:'#D2DDC3', muted:'#77866A', shape:'rounded', layout:'cards',    orn:'leaves'  },
-  { id:'blush', name:'وردي هادي', bg:'#FDF8F5', bg2:'#F7E6DE', ink:'#4A2D2A', accent:'#C27A6B', accent2:'#9A7A3C', soft:'#F6E3DB', line:'#EED7CD', muted:'#9A7B73', shape:'arch',    layout:'timeline', orn:'dots'    },
-  { id:'lilac', name:'ليلكي',     bg:'#F9F7FC', bg2:'#ECE6F6', ink:'#34294B', accent:'#7C66AA', accent2:'#A9822A', soft:'#EAE4F5', line:'#DCD2EC', muted:'#857A9B', shape:'circle',  layout:'cards',    orn:'crosses' }
+  { id:'ivory', name:'عاجي ذهبي', bg:'#FBF8F2', band:'#F2E7D3', ink:'#2F2A24', accent:'#B0822C', accent2:'#7E2F2F', muted:'#857963', line:'#E9DFCC' },
+  { id:'sky',   name:'سماوي',     bg:'#F6F9FC', band:'#DFEAF6', ink:'#1D3350', accent:'#2F6DB0', accent2:'#9A7224', muted:'#6C7F96', line:'#D9E4F0' },
+  { id:'sage',  name:'زيتوني',    bg:'#F6F8F2', band:'#E1EAD7', ink:'#283826', accent:'#5B804D', accent2:'#946330', muted:'#738268', line:'#DAE2CF' },
+  { id:'rose',  name:'وردي هادي', bg:'#FCF7F5', band:'#F5E2DB', ink:'#43282A', accent:'#B0625A', accent2:'#86652B', muted:'#97786F', line:'#F0DFD8' },
+  { id:'lilac', name:'ليلكي',     bg:'#F9F7FC', band:'#E8E1F3', ink:'#2E2545', accent:'#6A5699', accent2:'#9A7224', muted:'#827896', line:'#E3DCEE' }
 ];
 const POST_DAY_NAMES = { friday:'الجمعة', sunday:'الأحد' };
 let postDay = 'friday', postMonth = 9, postOneIso = '', postTheme = 'auto', postCanvas = null, postUsedTheme = null, postRenderToken = 0;
@@ -7047,306 +7047,197 @@ function postThemeFor(seed){
   return picked || POST_THEMES[((seed % POST_THEMES.length) + POST_THEMES.length) % POST_THEMES.length];
 }
 function postA(hex, a){ const n = parseInt(hex.slice(1), 16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; }
-function postShape(ctx, shape, x, y, w, h){
-  if(shape === 'rounded'){ postRoundRect(ctx, x, y, w, h, Math.min(w, h) * 0.2); return; }
-  ctx.beginPath();
-  if(shape === 'arch'){ const r = w/2; ctx.moveTo(x, y+h); ctx.lineTo(x, y+r); ctx.arc(x+r, y+r, r, Math.PI, 0); ctx.lineTo(x+w, y+h); }
-  else ctx.ellipse(x+w/2, y+h/2, w/2, h/2, 0, 0, Math.PI*2);
-  ctx.closePath();
-}
-function postCover(ctx, img, x, y, w, h){
-  const s = Math.max(w / img.width, h / img.height), dw = img.width * s, dh = img.height * s;
-  ctx.drawImage(img, x + (w - dw)/2, y - (dh - h) * 0.25, dw, dh);  // keep faces: 25% from the top
-}
-function postCross(ctx, cx, cy, s, color){
-  const a = s * 0.16;
-  ctx.fillStyle = color;
-  ctx.fillRect(cx - a, cy - s, 2*a, 2*s); ctx.fillRect(cx - s, cy - a, 2*s, 2*a);
-  [[0,-s],[0,s],[-s,0],[s,0]].forEach(([dx,dy])=>{ ctx.beginPath(); ctx.arc(cx+dx, cy+dy, a*1.5, 0, Math.PI*2); ctx.fill(); });
-}
-function postDiamond(ctx, cx, cy, r, color){
-  ctx.beginPath(); ctx.moveTo(cx, cy-r); ctx.lineTo(cx+r, cy); ctx.lineTo(cx, cy+r); ctx.lineTo(cx-r, cy); ctx.closePath();
-  ctx.fillStyle = color; ctx.fill();
-}
-// a thin line with a diamond in the middle, or around a word when text is given
-function postDivider(ctx, t, cx, y, half, text){
-  let gap = 16;
-  if(text){ ctx.textAlign = 'center'; ctx.fillStyle = t.accent; ctx.fillText(text, cx, y + 12); gap = ctx.measureText(text).width/2 + 26; }
-  ctx.strokeStyle = postA(t.accent, .7); ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(cx - half, y); ctx.lineTo(cx - gap, y); ctx.moveTo(cx + gap, y); ctx.lineTo(cx + half, y); ctx.stroke();
-  if(text){ postDiamond(ctx, cx - half - 10, y, 6, t.accent); postDiamond(ctx, cx + half + 10, y, 6, t.accent); }
-  else postDiamond(ctx, cx, y, 7, t.accent);
+// speakers' photos are stored as 300px squares, so they are always shown whole, in a circle, near that size
+function postCircleImage(ctx, img, cx, cy, d){
+  ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, d/2, 0, Math.PI*2); ctx.clip();
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  const s = Math.max(d / img.width, d / img.height), w = img.width * s, h = img.height * s;
+  ctx.drawImage(img, cx - w/2, cy - d/2 - (h - d) * 0.2, w, h);
+  ctx.restore();
 }
 // the speaker's first name stands in for a missing photo (titles like "أبونا" or "د." are skipped)
 function postFirstName(name){
   const skip = /^(أبونا|ابونا|الأب|الاب|القس|القمص|الأنبا|الانبا|نيافة|د\.?|دكتور|الدكتور|م\.?|المهندس|أ\.?|الأستاذ|الاستاذ|أستاذ|الشماس|الأخ|الاخ|الأخت|الاخت|تاسوني|الراهب|الخادم|الخادمة)$/;
   return String(name || '').replace(/\s+/g,' ').trim().split(' ').find(w=>!skip.test(w)) || '';
 }
-function postPhoto(ctx, t, img, name, logo, x, y, w, h, big){
-  ctx.save();
-  if(big){  // an offset outline behind the photo
-    postShape(ctx, t.shape, x + 22, y - 22, w, h); ctx.strokeStyle = postA(t.accent, .55); ctx.lineWidth = 3; ctx.stroke();
-  }
-  ctx.shadowColor = postA(t.ink, big ? .16 : .12); ctx.shadowBlur = big ? 30 : 14; ctx.shadowOffsetY = big ? 12 : 5;
-  postShape(ctx, t.shape, x - 6, y - 6, w + 12, h + 12); ctx.fillStyle = '#ffffff'; ctx.fill();
-  ctx.restore();
-  ctx.save();
-  postShape(ctx, t.shape, x, y, w, h); ctx.clip();
-  if(img) postCover(ctx, img, x, y, w, h);
-  else {
-    const g = ctx.createLinearGradient(x, y, x, y + h); g.addColorStop(0, t.soft); g.addColorStop(1, t.bg2);
-    ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
-    const first = postFirstName(name);
-    if(first){
-      ctx.textAlign = 'center'; ctx.fillStyle = t.accent;
-      let fs = w * 0.3; ctx.font = postFont(700, fs, 'amiri');
-      while(fs > 14 && ctx.measureText(first).width > w * 0.8){ fs -= 2; ctx.font = postFont(700, fs, 'amiri'); }
-      ctx.fillText(first, x + w/2, y + h/2 + fs * 0.32);
-    } else if(logo){
-      const d = Math.min(w, h) * 0.6; ctx.globalAlpha = .9; ctx.drawImage(logo, x + (w-d)/2, y + (h-d)/2, d, d);
-    } else postCross(ctx, x + w/2, y + h/2, w * 0.16, postA(t.accent, .6));
-  }
-  ctx.restore();
-  postShape(ctx, t.shape, x, y, w, h); ctx.strokeStyle = postA(t.accent, .8); ctx.lineWidth = big ? 3 : 2; ctx.stroke();
+// round photo with a white mat and a thin colored ring
+function postPortrait(ctx, t, img, name, logo, cx, cy, d){
+  const mat = Math.round(d * 0.045);
+  ctx.save(); ctx.shadowColor = postA(t.ink, .18); ctx.shadowBlur = d * 0.12; ctx.shadowOffsetY = d * 0.04;
+  ctx.beginPath(); ctx.arc(cx, cy, d/2 + mat, 0, Math.PI*2); ctx.fillStyle = '#ffffff'; ctx.fill(); ctx.restore();
+  ctx.beginPath(); ctx.arc(cx, cy, d/2 + mat + 7, 0, Math.PI*2); ctx.strokeStyle = postA(t.accent, .55); ctx.lineWidth = 2; ctx.stroke();
+  if(img){ postCircleImage(ctx, img, cx, cy, d); return; }
+  ctx.beginPath(); ctx.arc(cx, cy, d/2, 0, Math.PI*2); ctx.fillStyle = t.band; ctx.fill();
+  const first = postFirstName(name);
+  if(first){
+    let fs = d * 0.28; ctx.font = postFont(700, fs, 'amiri');
+    while(fs > 14 && ctx.measureText(first).width > d * 0.78){ fs -= 2; ctx.font = postFont(700, fs, 'amiri'); }
+    ctx.textAlign = 'center'; ctx.fillStyle = t.accent; ctx.fillText(first, cx, cy + fs * 0.3);
+  } else if(logo){ const s = d * 0.62; ctx.drawImage(logo, cx - s/2, cy - s/2, s, s); }
+}
+function postPill(ctx, t, text, cx, cy, size, fill, color){
+  ctx.font = postFont(700, size);
+  const w = ctx.measureText(text).width + size * 1.6, h = size * 1.9;
+  postRoundRect(ctx, cx - w/2, cy - h/2, w, h, h/2);
+  ctx.fillStyle = fill; ctx.fill();
+  if(fill === '#ffffff'){ ctx.strokeStyle = postA(t.accent, .6); ctx.lineWidth = 2; ctx.stroke(); }
+  ctx.textAlign = 'center'; ctx.fillStyle = color; ctx.fillText(text, cx, cy + size * 0.36);
 }
 function postLogo(ctx, t, logo, cx, cy, d){
-  ctx.beginPath(); ctx.arc(cx, cy, d/2 + 11, 0, Math.PI*2); ctx.strokeStyle = postA(t.accent, .45); ctx.lineWidth = 1.5; ctx.stroke();
-  ctx.beginPath(); ctx.arc(cx, cy, d/2 + 4, 0, Math.PI*2); ctx.fillStyle = '#ffffff'; ctx.fill();
-  ctx.strokeStyle = t.accent; ctx.lineWidth = 2.5; ctx.stroke();
-  ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, d/2 - 2, 0, Math.PI*2); ctx.clip();
-  ctx.drawImage(logo, cx - d/2 + 2, cy - d/2 + 2, d - 4, d - 4); ctx.restore();
+  ctx.save(); ctx.shadowColor = postA(t.ink, .12); ctx.shadowBlur = 14; ctx.shadowOffsetY = 4;
+  ctx.beginPath(); ctx.arc(cx, cy, d/2 + 5, 0, Math.PI*2); ctx.fillStyle = '#ffffff'; ctx.fill(); ctx.restore();
+  ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, d/2, 0, Math.PI*2); ctx.clip();
+  ctx.drawImage(logo, cx - d/2, cy - d/2, d, d); ctx.restore();
 }
-// light background, the theme's quiet ornament, and a thin double frame
-function postBackground(ctx, t, W, H){
-  const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, t.bg); g.addColorStop(1, t.bg2);
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  const glow = ctx.createRadialGradient(W/2, 120, 20, W/2, 120, 640);
-  glow.addColorStop(0, 'rgba(255,255,255,.9)'); glow.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, Math.min(H, 900));
+// the colored band at the top, with two soft circles and a gentle curved edge
+function postBand(ctx, t, W, h){
   ctx.save();
-  if(t.orn === 'arches'){
-    ctx.strokeStyle = postA(t.accent, .13); ctx.lineWidth = 2;
-    const fade = ctx.createLinearGradient(0, 0, 0, 900); fade.addColorStop(0, postA(t.accent, .16)); fade.addColorStop(1, postA(t.accent, 0));
-    ctx.strokeStyle = fade;
-    for(let i = 0; i < 4; i++){ const w = 960 - i*90, r = w/2, x = W/2 - r, y = 46 + i*45; ctx.beginPath(); ctx.moveTo(x, 900); ctx.lineTo(x, y + r); ctx.arc(x + r, y + r, r, Math.PI, 0); ctx.lineTo(x + w, 900); ctx.stroke(); }
-    postCross(ctx, W/2, 74, 13, postA(t.accent, .35));
-  } else if(t.orn === 'rays'){
-    ctx.strokeStyle = postA(t.accent, .07); ctx.lineWidth = 2;
-    for(let i = 0; i <= 28; i++){ const a = Math.PI * (0.05 + 0.9 * i / 28); ctx.beginPath(); ctx.moveTo(W/2, -60); ctx.lineTo(W/2 - Math.cos(a)*1400, -60 + Math.sin(a)*1400); ctx.stroke(); }
-    [260, 420, 600].forEach((r, i)=>{ ctx.beginPath(); ctx.arc(W/2, -60, r, 0, Math.PI); ctx.strokeStyle = postA(t.accent, .10 - i*0.025); ctx.stroke(); });
-  } else if(t.orn === 'leaves'){
-    const branch = (sx, sy, ex, ey, flip)=>{
-      ctx.strokeStyle = postA(t.accent, .28); ctx.lineWidth = 3;
-      const mx = (sx+ex)/2 + 60*flip, my = (sy+ey)/2 - 40;
-      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(mx, my, ex, ey); ctx.stroke();
-      for(let i = 1; i < 9; i++){
-        const k = i/9, px = (1-k)*(1-k)*sx + 2*(1-k)*k*mx + k*k*ex, py = (1-k)*(1-k)*sy + 2*(1-k)*k*my + k*k*ey;
-        const ang = Math.atan2(ey - sy, ex - sx);
-        [1,-1].forEach(side=>{
-          ctx.save(); ctx.translate(px, py); ctx.rotate(ang + side*0.9);
-          ctx.beginPath(); ctx.ellipse(18, 0, 20 - i, 8 - i*0.4, 0, 0, Math.PI*2);
-          ctx.fillStyle = postA(t.accent, .20); ctx.fill(); ctx.restore();
-        });
-      }
-    };
-    branch(W - 40, 40, W - 330, 300, -1); branch(40, 40, 330, 300, 1);
-    branch(W - 40, H - 40, W - 300, H - 230, 1); branch(40, H - 40, 300, H - 230, -1);
-  } else if(t.orn === 'dots'){
-    ctx.fillStyle = postA(t.accent, .22);
-    for(let r = 0; r < 9; r++) for(let c = 0; c < 9 - r; c++){
-      ctx.beginPath(); ctx.arc(W - 60 - c*26, 60 + r*26, 3, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(60 + c*26, H - 60 - r*26, 3, 0, Math.PI*2); ctx.fill();
-    }
-    ctx.strokeStyle = postA(t.accent, .10); ctx.lineWidth = 2;
-    [120, 190].forEach(r=>{ ctx.beginPath(); ctx.arc(70, 70, r, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(W - 70, H - 70, r, 0, Math.PI*2); ctx.stroke(); });
-  } else if(t.orn === 'crosses'){
-    for(let yy = 90; yy < H; yy += 150) for(let xx = (yy/150 % 2 ? 90 : 165); xx < W; xx += 150) postCross(ctx, xx, yy, 11, postA(t.accent, .07));
-  }
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(W, 0); ctx.lineTo(W, h - 40);
+  ctx.quadraticCurveTo(W/2, h + 40, 0, h - 40); ctx.closePath();
+  const g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, t.band); g.addColorStop(1, postA(t.band, .75));
+  ctx.fillStyle = g; ctx.fill(); ctx.clip();
+  ctx.fillStyle = 'rgba(255,255,255,.35)';
+  ctx.beginPath(); ctx.arc(W - 40, 60, 230, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = postA(t.accent, .06);
+  ctx.beginPath(); ctx.arc(60, h - 60, 200, 0, Math.PI*2); ctx.fill();
   ctx.restore();
-  ctx.strokeStyle = postA(t.accent, .6); ctx.lineWidth = 2; ctx.strokeRect(22, 22, W - 44, H - 44);
-  ctx.strokeStyle = postA(t.accent, .3); ctx.lineWidth = 1; ctx.strokeRect(32, 32, W - 64, H - 64);
-  [[22,22],[W-22,22],[22,H-22],[W-22,H-22]].forEach(([x,y])=>postDiamond(ctx, x, y, 9, t.accent));
 }
 function postFooter(ctx, t, W, fy, line1){
-  postDivider(ctx, t, W/2, fy + 20, 160);
+  ctx.fillStyle = t.band; ctx.fillRect(0, fy, W, 9999);
+  ctx.fillStyle = t.accent; ctx.fillRect(0, fy, W, 5);
   ctx.textAlign = 'center';
-  ctx.font = postFont(700, 36, 'amiri'); ctx.fillStyle = t.ink; ctx.fillText(line1, W/2, fy + 76);
-  ctx.font = postFont(400, 22); ctx.fillStyle = t.muted;
-  ctx.fillText(`سنة ${copticYear(progYear)} للشهداء  •  ${progYear} - ${progYear+1}`, W/2, fy + 114);
+  ctx.font = postFont(700, 38, 'amiri'); ctx.fillStyle = t.ink; ctx.fillText(line1, W/2, fy + 64);
+  ctx.font = postFont(500, 22); ctx.fillStyle = t.muted;
+  ctx.fillText(`سنة ${copticYear(progYear)} للشهداء  •  ${progYear} - ${progYear+1}`, W/2, fy + 104);
 }
+function postHeader(ctx, t, W, logo, logoD, title, titleSize){
+  let y = 46;
+  ctx.textAlign = 'center';
+  if(logo){ postLogo(ctx, t, logo, W/2, y + logoD/2, logoD); y += logoD + 26; }
+  ctx.font = postFont(600, 25); ctx.fillStyle = t.accent;
+  ctx.fillText('اجتماع الأنبا بولا والعائلة المقدسة', W/2, y + 26); y += 38;
+  ctx.font = postFont(700, titleSize, 'amiri'); ctx.fillStyle = t.ink;
+  ctx.fillText(title, W/2, y + titleSize * 0.9); y += titleSize * 1.15;
+  return y;
+}
+const postHeaderH = (logo, logoD, titleSize)=> 46 + (logo ? logoD + 26 : 0) + 38 + titleSize * 1.15;
 
-/* The month's program. With ctx === null it only measures and returns the height. */
+/* The month's program: one card per meeting, two to a row. With ctx === null it only measures. */
 function postMonthLayout(ctx, m, data, logo, photos, t){
-  const W = POST_W, P = 64;
+  const W = POST_W, P = 56, G = 28, colW = (W - 2*P - G) / 2;
   const { sec, rows } = data;
   const calYear = month => month >= 9 ? progYear : progYear + 1;
   const mctx = ctx || postMeasureCtx();
   mctx.direction = 'rtl';
-  const timeline = t.layout === 'timeline';
-
-  // ----- header -----
-  const logoD = 120;
-  let hy = 74 + (logo ? logoD + 30 : 0) + 40 + 84 + 64;
+  const logoD = 104, titleSize = 70;
+  let headH = postHeaderH(logo, logoD, titleSize) + 86;
   let visionLines = [];
-  if(sec.vision){ mctx.font = postFont(600, 27); visionLines = postWrap(mctx, sec.vision, W - 2*P - 140, 2); hy += 20 + visionLines.length*40 + 30; }
-  const headH = hy + 30;
+  if(sec.vision){ mctx.font = postFont(600, 27); visionLines = postWrap(mctx, sec.vision, W - 2*P - 80, 2); headH += 14 + visionLines.length * 40; }
+  headH += 50;
 
-  // ----- meetings -----
-  const pw = timeline ? 124 : 138, ph = t.shape === 'arch' ? Math.round(pw * 1.22) : pw;
-  const pad = 30, dateW = 118, railW = 150;
-  const textW = timeline ? W - 2*P - railW - pw - 34 : W - 2*P - 2*pad - pw - 26 - dateW - 30;
-  const items = rows.map((r, i)=>{
+  const D = 176, pad = 30, textW = colW - 2*pad;
+  const cards = rows.map((r, i)=>{
     const it = r.it;
-    mctx.font = postFont(700, 34); const tl = postWrap(mctx, it.title || 'الموضوع لسه هيتحدد', textW, 3);
-    mctx.font = postFont(400, 24); const gl = it.goal ? postWrap(mctx, it.goal, textW, 2) : [];
-    mctx.font = postFont(700, 27); const sp = postWrap(mctx, it.speaker || 'المتكلم لسه هيتحدد', textW, 2);
-    mctx.font = postFont(400, 23); const ch = it.church ? postWrap(mctx, it.church, textW, 1) : [];
-    const contentH = tl.length*50 + (gl.length ? 6 + gl.length*36 : 0) + 16 + sp.length*40 + ch.length*34;
-    return { r, img: photos[i], tl, gl, sp, ch, contentH, h: Math.max(ph, contentH) + 2*pad };
+    mctx.font = postFont(700, 30); const tl = postWrap(mctx, it.title || 'الموضوع لسه هيتحدد', textW, 3);
+    mctx.font = postFont(400, 21); const gl = it.goal ? postWrap(mctx, it.goal, textW, 2) : [];
+    mctx.font = postFont(700, 25); const sp = postWrap(mctx, it.speaker || 'المتكلم لسه هيتحدد', textW, 2);
+    mctx.font = postFont(400, 21); const ch = it.church ? postWrap(mctx, it.church, textW, 2) : [];
+    const h = pad + 10 + D + 46 + tl.length*44 + (gl.length ? 6 + gl.length*32 : 0) + 34 + sp.length*36 + ch.length*30 + pad;
+    return { r, img: photos[i], tl, gl, sp, ch, h };
   });
-  const itemGap = timeline ? 0 : 24;
-  const listH = items.length ? items.reduce((s,c)=>s + c.h, 0) + (items.length-1)*itemGap : 120;
+  const rowsOf = [];
+  for(let i = 0; i < cards.length; i += 2) rowsOf.push(cards.slice(i, i + 2));
+  const rowH = rowsOf.map(rw=>Math.max(...rw.map(c=>c.h)));
+  const listH = rowsOf.length ? rowH.reduce((s, h)=>s + h, 0) + (rowsOf.length - 1) * G : 120;
   const footH = 140;
-  const H = headH + listH + 40 + footH + 30;
+  const H = headH + listH + 50 + footH;
   if(!ctx) return H;
 
-  postBackground(ctx, t, W, H);
-  ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'center';
-  let y = 74;
-  if(logo){ postLogo(ctx, t, logo, W/2, y + logoD/2, logoD); y += logoD + 30; }
-  ctx.font = postFont(600, 26); ctx.fillStyle = t.accent;
-  ctx.fillText('اجتماع الأنبا بولا والعائلة المقدسة', W/2, y + 28); y += 40;
-  ctx.font = postFont(700, 66, 'amiri'); ctx.fillStyle = t.ink;
-  ctx.fillText(cfg.postTitle(PROG_DAYS[postDay].meeting), W/2, y + 64); y += 84;
-  ctx.font = postFont(700, 34);
-  postDivider(ctx, t, W/2, y + 30, 250, `شهر ${PROG_MONTHS[m]} ${calYear(m)}`); y += 64;
+  ctx.fillStyle = t.bg; ctx.fillRect(0, 0, W, H);
+  postBand(ctx, t, W, headH - 10);
+  ctx.textBaseline = 'alphabetic';
+  let y = postHeader(ctx, t, W, logo, logoD, cfg.postTitle(PROG_DAYS[postDay].meeting), titleSize);
+  postPill(ctx, t, `${PROG_MONTHS[m]} ${calYear(m)}`, W/2, y + 46, 32, '#ffffff', t.accent); y += 86;
   if(visionLines.length){
-    y += 20;
-    ctx.font = postFont(600, 27);
-    const vw = Math.max(...visionLines.map(l=>ctx.measureText(l).width)) + 90, vh = visionLines.length*40 + 30;
-    postRoundRect(ctx, W/2 - vw/2, y, vw, vh, vh/2 > 40 ? 30 : vh/2); ctx.fillStyle = postA(t.soft, .9); ctx.fill();
-    ctx.strokeStyle = t.line; ctx.lineWidth = 1.5; ctx.stroke();
-    ctx.fillStyle = t.accent2; ctx.textAlign = 'center';
-    visionLines.forEach((l, i)=>ctx.fillText(l, W/2, y + 15 + 30 + i*40));
+    y += 14; ctx.font = postFont(600, 27); ctx.fillStyle = t.accent2; ctx.textAlign = 'center';
+    visionLines.forEach(l=>{ ctx.fillText(l, W/2, y + 30); y += 40; });
   }
 
   y = headH;
-  if(!items.length){
-    ctx.font = postFont(600, 30); ctx.fillStyle = t.muted; ctx.textAlign = 'center'; ctx.fillText('مفيش اجتماعات في الشهر ده', W/2, y + 70);
-  }
-  const drawText = (c, tx, top)=>{
-    ctx.textAlign = 'right';
-    let ty = top;
-    ctx.font = postFont(700, 34); ctx.fillStyle = c.r.it.title ? t.ink : t.muted;
-    c.tl.forEach(l=>{ ctx.fillText(l, tx, ty + 38); ty += 50; });
-    if(c.gl.length){ ty += 6; ctx.font = postFont(400, 24); ctx.fillStyle = t.muted; c.gl.forEach(l=>{ ctx.fillText(l, tx, ty + 27); ty += 36; }); }
-    ty += 16;
-    ctx.font = postFont(700, 27); ctx.fillStyle = c.r.it.speaker ? t.accent2 : t.muted;
-    c.sp.forEach(l=>{ ctx.fillText(l, tx, ty + 30); ty += 40; });
-    ctx.font = postFont(400, 23); ctx.fillStyle = t.muted;
-    c.ch.forEach(l=>{ ctx.fillText(l, tx, ty + 26); ty += 34; });
-  };
-  if(timeline && items.length){
-    const railX = W - P - railW/2;
-    ctx.strokeStyle = postA(t.accent, .35); ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(railX, y + items[0].h/2); ctx.lineTo(railX, y + listH - items[items.length-1].h/2); ctx.stroke();
-  }
-  items.forEach((c, i)=>{
-    const h = c.h;
-    if(timeline){
-      const railX = W - P - railW/2, cy = y + h/2;
-      ctx.beginPath(); ctx.arc(railX, cy, 60, 0, Math.PI*2); ctx.fillStyle = '#ffffff'; ctx.fill();
-      ctx.strokeStyle = t.accent; ctx.lineWidth = 3; ctx.stroke();
-      ctx.beginPath(); ctx.arc(railX, cy, 52, 0, Math.PI*2); ctx.strokeStyle = postA(t.accent, .3); ctx.lineWidth = 1; ctx.stroke();
+  if(!cards.length){ ctx.font = postFont(600, 30); ctx.fillStyle = t.muted; ctx.textAlign = 'center'; ctx.fillText('مفيش اجتماعات في الشهر ده', W/2, y + 70); }
+  rowsOf.forEach((rw, ri)=>{
+    const h = rowH[ri];
+    rw.forEach((c, ci)=>{
+      // right column first (RTL); a lone last card sits in the middle
+      const x = rw.length === 1 ? W/2 - colW/2 : (ci === 0 ? W - P - colW : P);
+      const cx = x + colW/2;
+      ctx.save(); ctx.shadowColor = postA(t.ink, .07); ctx.shadowBlur = 26; ctx.shadowOffsetY = 8;
+      postRoundRect(ctx, x, y, colW, h, 30); ctx.fillStyle = '#ffffff'; ctx.fill(); ctx.restore();
+      ctx.save(); postRoundRect(ctx, x, y, colW, h, 30); ctx.clip();
+      ctx.fillStyle = postA(t.band, .7); ctx.fillRect(x, y, colW, pad + 10 + D/2);
+      ctx.restore();
+      postRoundRect(ctx, x, y, colW, h, 30); ctx.strokeStyle = t.line; ctx.lineWidth = 1.5; ctx.stroke();
+      let ty = y + pad + 10;
+      postPortrait(ctx, t, c.img, c.r.it.speaker, logo, cx, ty + D/2, D);
+      ty += D;
+      postPill(ctx, t, `${POST_DAY_NAMES[postDay]} ${c.r.d.getDate()} ${PROG_MONTHS[c.r.d.getMonth()]}`, cx, ty + 4, 22, t.accent, '#ffffff');
+      ty += 46;
       ctx.textAlign = 'center';
-      ctx.font = postFont(600, 17); ctx.fillStyle = t.muted; ctx.fillText(POST_DAY_NAMES[postDay], railX, cy - 22);
-      ctx.font = postFont(700, 42); ctx.fillStyle = t.accent; ctx.fillText(String(c.r.d.getDate()), railX, cy + 16);
-      ctx.font = postFont(600, 17); ctx.fillStyle = t.accent2; ctx.fillText(PROG_MONTHS[c.r.d.getMonth()], railX, cy + 40);
-      const px = W - P - railW - pw;
-      postPhoto(ctx, t, c.img, c.r.it.speaker, logo, px, y + (h - ph)/2, pw, ph, false);
-      drawText(c, px - 34, y + (h - c.contentH)/2);
-      if(i < items.length - 1){
-        ctx.strokeStyle = t.line; ctx.lineWidth = 1.5; ctx.setLineDash([6, 8]);
-        ctx.beginPath(); ctx.moveTo(P + 10, y + h); ctx.lineTo(px + pw, y + h); ctx.stroke(); ctx.setLineDash([]);
-      }
-    } else {
-      const x = P, w = W - 2*P;
-      ctx.save(); ctx.shadowColor = postA(t.ink, .08); ctx.shadowBlur = 24; ctx.shadowOffsetY = 8;
-      postRoundRect(ctx, x, y, w, h, 28); ctx.fillStyle = 'rgba(255,255,255,.94)'; ctx.fill(); ctx.restore();
-      postRoundRect(ctx, x, y, w, h, 28); ctx.lineWidth = 1.5; ctx.strokeStyle = t.line; ctx.stroke();
-      const px = x + w - pad - pw;
-      postPhoto(ctx, t, c.img, c.r.it.speaker, logo, px, y + (h - ph)/2, pw, ph, false);
-      // the date sits on the left, behind a thin rule
-      const dx = x + pad, mid = y + h/2;
-      ctx.strokeStyle = t.line; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.moveTo(dx + dateW + 15, y + 28); ctx.lineTo(dx + dateW + 15, y + h - 28); ctx.stroke();
-      ctx.textAlign = 'center';
-      ctx.font = postFont(600, 22); ctx.fillStyle = t.muted; ctx.fillText(POST_DAY_NAMES[postDay], dx + dateW/2, mid - 36);
-      ctx.font = postFont(700, 60); ctx.fillStyle = t.accent; ctx.fillText(String(c.r.d.getDate()), dx + dateW/2, mid + 22);
-      ctx.font = postFont(600, 22); ctx.fillStyle = t.accent2; ctx.fillText(PROG_MONTHS[c.r.d.getMonth()], dx + dateW/2, mid + 56);
-      drawText(c, px - 26, y + (h - c.contentH)/2);
-    }
-    y += h + itemGap;
+      ctx.font = postFont(700, 30); ctx.fillStyle = c.r.it.title ? t.ink : t.muted;
+      c.tl.forEach(l=>{ ctx.fillText(l, cx, ty + 34); ty += 44; });
+      if(c.gl.length){ ty += 6; ctx.font = postFont(400, 21); ctx.fillStyle = t.muted; c.gl.forEach(l=>{ ctx.fillText(l, cx, ty + 24); ty += 32; }); }
+      ctx.fillStyle = postA(t.accent, .5); ctx.fillRect(cx - 24, ty + 14, 48, 2);
+      ty += 34;
+      ctx.font = postFont(700, 25); ctx.fillStyle = c.r.it.speaker ? t.accent2 : t.muted;
+      c.sp.forEach(l=>{ ctx.fillText(l, cx, ty + 28); ty += 36; });
+      ctx.font = postFont(400, 21); ctx.fillStyle = t.muted;
+      c.ch.forEach(l=>{ ctx.fillText(l, cx, ty + 24); ty += 30; });
+    });
+    y += h + G;
   });
 
-  postFooter(ctx, t, W, H - footH - 30, 'مستنيينكم كل ' + POST_DAY_NAMES[postDay]);
+  postFooter(ctx, t, W, H - footH, 'مستنيينكم كل ' + POST_DAY_NAMES[postDay] + ' 🙏');
   return H;
 }
 
-/* One meeting: the speaker's photo large, the date, the topic. Measures with ctx === null. */
+/* One meeting: the speaker's photo, the date, the topic. Measures with ctx === null. */
 function postOneLayout(ctx, r, logo, img, t){
   const W = POST_W, P = 80, it = r.it;
   const mctx = ctx || postMeasureCtx();
   mctx.direction = 'rtl';
-  const logoD = 92;
-  const headH = 70 + (logo ? logoD + 24 : 0) + 38 + 66;
-  const pw = t.shape === 'circle' ? 470 : 440, ph = t.shape === 'circle' ? 470 : t.shape === 'arch' ? 540 : 500;
-  const textW = W - 2*P - 40;
-  mctx.font = postFont(700, 58, 'amiri'); const tl = postWrap(mctx, it.title || 'الموضوع لسه هيتحدد', textW, 3);
+  const logoD = 84, titleSize = 52, D = 380;
+  const headH = postHeaderH(logo, logoD, titleSize);
+  const textW = W - 2*P;
+  mctx.font = postFont(700, 62, 'amiri'); const tl = postWrap(mctx, it.title || 'الموضوع لسه هيتحدد', textW, 3);
   mctx.font = postFont(400, 27); const gl = it.goal ? postWrap(mctx, it.goal, textW, 3) : [];
-  mctx.font = postFont(700, 36); const sp = postWrap(mctx, it.speaker || 'المتكلم لسه هيتحدد', textW, 2);
-  mctx.font = postFont(500, 26); const ch = it.church ? postWrap(mctx, it.church, textW, 2) : [];
-  const textH = tl.length*76 + (gl.length ? 8 + gl.length*40 : 0) + 56 + sp.length*50 + ch.length*38;
+  mctx.font = postFont(700, 38); const sp = postWrap(mctx, it.speaker || 'المتكلم لسه هيتحدد', textW, 2);
+  mctx.font = postFont(500, 27); const ch = it.church ? postWrap(mctx, it.church, textW, 2) : [];
+  const textH = tl.length*80 + (gl.length ? 10 + gl.length*40 : 0) + 50 + sp.length*52 + ch.length*40;
   const footH = 140;
-  const need = headH + 50 + ph + 60 + textH + 40 + footH + 30;
-  const H = Math.max(1350, need), extra = (H - need)/3;
+  const need = headH + 40 + D + 70 + textH + 50 + footH;
+  const H = Math.max(1350, need), extra = (H - need) / 3;
   if(!ctx) return H;
 
-  postBackground(ctx, t, W, H);
-  ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'center';
-  let y = 70;
-  if(logo){ postLogo(ctx, t, logo, W/2, y + logoD/2, logoD); y += logoD + 24; }
-  ctx.font = postFont(600, 25); ctx.fillStyle = t.accent;
-  ctx.fillText('اجتماع الأنبا بولا والعائلة المقدسة', W/2, y + 27); y += 38;
-  ctx.font = postFont(700, 50, 'amiri'); ctx.fillStyle = t.ink;
-  ctx.fillText(cfg.postOne(PROG_DAYS[postDay].meeting), W/2, y + 50); y += 66;
-
-  y += 50 + extra;
-  const px = W/2 - pw/2;
-  postPhoto(ctx, t, img, it.speaker, logo, px, y, pw, ph, true);
-  // date medallion on the photo's lower left
-  const mx = px + 16, my = y + ph - 70, mr = 90;
-  ctx.save(); ctx.shadowColor = postA(t.ink, .2); ctx.shadowBlur = 20; ctx.shadowOffsetY = 6;
-  ctx.beginPath(); ctx.arc(mx, my, mr, 0, Math.PI*2); ctx.fillStyle = t.accent; ctx.fill(); ctx.restore();
-  ctx.beginPath(); ctx.arc(mx, my, mr, 0, Math.PI*2); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 6; ctx.stroke();
-  ctx.beginPath(); ctx.arc(mx, my, mr - 12, 0, Math.PI*2); ctx.strokeStyle = 'rgba(255,255,255,.45)'; ctx.lineWidth = 1.5; ctx.stroke();
-  ctx.textAlign = 'center'; ctx.fillStyle = '#ffffff';
-  ctx.font = postFont(600, 24); ctx.fillText(POST_DAY_NAMES[postDay], mx, my - 32);
-  ctx.font = postFont(700, 64); ctx.fillText(String(r.d.getDate()), mx, my + 26);
-  ctx.font = postFont(600, 24); ctx.fillText(PROG_MONTHS[r.d.getMonth()], mx, my + 60);
-  y += ph + 60 + extra;
-
+  ctx.fillStyle = t.bg; ctx.fillRect(0, 0, W, H);
+  const photoTop = headH + 40 + extra;
+  postBand(ctx, t, W, photoTop + D * 0.62);
+  ctx.textBaseline = 'alphabetic';
+  postHeader(ctx, t, W, logo, logoD, cfg.postOne(PROG_DAYS[postDay].meeting), titleSize);
+  postPortrait(ctx, t, img, it.speaker, logo, W/2, photoTop + D/2, D);
+  postPill(ctx, t, `${POST_DAY_NAMES[postDay]} ${r.d.getDate()} ${PROG_MONTHS[r.d.getMonth()]} ${r.d.getFullYear()}`, W/2, photoTop + D + 10, 32, t.accent, '#ffffff');
+  let y = photoTop + D + 70 + extra;
   ctx.textAlign = 'center';
-  ctx.font = postFont(700, 58, 'amiri'); ctx.fillStyle = it.title ? t.ink : t.muted;
-  tl.forEach(l=>{ ctx.fillText(l, W/2, y + 56); y += 76; });
-  if(gl.length){ y += 8; ctx.font = postFont(400, 27); ctx.fillStyle = t.muted; gl.forEach(l=>{ ctx.fillText(l, W/2, y + 30); y += 40; }); }
-  postDivider(ctx, t, W/2, y + 28, 120); y += 56;
-  ctx.font = postFont(700, 36); ctx.fillStyle = it.speaker ? t.accent2 : t.muted; ctx.textAlign = 'center';
-  sp.forEach(l=>{ ctx.fillText(l, W/2, y + 38); y += 50; });
-  ctx.font = postFont(500, 26); ctx.fillStyle = t.muted;
-  ch.forEach(l=>{ ctx.fillText(l, W/2, y + 29); y += 38; });
+  ctx.font = postFont(700, 62, 'amiri'); ctx.fillStyle = it.title ? t.ink : t.muted;
+  tl.forEach(l=>{ ctx.fillText(l, W/2, y + 60); y += 80; });
+  if(gl.length){ y += 10; ctx.font = postFont(400, 27); ctx.fillStyle = t.muted; gl.forEach(l=>{ ctx.fillText(l, W/2, y + 30); y += 40; }); }
+  ctx.fillStyle = postA(t.accent, .5); ctx.fillRect(W/2 - 36, y + 22, 72, 3);
+  y += 50;
+  ctx.font = postFont(700, 38); ctx.fillStyle = it.speaker ? t.accent2 : t.muted;
+  sp.forEach(l=>{ ctx.fillText(l, W/2, y + 40); y += 52; });
+  ctx.font = postFont(500, 27); ctx.fillStyle = t.muted;
+  ch.forEach(l=>{ ctx.fillText(l, W/2, y + 30); y += 40; });
 
-  postFooter(ctx, t, W, H - footH - 30, 'مستنيينكم 🙏');
+  postFooter(ctx, t, W, H - footH, 'مستنيينكم 🙏');
   return H;
 }
 let _postMeasure = null;
