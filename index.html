@@ -1015,6 +1015,10 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
     <div style="margin:6px 0 12px;"><input type="text" id="newServantPhone" placeholder="01xxxxxxxxx"></div>
     <label>الاجتماعات التي يشترك فيها</label>
     <div class="group-grid" id="newServantGroups"></div>
+    <div id="newServantDaysBox" style="display:none;margin-top:8px;">
+      <label>مطلوب يحضر اجتماع الخدام</label>
+      <select id="newServantDays" style="margin-top:6px;"><option value="both">الجمعة والأحد</option><option value="friday">الجمعة بس</option><option value="sunday">الأحد بس</option></select>
+    </div>
     <button type="button" class="ghost" id="newServantMoreToggle" style="margin:12px 0;">+ بيانات إضافية (الصورة، العنوان، تاريخ الميلاد، أب الاعتراف، الكنيسة)</button>
     <div id="newServantMore" style="display:none;">
       <label>الصورة الشخصية (اختياري)</label>
@@ -1148,7 +1152,7 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
     <details class="follow-all">
       <summary>الجدول الكامل لنسبة حضور كل فرد</summary>
       <table class="report-table" id="servantReportTable">
-        <thead><tr><th>الاسم</th><th>حضر</th><th>من إجمالي</th><th>النسبة</th></tr></thead>
+        <thead><tr><th>الاسم</th><th>الجمعة</th><th>الأحد</th></tr></thead>
         <tbody id="servantReportBody"></tbody>
       </table>
     </details>
@@ -1763,35 +1767,58 @@ const GROUPS = [
 // people moved out (departed / emigrated / moved elsewhere) stay saved but
 // drop out of every working list
 const activeServants = () => DATA.servants.filter(s=>!s.status);
+// The servants' meeting (anba-boula) is held Friday and Sunday, but not every servant is expected
+// at both. s.servDays: 'friday' | 'sunday' | missing (= both). The other groups meet on one day.
+const SERVANTS_GID = 'anba-boula';
+const SERV_DAYS = { both:'الجمعة والأحد', friday:'الجمعة بس', sunday:'الأحد بس' };
+function sessDay(date){ const d = new Date(date+'T00:00:00').getDay(); return d===5 ? 'friday' : (d===0 ? 'sunday' : ''); }
+function expectedAt(s, gid, sess){
+  if(gid !== SERVANTS_GID || !s.servDays || s.servDays === 'both') return true;
+  return sessDay(sess.date) === s.servDays;
+}
 // Attendance of one person across groups: meetings attended out of every meeting recorded
-// in the groups they belong to (optionally limited by sessFilter, e.g. a date range).
+// in the groups they belong to that they are expected at (optionally limited by sessFilter,
+// e.g. a date range). days splits the same counts into Friday and Sunday.
 function personAttendance(s, gids, sessFilter){
   let attended = 0, possible = 0;
+  const days = { friday:{ attended:0, possible:0 }, sunday:{ attended:0, possible:0 } };
   gids.forEach(gid=>{
     if(!s.groups.includes(gid)) return;
-    let sessions = DATA.sessions[gid] || [];
+    let sessions = (DATA.sessions[gid] || []).filter(sess=>expectedAt(s, gid, sess));
     if(sessFilter) sessions = sessions.filter(sessFilter);
-    possible += sessions.length;
-    attended += sessions.filter(sess=>sess.present.includes(s.id)).length;
+    sessions.forEach(sess=>{
+      const hit = sess.present.includes(s.id);
+      possible++; if(hit) attended++;
+      const d = days[sessDay(sess.date)];
+      if(d){ d.possible++; if(hit) d.attended++; }
+    });
   });
+  Object.values(days).forEach(d=>{ d.absent = d.possible - d.attended; d.pct = d.possible ? Math.round(d.attended/d.possible*100) : 0; });
   const pct = possible>0 ? Math.round((attended/possible)*100) : 0;
-  return { attended, possible, pct };
+  return { attended, possible, pct, days };
 }
 // Attendance of a whole meeting (group). Only people who are currently active members of the
 // group are counted, both on top and on the bottom, so people who moved, left or were removed
-// from the group no longer push the percentage up. pct = all attendances / all possible attendances.
+// from the group no longer push the percentage up. Each meeting only counts the members expected
+// that day. pct = all attendances / all possible attendances; days splits it into Friday and Sunday.
 function groupAttendance(gid, sessFilter){
   const members = activeServants().filter(s=>s.groups.includes(gid));
-  const ids = new Set(members.map(s=>s.id));
   let sessions = (DATA.sessions[gid]||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
   if(sessFilter) sessions = sessions.filter(sessFilter);
-  const counts = sessions.map(sess=>sess.present.filter(id=>ids.has(id)).length);
-  const total = counts.reduce((a,b)=>a+b,0);
-  const pct = (sessions.length && members.length) ? Math.round(total/(sessions.length*members.length)*100) : 0;
-  const lastCount = counts.length ? counts[counts.length-1] : 0;
-  const lastPct = (sessions.length && members.length) ? Math.round(lastCount/members.length*100) : 0;
+  const days = { friday:{ present:0, possible:0, sessions:0 }, sunday:{ present:0, possible:0, sessions:0 } };
+  let total = 0, possible = 0, lastCount = 0, lastOf = 0;
+  sessions.forEach(sess=>{
+    const ids = new Set(members.filter(s=>expectedAt(s, gid, sess)).map(s=>s.id));
+    const n = sess.present.filter(id=>ids.has(id)).length;
+    total += n; possible += ids.size; lastCount = n; lastOf = ids.size;
+    const d = days[sessDay(sess.date)];
+    if(d){ d.present += n; d.possible += ids.size; d.sessions++; }
+  });
+  Object.values(days).forEach(d=>{ d.pct = d.possible ? Math.round(d.present/d.possible*100) : 0; });
+  const pct = possible ? Math.round(total/possible*100) : 0;
+  const lastPct = lastOf ? Math.round(lastCount/lastOf*100) : 0;
   const lastDate = sessions.length ? sessions[sessions.length-1].date : '';
-  return { members, sessions, pct, lastCount, lastPct, lastDate };
+  return { members, sessions, pct, lastCount, lastOf, lastPct, lastDate, days };
 }
 const MOVE_REASONS = {
   departed:  { label:'انتقل (للسماء)',     title:'المنتقلين',            icon:'🕊️' },
@@ -2249,7 +2276,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '16-Oct-2026 E';
+const APP_VERSION = '17-Oct-2026 A';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -2336,12 +2363,13 @@ async function flushAudit(){
 }
 const FIELD_LABELS = { name:'الاسم', phone:'التليفون', birthDate:'تاريخ الميلاد', area:'المنطقة', address:'العنوان', groups:'الاجتماعات',
   church:'الكنيسة', confessionFather:'أب الاعتراف', occupation:'الوظيفة', workplace:'مكان العمل', spouseName:'اسم الزوج/الزوجة', children:'الأبناء',
-  status:'الحالة', statusDate:'تاريخ النقل', statusNote:'ملاحظة النقل', lastVisitDate:'تاريخ آخر افتقاد', lastVisitType:'نوع الافتقاد' };
+  status:'الحالة', statusDate:'تاريخ النقل', statusNote:'ملاحظة النقل', lastVisitDate:'تاريخ آخر افتقاد', lastVisitType:'نوع الافتقاد', servDays:'مطلوب يحضر اجتماع الخدام' };
 const AUDIT_IGNORE = new Set(['id','photo','photoVer','personCode','code','lastEditedBy','lastEditedAt','statusBy','addedBy','addedAt']);
 function auditVal(k, v){
   if(v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0)) return '—';
   if(k === 'groups') return v.map(groupName).join(' + ');
   if(k === 'status') return (MOVE_REASONS[v] || {}).label || v;
+  if(k === 'servDays') return SERV_DAYS[v] || v;
   if(typeof v === 'object') return JSON.stringify(v);
   return String(v);
 }
@@ -2650,7 +2678,16 @@ function buildGroupGrid(container, checkedIds=[], availableGroups=GROUPS){
 function refreshNewServantGroupsGrid(){
   const avail = GROUPS.filter(g=>visibleGroupIds().includes(g.id));
   buildGroupGrid(document.getElementById('newServantGroups'), [], avail);
+  document.getElementById('newServantDays').value = 'both';
+  syncServDaysBox(document.getElementById('newServantGroups'), document.getElementById('newServantDaysBox'));
 }
+// the "which days" choice only matters for the servants' meeting, so it shows only while that box is ticked
+function syncServDaysBox(grid, box){
+  const chk = grid.querySelector(`input[value="${SERVANTS_GID}"]`);
+  box.style.display = chk && chk.checked ? 'block' : 'none';
+}
+document.getElementById('newServantGroups').addEventListener('change', ()=>
+  syncServDaysBox(document.getElementById('newServantGroups'), document.getElementById('newServantDaysBox')));
 
 document.getElementById('newServantMoreToggle').addEventListener('click', ()=>{
   const box = document.getElementById('newServantMore');
@@ -2719,13 +2756,15 @@ document.getElementById('addServantBtn').addEventListener('click', async ()=>{
   const workplace = document.getElementById('newServantWorkplace').value.trim();
   const children = getChildrenFromContainer(document.getElementById('newServantChildrenList'));
   const checked = Array.from(document.querySelectorAll('#newServantGroups input:checked')).map(c=>c.value);
+  const servDays = document.getElementById('newServantDays').value;
   DATA.servants.push({
     id: 's_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
     personCode: generateUniquePersonCode(),
     name, phone, area, address, birthDate, confessionFather, church,
     spouseName, occupation, workplace, children,
     photo: pendingNewServantPhoto,
-    groups: checked, addedBy: currentUser ? currentUser.name : '—'
+    groups: checked, addedBy: currentUser ? currentUser.name : '—',
+    ...(checked.includes(SERVANTS_GID) && servDays !== 'both' ? { servDays } : {})
   });
   nameInput.value = '';
   phoneInput.value = '';
@@ -2788,7 +2827,7 @@ function servantPrintFields(){
     { k:'spouse', w:9,  label:'الزوج / الزوجة',     on:false, perm:'otherDetails', get:(s,vis,ctx)=>s.spouseName || (ctx.spouseOf.get(s.name)||{}).name || '' },
     { k:'kids', w:13,    label:'الأبناء',            on:false, perm:'otherDetails', get:kids },
     { k:'visit', w:9,   label:'آخر افتقاد',         on:false, perm:'tabAfeqad', get:s=>s.lastVisitDate ? s.lastVisitDate + (s.lastVisitType ? ' — ' + s.lastVisitType : '') : '' },
-    { k:'att', w:6,     label:'نسبة الحضور',        on:false, perm:'tabReports', get:(s,vis)=>{ const a = personAttendance(s, vis); return a.possible ? `${a.pct}%|${a.attended}/${a.possible}` : ''; } },
+    ...[['attF','friday','الجمعة'],['attS','sunday','الأحد']].map(([k,day,dl])=>({ k, w:6, label:'نسبة حضور '+dl, short:'حضور '+dl, att:true, on:false, perm:'tabReports', get:(s,vis)=>{ const d = personAttendance(s, vis).days[day]; return d.possible ? `${d.pct}%|${d.attended}/${d.possible}` : ''; } })),
     { k:'notes', w:13,   label:'خانة ملاحظات فاضية', on:false, blank:true, get:()=>'' }
   ];
   return all.filter(f=>!f.perm || can(f.perm));
@@ -2968,7 +3007,7 @@ function openServantPrint(){
       if(f.blank) return '<td class="blank"></td>';
       const v = f.get(s, vis, ctx);
       if(!v) return `<td class="c">${dash}</td>`;
-      if(f.k === 'att'){
+      if(f.att){
         const [p, n] = v.split('|'); const num = parseInt(p, 10);
         const tone = num >= 75 ? 'good' : num >= 50 ? 'mid' : 'low';
         return `<td class="c"><span class="pill ${tone}">${p}</span><span class="sub">${n}</span></td>`;
@@ -2988,7 +3027,7 @@ function openServantPrint(){
       n++;
       body += `<tr><td class="num">${n}</td><td class="nm">${escHtml(p.name)}</td>${cols.map(f=>cell(f,p)).join('')}</tr>`;
     });
-    const thLabel = f=> f.blank ? 'ملاحظات' : f.photo ? 'صورة' : f.k === 'att' ? 'الحضور' : f.label;
+    const thLabel = f=> f.blank ? 'ملاحظات' : f.photo ? 'صورة' : f.att ? f.short : f.label;
     w.document.open();
     w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>بيانات الخدام — ${escHtml(sub)}</title>
       <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
@@ -3046,7 +3085,7 @@ function openServantPrint(){
           <div class="meta"><div><b>${rows.length}</b> اسم</div><div>${escHtml(sub)}</div><div>${today}</div></div></div>
         <div class="rule"></div>
         <table><colgroup><col style="width:${pct(4)}"><col style="width:${pct(14)}">${cols.map(f=>`<col style="width:${pct(f.w)}">`).join('')}</colgroup>
-        <thead><tr><th style="text-align:center">م</th><th>الاسم</th>${cols.map(f=>`<th${f.ltr || f.photo || ['code','att'].includes(f.k) ? ' style="text-align:center"' : ''}>${thLabel(f)}</th>`).join('')}</tr></thead>
+        <thead><tr><th style="text-align:center">م</th><th>الاسم</th>${cols.map(f=>`<th${f.ltr || f.photo || (f.att || f.k === 'code') ? ' style="text-align:center"' : ''}>${thLabel(f)}</th>`).join('')}</tr></thead>
         <tbody>${body}</tbody></table>
         <div class="foot"><span>${escHtml(brand)}</span><span>طُبع في ${today}</span></div>
       </div>
@@ -3103,7 +3142,7 @@ function renderServantList(){
           return lvl ? `${c.name} (${schoolLevelLabel(lvl)})` : c.name;
         }).join('، ')}</div>` : ''}
         <div class="chips">
-          ${s.groups.filter(gid=>visible.includes(gid)).length? s.groups.filter(gid=>visible.includes(gid)).map(gid=>`<span class="chip g-${gid}">${groupName(gid)}</span>`).join('') : '<span class="chip" style="background:#eee;color:#999;">لم يُحدَّد اجتماع</span>'}
+          ${s.groups.filter(gid=>visible.includes(gid)).length? s.groups.filter(gid=>visible.includes(gid)).map(gid=>`<span class="chip g-${gid}">${groupName(gid)}${gid===SERVANTS_GID && s.servDays && s.servDays!=='both' ? ' · '+SERV_DAYS[s.servDays] : ''}</span>`).join('') : '<span class="chip" style="background:#eee;color:#999;">لم يُحدَّد اجتماع</span>'}
         </div>
         ${(s.addedBy && can('addedBy')) ? `<div class="added-by">أضافه: ${s.addedBy}</div>` : ''}
         ${(s.lastEditedBy && can('addedBy')) ? `<div class="added-by">آخر تعديل: ${s.lastEditedBy}</div>` : ''}
@@ -3172,10 +3211,17 @@ function renderServantList(){
           <button type="button" class="ghost edit-add-child-row" style="margin-bottom:10px;">+ إضافة ابن</button>
           <label style="display:block;margin-bottom:4px;">الاجتماعات</label>
           <div class="group-grid"></div>
+          <div class="edit-servdays-box" style="margin-top:8px;">
+            <label style="display:block;margin-bottom:4px;">مطلوب يحضر اجتماع الخدام</label>
+            <select class="edit-servdays">${Object.entries(SERV_DAYS).map(([k,l])=>`<option value="${k}" ${(s.servDays||'both')===k?'selected':''}>${l}</option>`).join('')}</select>
+          </div>
           <button class="primary" style="margin-top:8px;" data-save="${id}">حفظ</button>
           ${s.personCode ? `<div class="added-by" style="margin-top:8px;">الكود: ${s.personCode}</div>` : ''}
           ${s.lastEditedBy ? `<div class="added-by">آخر تعديل: ${s.lastEditedBy}${s.lastEditedAt?' — '+s.lastEditedAt:''}</div>` : ''}`;
         buildGroupGrid(editPanel.querySelector('.group-grid'), s.groups, GROUPS.filter(g=>visibleGroupIds().includes(g.id)));
+        const editGrid = editPanel.querySelector('.group-grid'), editDaysBox = editPanel.querySelector('.edit-servdays-box');
+        syncServDaysBox(editGrid, editDaysBox);
+        editGrid.addEventListener('change', ()=>syncServDaysBox(editGrid, editDaysBox));
         const existingChildren = (s.children && s.children.length) ? s.children : (s.childrenNames ? s.childrenNames.split(',').map(c=>c.trim()).filter(Boolean) : []);
         const editChildrenList = editPanel.querySelector('.edit-children-list');
         existingChildren.forEach(c=> addChildRow(editChildrenList, c));
@@ -3222,6 +3268,8 @@ function renderServantList(){
           const checkedVisible = Array.from(editPanel.querySelectorAll('.group-grid input:checked')).map(c=>c.value);
           const hiddenExisting = s.groups.filter(g=>!visible.includes(g)); // preserve, not shown to this user
           s.groups = [...hiddenExisting, ...checkedVisible];
+          const servDays = editPanel.querySelector('.edit-servdays').value;
+          if(s.groups.includes(SERVANTS_GID) && servDays !== 'both') s.servDays = servDays; else delete s.servDays;
           s.phone = editPanel.querySelector('.edit-phone').value.trim();
           s.area = editPanel.querySelector('.edit-area').value.trim();
           s.address = editPanel.querySelector('.edit-address').value.trim();
@@ -3712,7 +3760,7 @@ function personFollowInfo(s, gids){
   let worst = null;
   gids.forEach(gid=>{
     if(!s.groups.includes(gid)) return;
-    const sess = (DATA.sessions[gid]||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
+    const sess = (DATA.sessions[gid]||[]).filter(x=>expectedAt(s, gid, x)).sort((a,b)=>a.date.localeCompare(b.date));
     if(sess.length === 0) return;
     const marks = sess.map(x=>x.present.includes(s.id));
     let streak = 0;
@@ -3798,8 +3846,9 @@ function renderReports(){
   const visible = visibleGroupIds();
   const visibleGroups = GROUPS.filter(g=>visible.includes(g.id));
   halos.innerHTML = visibleGroups.map(g=>{
-    const { members, sessions, pct, lastCount, lastPct, lastDate } = groupAttendance(g.id);
+    const { members, sessions, pct, lastCount, lastOf, lastPct, lastDate, days } = groupAttendance(g.id);
     const C = 2*Math.PI*34;
+    const split = (days.friday.sessions && days.sunday.sessions) ? `<div class="sub" style="margin-top:4px;">${['friday','sunday'].map(k=>`${k==='friday'?'الجمعة':'الأحد'}: <b style="color:${colorForPercent(days[k].pct)};">${days[k].pct}%</b> (${days[k].sessions} اجتماع)`).join(' · ')}</div>` : '';
     const dash = (pct/100)*C;
     const ringColor = colorForPercent(pct);
     return `
@@ -3812,7 +3861,8 @@ function renderReports(){
       </svg>
       <h3>${g.name}</h3>
       <div class="sub">${members.length} ${g.id==='anba-boula' ? 'خادم' : 'مخدوم'} · ${sessions.length} اجتماع</div>
-      ${lastDate ? `<div class="sub" style="margin-top:4px;">آخر اجتماع (${prettyDate(lastDate,false)}): <b style="color:${colorForPercent(lastPct)};">${lastCount} من ${members.length} · ${lastPct}%</b></div>` : ''}
+      ${split}
+      ${lastDate ? `<div class="sub" style="margin-top:4px;">آخر اجتماع (${prettyDate(lastDate,false)}): <b style="color:${colorForPercent(lastPct)};">${lastCount} من ${lastOf} · ${lastPct}%</b></div>` : ''}
     </div>`;
   }).join('');
 
@@ -3827,21 +3877,21 @@ function renderReports(){
   emptyNote.style.display='none';
   renderFollowUp(visibleServants, visible);
   const rows = visibleServants.map(s=>{
-    const { attended, possible, pct } = personAttendance(s, visible);
-    return {name:s.name, attended, possible, pct};
+    const { possible, pct, days } = personAttendance(s, visible);
+    return {name:s.name, possible, pct, days};
   }).sort((a,b)=> b.pct-a.pct || b.possible-a.possible);
+  const dayCell = d => d.possible ? `
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="bar-bg" style="max-width:80px;"><div class="bar-fill" style="width:${d.pct}%;background:${colorForPercent(d.pct)};"></div></div>
+          <span>${d.pct}%</span>
+        </div>
+        <div style="font-size:.72rem;color:var(--muted);">حضر ${d.attended} · غاب ${d.absent}</div>
+      </td>` : '<td style="color:var(--muted);">—</td>';
 
   body.innerHTML = rows.map(r=>`
     <tr>
-      <td>${r.name}</td>
-      <td>${r.attended}</td>
-      <td>${r.possible}</td>
-      <td>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <div class="bar-bg" style="max-width:100px;"><div class="bar-fill" style="width:${r.pct}%;background:${colorForPercent(r.pct)};"></div></div>
-          <span>${r.possible>0? r.pct+'%' : '—'}</span>
-        </div>
-      </td>
+      <td>${r.name}</td>${dayCell(r.days.friday)}${dayCell(r.days.sunday)}
     </tr>
   `).join('');
 }
@@ -5047,14 +5097,22 @@ document.getElementById('exportExcelBtn').addEventListener('click', async ()=>{
   const visibleServants = activeServants().filter(s=>s.groups.some(g=>visible.includes(g)));
 
   const summaryRows = visibleGroups.map(g=>{
-    const { members, sessions, pct } = groupAttendance(g.id);
-    return { 'الاجتماع': g.name, 'عدد الأفراد': members.length, 'عدد الاجتماعات': sessions.length, 'متوسط نسبة الحضور %': pct };
+    const { members, sessions, pct, days } = groupAttendance(g.id);
+    return { 'الاجتماع': g.name, 'عدد الأفراد': members.length, 'عدد الاجتماعات': sessions.length, 'متوسط نسبة الحضور %': pct,
+      'نسبة الجمعة %': days.friday.sessions ? days.friday.pct : '', 'نسبة الأحد %': days.sunday.sessions ? days.sunday.pct : '' };
   });
   const ws1 = XLSX.utils.json_to_sheet(summaryRows);
   XLSX.utils.book_append_sheet(wb, ws1, 'ملخص الاجتماعات');
 
   const servantRows = sortByName(visibleServants).map(s=>{
-    const { attended, possible, pct } = personAttendance(s, visible);
+    const { days } = personAttendance(s, visible);
+    const dayCols = {};
+    [['friday','الجمعة'],['sunday','الأحد']].forEach(([k,l])=>{
+      const d = days[k];
+      dayCols['حضر '+l] = d.possible ? d.attended : '';
+      dayCols['غاب '+l] = d.possible ? d.absent : '';
+      dayCols['نسبة '+l+' %'] = d.possible ? d.pct : '';
+    });
     return {
       'الاسم': s.name,
       'الكود': s.personCode || '',
@@ -5068,9 +5126,8 @@ document.getElementById('exportExcelBtn').addEventListener('click', async ()=>{
       'الأبناء': formatChildrenForExcel(s.children),
       'الزوج/الزوجة': s.spouseName || '',
       'الاجتماعات': s.groups.filter(gid=>visible.includes(gid)).map(gid=>groupName(gid)).join(' - '),
-      'حضر': attended,
-      'من إجمالي': possible,
-      'النسبة %': pct,
+      'مطلوب يحضر (اجتماع الخدام)': s.groups.includes(SERVANTS_GID) ? SERV_DAYS[s.servDays||'both'] : '',
+      ...dayCols,
       'أضافه': s.addedBy || ''
     };
   });
@@ -5453,12 +5510,13 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
     }
   } else if(type === 'people'){
     title = 'كشف الأفراد';
-    const columns = ['الاسم','التليفون','حضر بالفترة','من إجمالي اجتماعات الفترة','النسبة %'];
+    const columns = ['الاسم','التليفون','حضر الجمعة','غاب الجمعة','نسبة الجمعة %','حضر الأحد','غاب الأحد','نسبة الأحد %'];
     const rows = [];
     const members = sortByName(activeServants().filter(s=>s.groups.some(g=>selectedGroups.includes(g))));
     members.forEach(s=>{
-      const { attended, possible, pct } = personAttendance(s, selectedGroups, sess=>inRange(sess.date, from, to));
-      rows.push([s.name, s.phone||'', attended, possible, possible>0?pct+'%':'—']);
+      const { days } = personAttendance(s, selectedGroups, sess=>inRange(sess.date, from, to));
+      const dc = d => d.possible ? [d.attended, d.absent, d.pct+'%'] : ['—','—','—'];
+      rows.push([s.name, s.phone||'', ...dc(days.friday), ...dc(days.sunday)]);
     });
     sections.push({ heading: null, columns, rows });
   } else if(type === 'birthdays'){
