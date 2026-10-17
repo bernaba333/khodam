@@ -1065,7 +1065,10 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
       <h2 style="margin:0;">قائمة الخدام والمخدومين (<span id="servantCount">0</span>)</h2>
       <button class="ghost" id="servantPrintBtn">🖨️ طباعة البيانات</button>
     </div>
-    <input type="text" id="servantSearch" placeholder="🔍 دوّر على اسم..." style="margin:12px 0 14px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 14px;">
+      <select id="servantGroupFilter" style="flex:1 1 180px;" title="اعرض أفراد اجتماع معيّن بس"><option value="">👥 كل الاجتماعات</option></select>
+      <input type="text" id="servantSearch" placeholder="🔍 دوّر على اسم..." style="flex:2 1 200px;">
+    </div>
     <div id="servantList"></div>
   </div>
 </section>
@@ -2276,7 +2279,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '17-Oct-2026 A';
+const APP_VERSION = '17-Oct-2026 B';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -2792,6 +2795,29 @@ function sortByName(arr){
 }
 
 let servantSearchTerm = '';
+let servantGroupFilter = '';   // '' = all, a group id, or 'anba-boula:friday|sunday|both'
+document.getElementById('servantGroupFilter').addEventListener('change', (e)=>{
+  servantGroupFilter = e.target.value;
+  servantListLimit = LIST_PAGE;
+  renderServantList();
+});
+function fillServantGroupFilter(visible){
+  const sel = document.getElementById('servantGroupFilter');
+  const opts = [['', '👥 كل الاجتماعات']];
+  GROUPS.filter(g=>visible.includes(g.id)).forEach(g=>{
+    opts.push([g.id, g.name]);
+    if(g.id === SERVANTS_GID) Object.keys(SERV_DAYS).forEach(k=>opts.push([g.id+':'+k, '　↳ '+g.name+' — '+SERV_DAYS[k]]));
+  });
+  if(!opts.some(o=>o[0] === servantGroupFilter)) servantGroupFilter = '';
+  sel.innerHTML = opts.map(([v,l])=>`<option value="${v}">${escHtml(l)}</option>`).join('');
+  sel.value = servantGroupFilter;
+}
+function matchesServantGroupFilter(s){
+  if(!servantGroupFilter) return true;
+  const [gid, day] = servantGroupFilter.split(':');
+  if(!s.groups.includes(gid)) return false;
+  return !day || (s.servDays || 'both') === day;
+}
 let servantSearchTimer = null;
 document.getElementById('servantSearch').addEventListener('input', (e)=>{
   clearTimeout(servantSearchTimer);
@@ -2932,7 +2958,7 @@ function openServantPrint(){
       </div>
       <div style="flex:1;overflow:auto;padding:10px 18px;">
         <label style="font-weight:700;">الاجتماعات</label>
-        <div class="group-grid" id="spGroups" style="margin:6px 0 12px;">${groups.map(g=>`<label class="group-chk"><input type="checkbox" value="${g.id}" checked> ${escHtml(g.name)}</label>`).join('')}</div>
+        <div class="group-grid" id="spGroups" style="margin:6px 0 12px;">${groups.map(g=>`<label class="group-chk"><input type="checkbox" value="${g.id}" ${!servantGroupFilter || servantGroupFilter.split(':')[0]===g.id ? 'checked' : ''}> ${escHtml(g.name)}</label>`).join('')}</div>
         ${servantSearchTerm ? `<label class="group-chk" style="margin-bottom:12px;display:inline-flex;"><input type="checkbox" id="spOnlySearch" checked> نتايج البحث بس ("${escHtml(servantSearchTerm)}")</label>` : ''}
         <label style="font-weight:700;display:block;">البيانات اللي تتطبع</label>
         <div style="display:flex;gap:6px;margin:6px 0;">
@@ -3102,17 +3128,19 @@ function renderServantList(){
   const list = document.getElementById('servantList');
   const visible = visibleGroupIds();
   const visibleServants = activeServants().filter(s=>s.groups.some(g=>visible.includes(g)));
+  fillServantGroupFilter(visible);
   document.getElementById('servantCount').textContent = visibleServants.length;
   if(visibleServants.length === 0){
     list.innerHTML = '<div class="empty-note">لا يوجد خدام مسجّلون بعد في الاجتماعات اللي تقدر تشوفها</div>';
     return;
   }
-  let shown = sortByName(visibleServants);
+  let shown = sortByName(visibleServants.filter(matchesServantGroupFilter));
+  if(servantGroupFilter) document.getElementById('servantCount').textContent = shown.length + ' من ' + visibleServants.length;
   if(servantSearchTerm){
     shown = shown.filter(s=>s.name.includes(servantSearchTerm) || (s.phone||'').includes(servantSearchTerm) || (s.area||'').includes(servantSearchTerm));
   }
   if(shown.length === 0){
-    list.innerHTML = '<div class="empty-note">مفيش نتايج مطابقة للبحث</div>';
+    list.innerHTML = `<div class="empty-note">${servantSearchTerm ? 'مفيش نتايج مطابقة للبحث' : 'مفيش حد في الاجتماع ده'}</div>`;
     return;
   }
   const totalShown = shown.length;
