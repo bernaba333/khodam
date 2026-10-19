@@ -926,6 +926,11 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
     <div style="font-size:2.4rem;line-height:1;">⛪</div>
     <h2 style="font-family:'Amiri',serif;color:var(--ink);margin:10px 0 4px;font-size:1.35rem;">سجل حضور الخدمة</h2>
     <p id="gateSub" style="color:var(--ink-soft);font-size:.88rem;margin:0 0 18px;">اكتب باسورد الخدمة عشان تدخل</p>
+    <div id="gateActForm" style="display:none;">
+      <input id="gateActCode" type="text" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" placeholder="كود التفعيل (من المدير)" dir="ltr" style="width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;font-family:'Cairo',sans-serif;font-size:18px;letter-spacing:2px;background:var(--input);color:var(--ink);text-align:center;box-sizing:border-box;">
+      <button id="gateActBtn" style="margin-top:12px;width:100%;background:#7A2E2E;color:#fdf8ec;border:none;padding:11px 20px;border-radius:10px;font-family:'Cairo',sans-serif;font-weight:700;font-size:.95rem;cursor:pointer;">تفعيل الجهاز</button>
+      <button id="gateShowPwBtn" type="button" style="margin-top:10px;background:none;border:none;color:var(--ink-soft);font-family:'Cairo',sans-serif;font-size:.8rem;text-decoration:underline;cursor:pointer;">معايا باسورد الخدمة</button>
+    </div>
     <div id="gateForm">
       <input id="gatePassword" type="password" autocomplete="current-password" placeholder="باسورد الخدمة" style="width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;font-family:'Cairo',sans-serif;font-size:16px;background:var(--input);color:var(--ink);text-align:center;">
       <button id="gateBtn" style="margin-top:12px;width:100%;background:#7A2E2E;color:#fdf8ec;border:none;padding:11px 20px;border-radius:10px;font-family:'Cairo',sans-serif;font-weight:700;font-size:.95rem;cursor:pointer;">دخول</button>
@@ -1369,6 +1374,7 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
     <h2>المستخدمين (<span id="userCount">0</span>)</h2>
     <div class="set-usertools">
       <button type="button" class="primary" id="newUserToggleBtn">＋ مستخدم جديد</button>
+      <button type="button" class="ghost" id="deviceActBtn" title="كود يفتح البرنامج على موبايل جديد من غير باسورد الخدمة">📱 تفعيل جهاز جديد</button>
       <input type="text" id="userSearch" placeholder="🔍 دوّر على اسم">
     </div>
     <div class="set-newuser" id="newUserForm" hidden>
@@ -1849,11 +1855,29 @@ window.addEventListener('error', function(e){
     const setSavedPw = v=>{ try{ if(v) localStorage.setItem(SAVED_PW_KEY, v); else localStorage.removeItem(SAVED_PW_KEY); }catch(e){} };
     try{ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{}); }catch(e){}
     let done = false, triedSaved = false;
+    // a new device is opened with a one-time code from the admin; the service password form is the fallback
+    const actForm = document.getElementById('gateActForm');
+    const actCode = document.getElementById('gateActCode');
+    const actBtn = document.getElementById('gateActBtn');
     function showForm(){
+      if(form.style.display === 'block') return;
+      sub.textContent = 'اكتب كود التفعيل اللي المدير بعتهولك';
+      actForm.style.display = 'block';
+      if(actCode.value && !actRedeemTried){ actRedeemTried = true; redeemCode(); }
+      else setTimeout(()=>actCode.focus(), 50);
+    }
+    let actRedeemTried = false;
+    // an activation link (…#act=CODE) fills the code in; the code is then removed from the address bar
+    if(/^#act=/.test(location.hash)){
+      actCode.value = decodeURIComponent(location.hash.slice(5));
+      try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){}
+    }
+    document.getElementById('gateShowPwBtn').addEventListener('click', ()=>{
+      actForm.style.display = 'none'; msg.textContent = '';
       sub.textContent = 'اكتب باسورد الخدمة عشان تدخل';
       form.style.display = 'block';
       setTimeout(()=>pw.focus(), 50);
-    }
+    });
     auth.onAuthStateChanged(user=>{
       if(user && !done){
         done = true;
@@ -1868,7 +1892,7 @@ window.addEventListener('error', function(e){
             const c = err && err.code || '';
             if(c.includes('wrong-password') || c.includes('invalid-credential') || c.includes('invalid-login') || c.includes('user-disabled')){
               setSavedPw(null);
-              msg.textContent = 'باسورد الخدمة اتغيّر. اكتب الباسورد الجديد.';
+              msg.textContent = 'باسورد الخدمة اتغيّر. اطلب من المدير كود تفعيل جديد.';
             } else if(c.includes('network')){
               msg.textContent = 'مفيش إنترنت، اتأكد من الاتصال';
             }
@@ -1898,7 +1922,74 @@ window.addEventListener('error', function(e){
     }
     btn.addEventListener('click', tryLogin);
     pw.addEventListener('keydown', e=>{ if(e.key === 'Enter') tryLogin(); });
+
+    async function redeemCode(){
+      const code = normCode(actCode.value);
+      if(code.length !== CODE_LEN){ msg.textContent = 'الكود لازم يبقى ١٠ حروف وأرقام زي ما المدير بعته.'; return; }
+      if(!(window.crypto && crypto.subtle)){ msg.textContent = 'افتح البرنامج من اللينك الأصلي (https) عشان التفعيل يشتغل.'; return; }
+      actBtn.disabled = true; actBtn.textContent = 'لحظة...'; msg.textContent = '';
+      try{
+        const id = await pairId(code);
+        let snap = null;
+        try{ snap = await db.collection('pair').doc(id).get(); }
+        catch(e){ if(!(e && e.code === 'permission-denied')) throw e; }   // a wrong or expired code isn't readable at all
+        if(!snap || !snap.exists){ msg.textContent = 'الكود ده غلط أو وقته خلص (بيشتغل ١٠ دقايق ومرة واحدة بس). اطلب من المدير كود جديد.'; return; }
+        const svcPw = await pairDecrypt(code, snap.data());
+        await auth.signInWithEmailAndPassword(SERVICE_EMAIL, svcPw);
+        setSavedPw(svcPw);
+        db.collection('pair').doc(id).delete().catch(()=>{});   // one use only
+      }catch(err){
+        const c = err && err.code || '';
+        if(c.includes('network') || c === 'unavailable') msg.textContent = 'مفيش إنترنت، اتأكد من الاتصال';
+        else if(c.includes('wrong-password') || c.includes('invalid-credential') || c.includes('invalid-login')) msg.textContent = 'باسورد الخدمة اتغيّر بعد ما الكود اتعمل. اطلب من المدير كود جديد.';
+        else msg.textContent = 'الكود ده غلط أو وقته خلص. اطلب من المدير كود جديد.';
+      }finally{
+        actBtn.disabled = false; actBtn.textContent = 'تفعيل الجهاز';
+      }
+    }
+    actBtn.addEventListener('click', redeemCode);
+    actCode.addEventListener('keydown', e=>{ if(e.key === 'Enter') redeemCode(); });
+
+    // used by the admin's "تفعيل جهاز جديد" window
+    window.serviceActivation = {
+      hasSavedPw: ()=>!!getSavedPw(),
+      async create(by, typedPw){
+        if(typedPw){ await auth.signInWithEmailAndPassword(SERVICE_EMAIL, typedPw); setSavedPw(typedPw); }   // checks it's right
+        const svcPw = getSavedPw();
+        if(!svcPw) throw Object.assign(new Error('no saved service password'), { code:'no-saved-pw' });
+        try{ const old = await db.collection('pair').get(); old.docs.forEach(x=>{ if((x.data().exp||0) < Date.now()) x.ref.delete().catch(()=>{}); }); }catch(e){}
+        const code = Array.from(crypto.getRandomValues(new Uint8Array(CODE_LEN)), b=>CODE_ABC[b % CODE_ABC.length]).join('');
+        const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+        const ct = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, await pairKey(code, salt), enc.encode(svcPw));
+        const id = await pairId(code), exp = Date.now() + PAIR_MS;
+        await db.collection('pair').doc(id).set({ c: b64(ct), iv: b64(iv), s: b64(salt), exp, by: by || '', at: Date.now() });
+        return { code, id, exp };
+      },
+      cancel: id=> db.collection('pair').doc(id).delete(),
+      async used(id){ const s = await db.collection('pair').doc(id).get(); return !s.exists; }
+    };
   });
+
+  /* ---------- DEVICE ACTIVATION CODES ----------
+     The admin makes a one-time code (10 letters/digits, works 10 minutes). The service password is
+     stored encrypted with that code in pair/<hash of the code>; Firestore rules let a device that
+     isn't signed in read that one document while it hasn't expired. The new device decrypts the
+     password, signs in, keeps it like a typed one, and deletes the document. Nobody types or sees
+     the service password. */
+  const CODE_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', CODE_LEN = 10, PAIR_MS = 10 * 60000;
+  const enc = new TextEncoder();
+  const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  const unb64 = s => Uint8Array.from(atob(String(s).replace(/-/g,'+').replace(/_/g,'/')), c=>c.charCodeAt(0));
+  const normCode = s => String(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  async function pairId(code){ return b64(await crypto.subtle.digest('SHA-256', enc.encode('khodam-pair-id:' + code))); }
+  async function pairKey(code, salt){
+    const k = await crypto.subtle.importKey('raw', enc.encode(code), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey({ name:'PBKDF2', hash:'SHA-256', salt, iterations:100000 }, k, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']);
+  }
+  async function pairDecrypt(code, d){
+    const pt = await crypto.subtle.decrypt({ name:'AES-GCM', iv: unb64(d.iv) }, await pairKey(code, unb64(d.s)), unb64(d.c));
+    return new TextDecoder().decode(pt);
+  }
 
   window.saveFileToViewer = async function(filename, blob){
     const url = URL.createObjectURL(blob);
@@ -1924,6 +2015,8 @@ const SERVANTS_GID = 'anba-boula';
 const SERV_DAYS = { both:'الجمعة والأحد', friday:'الجمعة بس', sunday:'الأحد بس' };
 function sessDay(date){ const d = new Date(date+'T00:00:00').getDay(); return d===5 ? 'friday' : (d===0 ? 'sunday' : ''); }
 function expectedAt(s, gid, sess){
+  // someone added later isn't counted absent for the meetings before they joined (unless marked present)
+  if(s.addedAt && sess.date < s.addedAt && !(sess.present||[]).includes(s.id)) return false;
   if(gid !== SERVANTS_GID || !s.servDays || s.servDays === 'both') return true;
   return sessDay(sess.date) === s.servDays;
 }
@@ -2036,14 +2129,14 @@ function renderBarChartSVG(container, labels, series, opts={}){
       svg += `<text x="${(x+barW/2).toFixed(1)}" y="${(y-5).toFixed(1)}" font-size="10" fill="#333" text-anchor="middle">${val}${opts.suffix||''}</text>`;
     });
     const labelText = String(label).length > 12 ? String(label).slice(0,11)+'…' : label;
-    svg += `<text x="${(groupX+groupW/2).toFixed(1)}" y="${height-26}" font-size="10" fill="#555" text-anchor="middle">${labelText}</text>`;
+    svg += `<text x="${(groupX+groupW/2).toFixed(1)}" y="${height-26}" font-size="10" fill="#555" text-anchor="middle">${escHtml(labelText)}</text>`;
   });
   if(seriesCount > 1){
     let lx = pad.left;
     series.forEach(s=>{
       const c = typeof s.color === 'function' ? s.color(50) : (Array.isArray(s.color) ? s.color[0] : s.color);
       svg += `<circle cx="${lx+5}" cy="${height-10}" r="4" fill="${c}"/>`;
-      svg += `<text x="${lx+13}" y="${height-6}" font-size="9" fill="#555">${s.name}</text>`;
+      svg += `<text x="${lx+13}" y="${height-6}" font-size="9" fill="#555">${escHtml(s.name)}</text>`;
       lx += 13 + s.name.length*6 + 14;
     });
   }
@@ -2080,13 +2173,13 @@ function renderLineChartSVG(container, labels, series, opts={}){
   labels.forEach((label,i)=>{
     if(i % labelStep !== 0 && i !== n-1) return;
     const x = pad.left + i*stepX;
-    svg += `<text x="${x.toFixed(1)}" y="${height-14}" font-size="9" fill="#555" text-anchor="middle">${label}</text>`;
+    svg += `<text x="${x.toFixed(1)}" y="${height-14}" font-size="9" fill="#555" text-anchor="middle">${escHtml(label)}</text>`;
   });
   if(series.length > 1){
     let lx = pad.left;
     series.forEach(s=>{
       svg += `<circle cx="${lx+5}" cy="14" r="4" fill="${s.color}"/>`;
-      svg += `<text x="${lx+13}" y="17" font-size="9" fill="#555">${s.name}</text>`;
+      svg += `<text x="${lx+13}" y="17" font-size="9" fill="#555">${escHtml(s.name)}</text>`;
       lx += 13 + s.name.length*6 + 14;
     });
   }
@@ -2094,10 +2187,7 @@ function renderLineChartSVG(container, labels, series, opts={}){
   container.innerHTML = svg;
 }
 
-function todayStr(){
-  const d = new Date();
-  return d.toISOString().slice(0,10);
-}
+function todayStr(){ return dateStr(new Date()); }
 // Birthdates are stored as "day/month" (year usually unknown/irrelevant for a
 // recurring birthday). The calendar <input type="date"> needs a full date, so
 // we use a fixed placeholder leap year (2000) purely for display/picking —
@@ -2117,16 +2207,20 @@ function dateInputValueToDM(val){
   if(!month || !day) return '';
   return `${day}/${month}`;
 }
-function dateStr(d){ return d.toISOString().slice(0,10); }
-function isMeetingDay(dateString){
+// the device's own calendar day (toISOString() is the UTC day, a day early in Egypt after midnight)
+function dateStr(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+// which weekdays each meeting is held on (Friday=5, Sunday=0)
+const GROUP_DAYS = { 'anba-boula':[5,0], 'makhdomeen-had':[0], 'makhdomeen-gomaa':[5] };
+const groupDays = gid => GROUP_DAYS[gid] || [5,0];
+function isMeetingDay(dateString, gid){
   const day = new Date(dateString+'T00:00:00').getDay();
-  return day === 5 || day === 0; // Friday=5, Sunday=0
+  return groupDays(gid).includes(day);
 }
-function nearestMeetingDateStr(fromStr){
+function nearestMeetingDateStr(fromStr, gid){
   const base = fromStr ? new Date(fromStr+'T00:00:00') : new Date();
   for(let i=0;i<7;i++){
     const back = new Date(base); back.setDate(base.getDate()-i);
-    if(back.getDay()===5 || back.getDay()===0) return dateStr(back);
+    if(groupDays(gid).includes(back.getDay())) return dateStr(back);
   }
   return todayStr();
 }
@@ -2157,8 +2251,13 @@ async function loadData(){
 // made from a different tab/device — rather than a possibly-stale in-memory
 // copy loaded when this page was first opened.
 async function refreshLatestDataForExport(){
-  try{ await loadData(); }catch(e){ console.error('refresh data failed', e); }
-  try{ await loadUsers(); }catch(e){ console.error('refresh users failed', e); }
+  // merge the newest saved copy into this page (like a live update) instead of replacing it,
+  // so edits still being saved here, and the objects open edit forms hold, are kept
+  try{
+    if(saveRunner) await saveRunner;
+    if(window.storage.getWithRev) await pullRemoteData(); else await loadData();
+  }catch(e){ console.error('refresh data failed', e); }
+  try{ await loadUsers(); if(currentUser){ const u = USERS.find(x=>x.name === currentUser.name); if(u) currentUser = u; } }catch(e){ console.error('refresh users failed', e); }
 }
 
 /* ---------- PHOTOS (stored apart from the main data) ----------
@@ -2428,7 +2527,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '18-Oct-2026 A';
+const APP_VERSION = '19-Oct-2026 B';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -2665,19 +2764,19 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
 function refreshAreaChurchDatalists(){
   const areas = Array.from(new Set(DATA.servants.map(s=>s.area).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'ar'));
   const churches = Array.from(new Set(DATA.servants.map(s=>s.church).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'ar'));
-  document.getElementById('areaOptionsList').innerHTML = areas.map(a=>`<option value="${a}">`).join('');
-  document.getElementById('churchOptionsList').innerHTML = churches.map(c=>`<option value="${c}">`).join('');
+  document.getElementById('areaOptionsList').innerHTML = areas.map(a=>`<option value="${escHtml(a)}">`).join('');
+  document.getElementById('churchOptionsList').innerHTML = churches.map(c=>`<option value="${escHtml(c)}">`).join('');
   const visitTypeEl = document.getElementById('visitTypeOptionsList');
   if(visitTypeEl){
     const defaults = ['زيارة منزلية','مكالمة تليفونية','زيارة في الكنيسة','زيارة في المستشفى'];
     const existing = DATA.servants.map(s=>s.lastVisitType).filter(Boolean);
     const types = Array.from(new Set([...defaults, ...existing]));
-    visitTypeEl.innerHTML = types.map(t=>`<option value="${t}">`).join('');
+    visitTypeEl.innerHTML = types.map(t=>`<option value="${escHtml(t)}">`).join('');
   }
   const namesEl = document.getElementById('allNamesOptionsList');
   if(namesEl){
     const names = sortByName(DATA.servants).map(s=>s.name);
-    namesEl.innerHTML = names.map(n=>`<option value="${n}">`).join('');
+    namesEl.innerHTML = names.map(n=>`<option value="${escHtml(n)}">`).join('');
   }
 }
 
@@ -2785,8 +2884,8 @@ function renderAfeqadList(){
   list.innerHTML = people.map(s=>`
     <div class="servant-row" data-id="${s.id}">
       <div>
-        <div class="servant-name">${s.name}${s.id===afeqadJustSaved ? ' <span class="kf-ok" style="font-size:.78rem;">✓ اتسجل الافتقاد</span>' : ''}</div>
-        ${s.lastVisitDate ? `<div style="font-size:.78rem;color:var(--muted);margin-top:2px;">🏠 آخر افتقاد: ${s.lastVisitDate}${s.lastVisitType?' — '+s.lastVisitType:''}</div>` : '<div class="meta" style="font-size:.78rem;color:var(--wine);margin-top:2px;">⚠️ لسه ما اتافتقدش</div>'}
+        <div class="servant-name">${escHtml(s.name)}${s.id===afeqadJustSaved ? ' <span class="kf-ok" style="font-size:.78rem;">✓ اتسجل الافتقاد</span>' : ''}</div>
+        ${s.lastVisitDate ? `<div style="font-size:.78rem;color:var(--muted);margin-top:2px;">🏠 آخر افتقاد: ${escHtml(s.lastVisitDate)}${s.lastVisitType?' — '+escHtml(s.lastVisitType):''}</div>` : '<div class="meta" style="font-size:.78rem;color:var(--wine);margin-top:2px;">⚠️ لسه ما اتافتقدش</div>'}
       </div>
       <div class="row-actions">
         ${can('editAfeqad') ? `<button class="ghost record-visit">تسجيل افتقاد</button>` : ''}
@@ -2806,7 +2905,7 @@ function renderAfeqadList(){
         editPanel.innerHTML = `
           <label style="display:block;margin-bottom:4px;">تاريخ الافتقاد</label>
           <input type="date" class="visit-date" value="${todayStr()}" style="margin-bottom:10px;">
-          ${s.lastVisitDate ? `<div style="font-size:.78rem;color:var(--muted);margin:-4px 0 10px;">آخر افتقاد كان ${s.lastVisitDate}${s.lastVisitType?' — '+s.lastVisitType:''}</div>` : ''}
+          ${s.lastVisitDate ? `<div style="font-size:.78rem;color:var(--muted);margin:-4px 0 10px;">آخر افتقاد كان ${escHtml(s.lastVisitDate)}${s.lastVisitType?' — '+escHtml(s.lastVisitType):''}</div>` : ''}
           <label style="display:block;margin-bottom:4px;">نوع الافتقاد</label>
           <input type="text" class="visit-type" list="visitTypeOptionsList" value="" placeholder="اختار من القائمة أو اكتب نوع جديد" style="margin-bottom:10px;">
           <button class="primary" data-save-visit="${id}">حفظ</button>`;
@@ -2867,7 +2966,7 @@ function addChildRow(container, child){
   const row = document.createElement('div');
   row.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;';
   row.innerHTML = `
-    <input type="text" class="child-name-input" value="${name}" placeholder="اسم الابن/الابنة" style="flex:1;min-width:120px;">
+    <input type="text" class="child-name-input" value="${escHtml(name)}" placeholder="اسم الابن/الابنة" style="flex:1;min-width:120px;">
     <select class="child-level-input" style="flex:1;min-width:140px;padding:10px;border-radius:10px;border:1px solid var(--line);font-family:'Cairo',sans-serif;"></select>
     <button type="button" class="ghost danger remove-child-row" style="flex:none;">×</button>`;
   container.appendChild(row);
@@ -2926,7 +3025,7 @@ document.getElementById('addServantBtn').addEventListener('click', async ()=>{
     name, phone, area, address, birthDate, confessionFather, church,
     spouseName, occupation, workplace, children,
     photo: pendingNewServantPhoto,
-    groups: checked, addedBy: currentUser ? currentUser.name : '—',
+    groups: checked, addedBy: currentUser ? currentUser.name : '—', addedAt: todayStr(),
     ...(checked.includes(SERVANTS_GID) && servDays !== 'both' ? { servDays } : {})
   });
   nameInput.value = '';
@@ -3192,7 +3291,7 @@ function openServantPrint(){
     const pct = n=>(n / totalW * 100).toFixed(2) + '%';
     const dash = '<span class="nil">—</span>';
     const cell = (f,s)=>{
-      if(f.photo) return `<td class="pic">${s.photo ? `<img class="ava" src="${s.photo}">` : `<span class="noava">${escHtml(initialsOf(s.name))}</span>`}</td>`;
+      if(f.photo) return `<td class="pic">${s.photo ? `<img class="ava" src="${escHtml(s.photo)}">` : `<span class="noava">${escHtml(initialsOf(s.name))}</span>`}</td>`;
       if(f.blank) return '<td class="blank"></td>';
       const v = f.get(s, vis, ctx);
       if(!v) return `<td class="c">${dash}</td>`;
@@ -3319,24 +3418,24 @@ function renderServantList(){
       <div style="display:flex;gap:10px;flex:1;">
         ${avatarHtml(s, 44)}
         <div>
-        <div class="servant-name">${s.name} ${s.personCode ? `<span class="chip" style="background:var(--ink);color:#fdf8ec;font-size:.65rem;">${s.personCode}</span>` : ''}</div>
-        ${(s.phone && can('phones')) ? `<div style="font-size:.78rem;color:var(--muted);margin-top:2px;">📞 ${s.phone}</div>` : ''}
-        ${(s.birthDate && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">🎂 ${s.birthDate}</div>` : ''}
-        ${(s.area && can('addresses')) ? `<div style="font-size:.78rem;color:var(--muted);">🗺️ ${s.area}</div>` : ''}
-        ${(s.address && can('addresses')) ? `<div style="font-size:.78rem;color:var(--muted);">📍 ${s.address}</div>` : ''}
-        ${(s.confessionFather && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">✝️ أب الاعتراف: ${s.confessionFather}</div>` : ''}
-        ${(s.church && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">⛪ ${s.church}</div>` : ''}
-        ${(s.occupation && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">💼 ${s.occupation}${s.workplace?' — '+s.workplace:''}</div>` : ''}
-        ${((s.spouseName||spouse) && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">💍 الزوج/الزوجة: ${s.spouseName||spouse.name}</div>` : ''}
-        ${(childrenList.length>0 && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">🧒 الأبناء: ${childrenList.map(c=>{
+        <div class="servant-name">${escHtml(s.name)} ${s.personCode ? `<span class="chip" style="background:var(--ink);color:#fdf8ec;font-size:.65rem;">${escHtml(s.personCode)}</span>` : ''}</div>
+        ${(s.phone && can('phones')) ? `<div style="font-size:.78rem;color:var(--muted);margin-top:2px;">📞 ${escHtml(s.phone)}</div>` : ''}
+        ${(s.birthDate && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">🎂 ${escHtml(s.birthDate)}</div>` : ''}
+        ${(s.area && can('addresses')) ? `<div style="font-size:.78rem;color:var(--muted);">🗺️ ${escHtml(s.area)}</div>` : ''}
+        ${(s.address && can('addresses')) ? `<div style="font-size:.78rem;color:var(--muted);">📍 ${escHtml(s.address)}</div>` : ''}
+        ${(s.confessionFather && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">✝️ أب الاعتراف: ${escHtml(s.confessionFather)}</div>` : ''}
+        ${(s.church && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">⛪ ${escHtml(s.church)}</div>` : ''}
+        ${(s.occupation && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">💼 ${escHtml(s.occupation)}${s.workplace?' — '+escHtml(s.workplace):''}</div>` : ''}
+        ${((s.spouseName||spouse) && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">💍 الزوج/الزوجة: ${escHtml(s.spouseName||spouse.name)}</div>` : ''}
+        ${(childrenList.length>0 && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">🧒 الأبناء: ${escHtml(childrenList.map(c=>{
           const lvl = c.schoolLevelBase ? computedSchoolLevel(c.schoolLevelBase, c.schoolLevelBaseYear) : 0;
           return lvl ? `${c.name} (${schoolLevelLabel(lvl)})` : c.name;
-        }).join('، ')}</div>` : ''}
+        }).join('، '))}</div>` : ''}
         <div class="chips">
           ${s.groups.filter(gid=>visible.includes(gid)).length? s.groups.filter(gid=>visible.includes(gid)).map(gid=>`<span class="chip g-${gid}">${groupName(gid)}${gid===SERVANTS_GID && s.servDays && s.servDays!=='both' ? ' · '+SERV_DAYS[s.servDays] : ''}</span>`).join('') : '<span class="chip" style="background:#eee;color:#999;">لم يُحدَّد اجتماع</span>'}
         </div>
-        ${(s.addedBy && can('addedBy')) ? `<div class="added-by">أضافه: ${s.addedBy}</div>` : ''}
-        ${(s.lastEditedBy && can('addedBy')) ? `<div class="added-by">آخر تعديل: ${s.lastEditedBy}</div>` : ''}
+        ${(s.addedBy && can('addedBy')) ? `<div class="added-by">أضافه: ${escHtml(s.addedBy)}</div>` : ''}
+        ${(s.lastEditedBy && can('addedBy')) ? `<div class="added-by">آخر تعديل: ${escHtml(s.lastEditedBy)}</div>` : ''}
         </div>
       </div>
       <div class="row-actions">
@@ -3373,30 +3472,30 @@ function renderServantList(){
         editPanel.innerHTML = `
           <label style="display:block;margin-bottom:4px;">الصورة الشخصية</label>
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-            <img class="edit-photo-preview" src="${s.photo||''}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:1px solid var(--line);background:#fff;${s.photo?'':'display:none;'}">
+            <img class="edit-photo-preview" src="${escHtml(s.photo||'')}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:1px solid var(--line);background:#fff;${s.photo?'':'display:none;'}">
             <label class="ghost" style="cursor:pointer;display:inline-block;">⬆️ رفع صورة<input type="file" class="edit-photo-file" accept="image/*" style="display:none;"></label>
             ${s.photo ? `<button type="button" class="ghost danger edit-photo-remove">حذف الصورة</button>` : ''}
           </div>
           <label style="display:block;margin-bottom:4px;">الاسم</label>
-          <input type="text" class="edit-name" value="${s.name||''}" style="margin-bottom:10px;">
+          <input type="text" class="edit-name" value="${escHtml(s.name)}" style="margin-bottom:10px;">
           <label style="display:block;margin-bottom:4px;">رقم التليفون</label>
-          <input type="text" class="edit-phone" value="${s.phone||''}" style="margin-bottom:10px;">
+          <input type="text" class="edit-phone" value="${escHtml(s.phone)}" style="margin-bottom:10px;">
           <label style="display:block;margin-bottom:4px;">المنطقة</label>
-          <input type="text" class="edit-area" list="areaOptionsList" value="${s.area||''}" style="margin-bottom:10px;">
+          <input type="text" class="edit-area" list="areaOptionsList" value="${escHtml(s.area)}" style="margin-bottom:10px;">
           <label style="display:block;margin-bottom:4px;">العنوان بالتفصيل</label>
-          <input type="text" class="edit-address" value="${s.address||''}" style="margin-bottom:10px;">
+          <input type="text" class="edit-address" value="${escHtml(s.address)}" style="margin-bottom:10px;">
           <label style="display:block;margin-bottom:4px;">تاريخ الميلاد</label>
           <input type="date" class="edit-birth" value="${dmToDateInputValue(s.birthDate)}" style="margin-bottom:10px;">
           <label style="display:block;margin-bottom:4px;">أب الاعتراف</label>
-          <input type="text" class="edit-confession" value="${s.confessionFather||''}" style="margin-bottom:10px;">
+          <input type="text" class="edit-confession" value="${escHtml(s.confessionFather)}" style="margin-bottom:10px;">
           <label style="display:block;margin-bottom:4px;">كنيسته</label>
-          <input type="text" class="edit-church" list="churchOptionsList" value="${s.church||''}" style="margin-bottom:10px;">
+          <input type="text" class="edit-church" list="churchOptionsList" value="${escHtml(s.church)}" style="margin-bottom:10px;">
           <label style="display:block;margin-bottom:4px;">الزوج / الزوجة (لو موجود في البيانات)</label>
-          <input type="text" class="edit-spouse" list="allNamesOptionsList" value="${s.spouseName||''}" style="margin-bottom:10px;">
+          <input type="text" class="edit-spouse" list="allNamesOptionsList" value="${escHtml(s.spouseName)}" style="margin-bottom:10px;">
           <label style="display:block;margin-bottom:4px;">الوظيفة</label>
-          <input type="text" class="edit-job" value="${s.occupation||''}" style="margin-bottom:10px;">
+          <input type="text" class="edit-job" value="${escHtml(s.occupation)}" style="margin-bottom:10px;">
           <label style="display:block;margin-bottom:4px;">مكان العمل</label>
-          <input type="text" class="edit-workplace" value="${s.workplace||''}" style="margin-bottom:10px;">
+          <input type="text" class="edit-workplace" value="${escHtml(s.workplace)}" style="margin-bottom:10px;">
           <label style="display:block;margin-bottom:4px;">الأبناء</label>
           <div class="edit-children-list" style="margin-bottom:6px;"></div>
           <button type="button" class="ghost edit-add-child-row" style="margin-bottom:10px;">+ إضافة ابن</button>
@@ -3407,8 +3506,8 @@ function renderServantList(){
             <select class="edit-servdays">${Object.entries(SERV_DAYS).map(([k,l])=>`<option value="${k}" ${(s.servDays||'both')===k?'selected':''}>${l}</option>`).join('')}</select>
           </div>
           <button class="primary" style="margin-top:8px;" data-save="${id}">حفظ</button>
-          ${s.personCode ? `<div class="added-by" style="margin-top:8px;">الكود: ${s.personCode}</div>` : ''}
-          ${s.lastEditedBy ? `<div class="added-by">آخر تعديل: ${s.lastEditedBy}${s.lastEditedAt?' — '+s.lastEditedAt:''}</div>` : ''}`;
+          ${s.personCode ? `<div class="added-by" style="margin-top:8px;">الكود: ${escHtml(s.personCode)}</div>` : ''}
+          ${s.lastEditedBy ? `<div class="added-by">آخر تعديل: ${escHtml(s.lastEditedBy)}${s.lastEditedAt?' — '+escHtml(s.lastEditedAt):''}</div>` : ''}`;
         buildGroupGrid(editPanel.querySelector('.group-grid'), s.groups, GROUPS.filter(g=>visibleGroupIds().includes(g.id)));
         const editGrid = editPanel.querySelector('.group-grid'), editDaysBox = editPanel.querySelector('.edit-servdays-box');
         syncServDaysBox(editGrid, editDaysBox);
@@ -3506,7 +3605,7 @@ function renderMeetingPicker(){
   picker.querySelectorAll('.meeting-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       currentGroupId = btn.dataset.gid;
-      document.getElementById('attendDate').value = nearestMeetingDateStr();
+      document.getElementById('attendDate').value = nearestMeetingDateStr('', currentGroupId);
       renderMeetingPicker();
       renderAttendPanel();
     });
@@ -3551,7 +3650,7 @@ function renderAttendList(){
     <label class="attend-item ${attendCheckedIds.has(m.id)?'checked':''}" data-id="${m.id}" ${canMark?'':'style="cursor:default;"'}>
       <input type="checkbox" ${attendCheckedIds.has(m.id)?'checked':''} ${canMark?'':'disabled'}>
       ${avatarHtml({ name: m.name, groups: [currentGroupId] }, 28)}
-      <span>${m.name}</span>
+      <span>${escHtml(m.name)}</span>
     </label>
   `).join('');
   if(canMark) list.querySelectorAll('.attend-item').forEach(item=>{
@@ -3581,9 +3680,13 @@ document.getElementById('attendSearch').addEventListener('input', (e)=>{
 document.getElementById('attendDate').addEventListener('change', (e)=>{
   const picked = e.target.value;
   if(picked && !isMeetingDay(picked)){
-    const fixed = nearestMeetingDateStr(picked);
+    const fixed = nearestMeetingDateStr(picked, currentGroupId);
     alert('التسجيل متاح بس أيام الجمعة والأحد. اخترنالك أقرب يوم صالح: ' + fixed);
     e.target.value = fixed;
+  } else if(picked && currentGroupId && !isMeetingDay(picked, currentGroupId)){
+    // e.g. a Friday picked for the Sunday meeting: its attendance would land on the wrong day
+    const fixed = nearestMeetingDateStr(picked, currentGroupId);
+    if(!confirm(`${groupName(currentGroupId)} مش بيتعمل يوم ${AR_DAYS[new Date(picked+'T00:00:00').getDay()]}. متأكد إنك عايز تسجل الحضور في اليوم ده؟\n\n(لو دوست Cancel هنختارلك ${prettyDate(fixed)})`)) e.target.value = fixed;
   }
   renderAttendPanel();
 });
@@ -3591,6 +3694,8 @@ document.getElementById('attendDate').addEventListener('change', (e)=>{
 document.getElementById('saveAttendanceBtn').addEventListener('click', async ()=>{
   if(!currentGroupId || !can('editAttendance')) return;
   const date = document.getElementById('attendDate').value || todayStr();
+  // a meeting saved ahead of time counts as one everybody missed
+  if(date > todayStr() && !confirm(`التاريخ ده (${prettyDate(date)}) لسه مجاش. لو اتحفظ دلوقتي هيتحسب إن اللي مش متعلّم عليهم غابوا. تحفظ برضه؟`)) return;
   const present = Array.from(attendCheckedIds);
   DATA.sessions[currentGroupId] = DATA.sessions[currentGroupId] || [];
   const idx = DATA.sessions[currentGroupId].findIndex(s=>s.date===date);
@@ -3617,7 +3722,7 @@ function renderHistory(){
     <tr>
       <td>${prettyDate(s.date)}</td>
       <td>${s.present.filter(id=>memberIds.has(id)).length} / ${totalMembers}</td>
-      <td style="font-size:.78rem;color:var(--muted);">${can('addedBy') ? (s.recordedBy || '—') : ''}</td>
+      <td style="font-size:.78rem;color:var(--muted);">${can('addedBy') ? escHtml(s.recordedBy || '—') : ''}</td>
       <td>
         <button class="ghost" data-open="${s.date}">فتح</button>
         ${isAdmin() ? `<button class="ghost danger" data-del="${s.date}">حذف</button>` : ''}
@@ -3721,7 +3826,7 @@ function renderDashboard(){
     recentEl.innerHTML = allSessions.slice(0,8).map(s=>`
       <div class="dash-list-row">
         <div>${prettyDate(s.date)}<div class="meta">${s.groups.join(' + ')}</div></div>
-        <div class="meta">${s.count} حاضر${can('addedBy') && s.recordedBy.length ? ' · سجّله ' + Array.from(new Set(s.recordedBy)).join('، ') : ''}</div>
+        <div class="meta">${s.count} حاضر${can('addedBy') && s.recordedBy.length ? ' · سجّله ' + escHtml(Array.from(new Set(s.recordedBy)).join('، ')) : ''}</div>
       </div>
     `).join('');
   }
@@ -3755,8 +3860,8 @@ function renderDashboard(){
     } else {
       afeqadEl.innerHTML = shown.map(s=>`
         <div class="dash-list-row">
-          <div>${s.name}</div>
-          <div class="meta">${s.lastVisitDate ? `آخر افتقاد: ${s.lastVisitDate}` : '⚠️ لسه ما اتافتقدش'}</div>
+          <div>${escHtml(s.name)}</div>
+          <div class="meta">${s.lastVisitDate ? `آخر افتقاد: ${escHtml(s.lastVisitDate)}` : '⚠️ لسه ما اتافتقدش'}</div>
         </div>
       `).join('');
     }
@@ -4090,15 +4195,15 @@ function renderReports(){
 
   body.innerHTML = rows.map(r=>`
     <tr>
-      <td>${r.name}</td>${dayCell(r.days.friday)}${dayCell(r.days.sunday)}
+      <td>${escHtml(r.name)}</td>${dayCell(r.days.friday)}${dayCell(r.days.sunday)}
     </tr>
   `).join('');
 }
 
 /* ---------- USERS & LOGIN ---------- */
-// Setup key — required only for the very first admin setup on a fresh copy.
-// Change this string to whatever you want before distributing the file.
-const SETUP_KEY = 'PINSHTI2026';
+// Setup key — required only for the very first admin setup on a fresh copy. Only its hash is kept
+// here (PBKDF2 like the passwords, salt 'khodam-setup-key'), so reading the file doesn't reveal it.
+const SETUP_KEY_HASH = 'vGRUsit7rposCh5lgsqe45XzMecKE-_9tcFAH-b3t80';
 const USERS_KEY = 'khodam_users_list';
 const PERSONAL_LOGIN_KEY = 'khodam_my_login';
 const PERMISSIONS_KEY = 'khodam_permissions';
@@ -4170,7 +4275,7 @@ function diffUsers(before, after){
     if(!b){ out.push({ area:'المستخدمين', action:'إضافة مستخدم', target:name, changes:[{ f:'النوع', to: typeLabel(a) }] }); return; }
     const ch = [];
     if(b.role !== a.role) ch.push({ f:'النوع', from: roleLabelFor(b.role), to: roleLabelFor(a.role) });
-    if(b.password !== a.password) ch.push({ f:'كلمة السر', from:'—', to:'اتغيّرت' });
+    if((b.pwSetAt||'') !== (a.pwSetAt||'') || (b.password && a.password && b.password !== a.password)) ch.push({ f:'كلمة السر', from:'—', to:'اتغيّرت' });
     if(!!b.locked !== !!a.locked) ch.push({ f:'الحساب', from: b.locked ? 'مقفول 🔒' : 'مفتوح', to: a.locked ? 'مقفول 🔒 (٣ محاولات غلط)' : 'مفتوح' });
     if(JSON.stringify(allowedGroupsFor(b)) !== JSON.stringify(allowedGroupsFor(a))) ch.push({ f:'الاجتماعات المسموحة', from: allowedGroupsFor(b).map(groupName).join(' + '), to: allowedGroupsFor(a).map(groupName).join(' + ') });
     ALL_PERM_KEYS.forEach(k=>{
@@ -4452,7 +4557,14 @@ async function getPersonalLogin(){
   try{ return JSON.parse(result.value); }catch(e){ return null; }
 }
 async function setPersonalLogin(name){
-  try{ await window.storage.set(PERSONAL_LOGIN_KEY, JSON.stringify({name}), false); }catch(e){}
+  try{ await window.storage.set(PERSONAL_LOGIN_KEY, JSON.stringify({ name, at: Date.now() }), false); }catch(e){}
+}
+// keeps the remembered login's "last used" time fresh while the app is being used
+let personalLoginTouched = 0;
+function touchPersonalLogin(){
+  if(!currentUser || Date.now() - personalLoginTouched < 15000) return;
+  personalLoginTouched = Date.now();
+  setPersonalLogin(currentUser.name);
 }
 async function clearPersonalLogin(){
   try{ await window.storage.delete(PERSONAL_LOGIN_KEY, false); }catch(e){}
@@ -4681,6 +4793,36 @@ function startAdminLockCountdown(until){
   tick(); adminLockTimer = setInterval(tick, 1000);
 }
 
+/* ---------- PASSWORDS ----------
+   Accounts keep a salted PBKDF2 hash (pwHash + pwSalt), not the password itself, so the users
+   list and the backup file don't show anybody's password. Accounts saved before this keep their
+   old plain password until their next successful login, which replaces it with a hash. */
+const PW_ITER = 50000;
+async function hashPassword(pw, salt){
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name:'PBKDF2', hash:'SHA-256', salt: enc.encode(salt), iterations: PW_ITER }, key, 256);
+  return b64u(bits);
+}
+const canHash = ()=> !!(window.crypto && crypto.subtle && window.TextEncoder);
+// changed: true when someone actually set a new password (the audit log shows that), false for the silent upgrade
+async function setUserPassword(u, pw, changed){
+  if(canHash()){
+    const salt = b64u(randomBytes(16));
+    u.pwHash = await hashPassword(pw, salt); u.pwSalt = salt;
+    delete u.password;
+  } else { u.password = pw; delete u.pwHash; delete u.pwSalt; }
+  if(changed !== false) u.pwSetAt = new Date().toISOString();
+}
+// true / false, or null when this browser can't check a hashed password at all
+async function passwordMatches(u, pw){
+  if(u.pwHash){
+    if(!canHash()) return null;
+    try{ return (await hashPassword(pw, u.pwSalt || '')) === u.pwHash; }catch(e){ return null; }
+  }
+  return u.password === pw;
+}
+
 let APP_READY = false;
 async function doLogin(name, password){
   name = (name||'').trim();
@@ -4694,11 +4836,12 @@ async function doLogin(name, password){
       // First-time setup requires the setup key, so a copied file can't just be
       // claimed by whoever opens it first.
       const providedKey = (document.getElementById('setupKeyInput')?.value || '').trim();
-      if(providedKey !== SETUP_KEY){
+      if(!providedKey || !canHash() || (await hashPassword(providedKey, 'khodam-setup-key')) !== SETUP_KEY_HASH){
         note.textContent = 'مفتاح التفعيل غلط. البرنامج ده مقفول ومحتاج مفتاح التفعيل عشان يتظبط أول مرة.';
         return;
       }
-      const user = { name, role:'admin', password, addedBy: name, addedAt: todayStr() };
+      const user = { name, role:'admin', addedBy: name, addedAt: todayStr() };
+      await setUserPassword(user, password);
       USERS.push(user);
       await saveUsers();
       currentUser = user; auditLastUser = user.name;
@@ -4714,8 +4857,12 @@ async function doLogin(name, password){
     if(!user){ note.textContent = 'مفيش مستخدم بالاسم ده. اطلب من المدير يضيفك.'; return; }
     if(user.role !== 'admin' && user.locked){ note.textContent = LOCKED_MSG; return; }
     if(user.role === 'admin' && (user.lockUntil||0) > Date.now()){ startAdminLockCountdown(user.lockUntil); return; }
-    if(user.password !== password){ await registerWrongPassword(user); return; }
-    if(user.failedAttempts || user.lockUntil){ delete user.failedAttempts; delete user.lockUntil; await saveUsers(); }
+    const match = await passwordMatches(user, password);
+    if(match === null){ note.textContent = 'المتصفح ده مش قادر يتأكد من كلمة السر. افتح البرنامج من اللينك الأصلي (https) أو من متصفح أحدث.'; return; }
+    if(!match){ await registerWrongPassword(user); return; }
+    const upgrade = !user.pwHash && canHash();
+    if(upgrade) await setUserPassword(user, password, false);
+    if(user.failedAttempts || user.lockUntil || upgrade){ delete user.failedAttempts; delete user.lockUntil; await saveUsers(); }
 
     await finishLogin(user);
     maybeOfferFaceLogin();
@@ -5112,6 +5259,10 @@ async function doLogout(reasonMsg){
   if(currentUser) auditLastUser = currentUser.name;
   try{ stopTeamChat(); }catch(e){}
   currentUser = null;
+  // these windows sit above the login screen, so they must not stay open after a logout
+  { const pp = document.querySelector('#printPreview [data-pp="back"]'); if(pp) pp.click(); }
+  ['servantPrintModal','dcModal','bdayPopup','speakersModal','postModal','printPreview','actModal'].forEach(id=>{ const el = document.getElementById(id); if(el) el.remove(); });
+  { const ms = document.getElementById('moreSheet'); if(ms) ms.classList.remove('open'); }
   { const pg = document.getElementById('photoGateOverlay'); if(pg) pg.style.display = 'none'; }
   { const fo = document.getElementById('faceOfferOverlay'); if(fo) fo.style.display = 'none'; }
   document.getElementById('mySettingsOverlay').style.display = 'none';
@@ -5131,6 +5282,7 @@ const INACTIVITY_LIMIT_MS = 3 * 60 * 1000; // 3 minutes
 let inactivityTimer = null;
 function resetInactivityTimer(){
   if(!currentUser) return; // only track while logged in
+  touchPersonalLogin();
   if(inactivityTimer) clearTimeout(inactivityTimer);
   inactivityTimer = setTimeout(()=>{
     doLogout('تم تسجيل خروجك تلقائيًا بعد ٣ دقائق من عدم الاستخدام.');
@@ -5169,15 +5321,15 @@ function renderUsersList(){
   const list = document.getElementById('usersList');
   document.getElementById('userCount').textContent = USERS.length;
   list.innerHTML = USERS.map(u=>`
-    <div class="user-row${USER_ROWS_OPEN.has(u.name) ? ' open' : ''}" data-name="${u.name}">
+    <div class="user-row${USER_ROWS_OPEN.has(u.name) ? ' open' : ''}" data-name="${escHtml(u.name)}">
       ${avatarHtml(u, 38)}
       <div class="user-info">
-        <b>${u.name}</b>
+        <b>${escHtml(u.name)}</b>
         <span class="role-tag ${u.role}">${profileLabel(profileOf(u))}</span>
         ${u.locked ? `<span class="role-tag locked" title="اتقفل بعد ٣ محاولات غلط">🔒 مقفول</span>` : ''}
         <div class="perm-sum">${userSummaryHtml(u)}</div>
         ${u.role === 'user' ? `<div class="chips" style="margin-top:6px;">${allowedGroupsFor(u).map(gid=>`<span class="chip g-${gid}">${groupName(gid)}</span>`).join('')}</div>` : ''}
-        <div class="added-by">أضافه: ${u.addedBy || '—'}</div>
+        <div class="added-by">أضافه: ${escHtml(u.addedBy || '—')}</div>
         <div class="user-mini">${u.role === 'user' ? allowedGroupsFor(u).map(groupName).join('، ') : ''}</div>
       </div>
       <div class="row-actions">
@@ -5192,7 +5344,7 @@ function renderUsersList(){
       </div>
       <button type="button" class="ghost user-toggle">${USER_ROWS_OPEN.has(u.name) ? 'إخفاء' : 'تعديل'}</button>
     </div>
-    <div class="edit-panel" data-user-edit-for="${u.name}" style="display:none;padding:10px 0;"></div>
+    <div class="edit-panel" data-user-edit-for="${escHtml(u.name)}" style="display:none;padding:10px 0;"></div>
   `).join('');
   list.querySelectorAll('.user-toggle').forEach(btn=>{
     btn.addEventListener('click', e=>{
@@ -5202,7 +5354,7 @@ function renderUsersList(){
       if(open) USER_ROWS_OPEN.add(name);
       else {
         USER_ROWS_OPEN.delete(name);
-        const p = list.querySelector(`.edit-panel[data-user-edit-for="${name}"]`);
+        const p = list.querySelector(`.edit-panel[data-user-edit-for="${CSS.escape(name)}"]`);
         if(p) p.style.display = 'none';
       }
       btn.textContent = open ? 'إخفاء' : 'تعديل';
@@ -5214,7 +5366,7 @@ function renderUsersList(){
     btn.addEventListener('click', (e)=>{
       const name = e.target.closest('.user-row').dataset.name;
       const u = USERS.find(x=>x.name === name);
-      const editPanel = list.querySelector(`.edit-panel[data-user-edit-for="${name}"]`);
+      const editPanel = list.querySelector(`.edit-panel[data-user-edit-for="${CSS.escape(name)}"]`);
       if(editPanel.style.display === 'none'){
         editPanel.innerHTML = `<div class="group-grid"></div><button class="primary" style="margin-top:8px;">حفظ</button>`;
         buildGroupGrid(editPanel.querySelector('.group-grid'), allowedGroupsFor(u));
@@ -5236,11 +5388,11 @@ function renderUsersList(){
     btn.addEventListener('click', (e)=>{
       const name = e.target.closest('.user-row').dataset.name;
       const u = USERS.find(x=>x.name === name);
-      const editPanel = list.querySelector(`.edit-panel[data-user-edit-for="${name}"]`);
+      const editPanel = list.querySelector(`.edit-panel[data-user-edit-for="${CSS.escape(name)}"]`);
       if(editPanel.style.display === 'none'){
         const vals = Object.fromEntries(ALL_PERM_KEYS.map(k=>[k, effectivePerm(u, k)]));
         editPanel.innerHTML = `
-          <p style="font-size:.8rem;color:var(--ink-soft);margin:0 0 8px;">تخصيص صلاحيات "${name}" بس.</p>
+          <p style="font-size:.8rem;color:var(--ink-soft);margin:0 0 8px;">تخصيص صلاحيات "${escHtml(name)}" بس.</p>
           <div class="perm-sum" data-live-sum style="margin-bottom:8px;">${permSummaryHtml(k=>!!vals[k])}</div>
           <div class="perm-box">${permMatrixHtml(vals)}</div>
           <button class="primary" style="margin-top:8px;">حفظ صلاحياته</button>
@@ -5275,7 +5427,7 @@ function renderUsersList(){
       if(!newPass) return;
       const u = USERS.find(x=>x.name === name);
       const wasLocked = !!u.locked;
-      u.password = newPass;
+      await setUserPassword(u, newPass);
       delete u.locked; delete u.lockedAt; delete u.failedAttempts; delete u.lockUntil; delete u.faceKeys;
       await saveUsers();
       renderUsersList();
@@ -5302,7 +5454,7 @@ function renderUsersList(){
       if(pick === 'custom'){
         // open the per-screen editor; nothing changes until "حفظ"
         if(u.role !== 'user'){ renderUsersList(); return; }
-        const panel = list.querySelector(`.edit-panel[data-user-edit-for="${name}"]`);
+        const panel = list.querySelector(`.edit-panel[data-user-edit-for="${CSS.escape(name)}"]`);
         if(panel.style.display === 'none') row.querySelector('.edit-user-perms').click();
         return;
       }
@@ -5335,6 +5487,89 @@ function renderUsersList(){
   });
 }
 
+/* ---------- ACTIVATE A NEW DEVICE (admin): one-time code instead of the service password ---------- */
+function openDeviceActivation(){
+  if(!isAdmin() || !window.serviceActivation) return;
+  document.getElementById('actModal')?.remove();
+  const wrap = document.createElement('div');
+  wrap.id = 'actModal';
+  wrap.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(27,42,74,.6);display:flex;align-items:center;justify-content:center;padding:12px;direction:rtl;';
+  wrap.innerHTML = `
+    <div style="background:var(--card);border-radius:16px;max-width:420px;width:100%;max-height:94vh;overflow:auto;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.25);text-align:center;">
+      <h2 style="margin:0 0 6px;font-family:'Amiri',serif;color:var(--ink);">📱 تفعيل جهاز جديد</h2>
+      <p style="font-size:.85rem;color:var(--ink-soft);margin:0 0 12px;">الكود بيفتح البرنامج على موبايل واحد بس، وبيشتغل ١٠ دقايق. الخادم مش هيعرف باسورد الخدمة.</p>
+      <div class="act-pw" style="display:${window.serviceActivation.hasSavedPw() ? 'none' : 'block'};">
+        <p style="font-size:.8rem;color:var(--wine);margin:0 0 6px;">الجهاز ده مش حافظ باسورد الخدمة. اكتبه مرة واحدة هنا:</p>
+        <input type="password" class="act-pw-in" placeholder="باسورد الخدمة" style="margin-bottom:8px;">
+      </div>
+      <button class="primary act-make" style="width:100%;">إنشاء كود</button>
+      <div class="act-out" style="display:none;">
+        <div class="act-code" dir="ltr" style="font-size:2rem;font-weight:700;letter-spacing:4px;color:var(--ink);background:var(--cream-dark,#efe6d0);border-radius:12px;padding:10px 6px;margin:6px 0;user-select:all;"></div>
+        <div class="act-left" style="font-size:.8rem;color:var(--muted);margin-bottom:10px;"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+          <a class="primary act-wa" target="_blank" rel="noopener" style="text-decoration:none;padding:9px 14px;border-radius:10px;">💬 ابعته واتساب</a>
+          <button class="ghost act-copy">📋 نسخ</button>
+          <button class="ghost danger act-cancel">إلغاء الكود</button>
+        </div>
+        <p style="font-size:.75rem;color:var(--muted);margin:10px 0 0;">على الموبايل الجديد: افتح البرنامج واكتب الكود في شاشة "كود التفعيل"، أو دوس على اللينك اللي في الرسالة.</p>
+      </div>
+      <div class="act-note" style="font-size:.85rem;margin-top:10px;min-height:1.2em;"></div>
+      <button class="ghost act-close" style="margin-top:8px;">إغلاق</button>
+    </div>`;
+  document.body.appendChild(wrap);
+  const $ = s=>wrap.querySelector(s);
+  let timer = null, current = null;
+  const close = ()=>{ clearInterval(timer); wrap.remove(); };
+  wrap.addEventListener('click', e=>{ if(e.target === wrap) close(); });
+  $('.act-close').addEventListener('click', close);
+  $('.act-make').addEventListener('click', async ()=>{
+    const btn = $('.act-make'), note = $('.act-note');
+    const typed = $('.act-pw').style.display !== 'none' ? $('.act-pw-in').value : '';
+    if($('.act-pw').style.display !== 'none' && !typed){ note.textContent = 'اكتب باسورد الخدمة الأول.'; return; }
+    btn.disabled = true; btn.textContent = 'لحظة…'; note.textContent = ''; note.style.color = '';
+    try{
+      if(current) window.serviceActivation.cancel(current.id).catch(()=>{});
+      current = await window.serviceActivation.create(currentUser ? currentUser.name : '', typed);
+      $('.act-pw').style.display = 'none';
+      const shown = current.code.slice(0,5) + '-' + current.code.slice(5);
+      $('.act-code').textContent = shown;
+      const link = location.origin + location.pathname + '#act=' + current.code;
+      const text = `كود تفعيل برنامج الخدمة على موبايلك: ${shown}\nافتح البرنامج واكتبه، أو دوس على اللينك:\n${link}\n(الكود بيشتغل ١٠ دقايق ومرة واحدة بس)`;
+      $('.act-wa').href = 'https://wa.me/?text=' + encodeURIComponent(text);
+      $('.act-copy').onclick = ()=>{ try{ navigator.clipboard.writeText(text); note.textContent = 'اتنسخ ✓'; }catch(e){} };
+      $('.act-out').style.display = 'block';
+      btn.textContent = 'كود جديد';
+      auditPush({ area:'المستخدمين', action:'كود تفعيل جهاز', target:'جهاز جديد', changes:[{ f:'صالح لحد', to: new Date(current.exp).toLocaleTimeString('ar-EG-u-nu-latn', { hour:'numeric', minute:'2-digit' }) }] });
+      clearInterval(timer);
+      let tick = 0;
+      timer = setInterval(async ()=>{
+        const left = Math.max(0, current.exp - Date.now());
+        $('.act-left').textContent = left ? `باقي ${Math.floor(left/60000)}:${String(Math.floor(left/1000)%60).padStart(2,'0')}` : 'الكود خلص وقته. اعمل كود جديد.';
+        if(!left){ clearInterval(timer); $('.act-code').style.opacity = '.35'; return; }
+        if(++tick % 4 === 0){
+          try{ if(await window.serviceActivation.used(current.id)){ clearInterval(timer); $('.act-code').style.opacity = '.35'; $('.act-left').textContent = ''; note.style.color = '#2f6b3a'; note.textContent = '✓ الجهاز الجديد اتفعّل. يقدر يدخل باسمه وكلمة السر بتاعته.'; } }catch(e){}
+        }
+      }, 1000);
+    }catch(err){
+      console.error('activation code failed', err);
+      const c = err && err.code || '';
+      note.style.color = 'var(--wine)';
+      note.textContent = (c.includes('wrong-password') || c.includes('invalid-credential') || c.includes('invalid-login')) ? 'باسورد الخدمة غلط.'
+        : c === 'no-saved-pw' ? 'اكتب باسورد الخدمة مرة واحدة.'
+        : 'مقدرناش نعمل الكود. اتأكد من النت وجرّب تاني.';
+      if(c === 'no-saved-pw') $('.act-pw').style.display = 'block';
+    }finally{ btn.disabled = false; if(btn.textContent === 'لحظة…') btn.textContent = 'إنشاء كود'; }
+  });
+  $('.act-cancel').addEventListener('click', async ()=>{
+    if(!current) return;
+    try{ await window.serviceActivation.cancel(current.id); }catch(e){}
+    clearInterval(timer); current = null;
+    $('.act-out').style.display = 'none'; $('.act-make').textContent = 'إنشاء كود';
+    $('.act-note').style.color = ''; $('.act-note').textContent = 'الكود اتلغى.';
+  });
+}
+document.getElementById('deviceActBtn').addEventListener('click', openDeviceActivation);
+
 document.getElementById('newUserPasswordToggle').addEventListener('click', ()=>{
   const input = document.getElementById('newUserPassword');
   const btn = document.getElementById('newUserPasswordToggle');
@@ -5343,6 +5578,7 @@ document.getElementById('newUserPasswordToggle').addEventListener('click', ()=>{
   btn.textContent = showing ? '👁️' : '🙈';
 });
 document.getElementById('addUserBtn').addEventListener('click', async ()=>{
+  if(!isAdmin()) return;
   const nameInput = document.getElementById('newUserName');
   const passInput = document.getElementById('newUserPassword');
   const name = nameInput.value.trim();
@@ -5354,7 +5590,8 @@ document.getElementById('addUserBtn').addEventListener('click', async ()=>{
   let allowedGroups = Array.from(document.querySelectorAll('#newUserGroups input:checked')).map(c=>c.value);
   if(picked === 'program' || picked === 'tenmin' || role !== 'user') allowedGroups = GROUPS.map(g=>g.id);
   if(role === 'user' && allowedGroups.length === 0){ alert('اختار اجتماع واحد على الأقل يشوفه المستخدم ده.'); return; }
-  const newUser = { name, role, password, allowedGroups, addedBy: currentUser ? currentUser.name : '—', addedAt: todayStr() };
+  const newUser = { name, role, allowedGroups, addedBy: currentUser ? currentUser.name : '—', addedAt: todayStr() };
+  await setUserPassword(newUser, password);
   if(PERM_PRESETS[picked]) newUser.perms = PERM_PRESETS[picked]();
   USERS.push(newUser);
   nameInput.value = '';
@@ -5421,23 +5658,25 @@ document.getElementById('exportExcelBtn').addEventListener('click', async ()=>{
       dayCols['غاب '+l] = d.possible ? d.absent : '';
       dayCols['نسبة '+l+' %'] = d.possible ? d.pct : '';
     });
-    return {
-      'الاسم': s.name,
-      'الكود': s.personCode || '',
-      'التليفون': s.phone || '',
-      'تاريخ الميلاد': s.birthDate || '',
-      'العنوان': s.address || '',
+    const row = { 'الاسم': s.name, 'الكود': s.personCode || '' };
+    if(can('phones')) row['التليفون'] = s.phone || '';
+    if(can('otherDetails')) row['تاريخ الميلاد'] = s.birthDate || '';
+    if(can('addresses')) row['العنوان'] = s.address || '';
+    if(can('otherDetails')) Object.assign(row, {
       'أب الاعتراف': s.confessionFather || '',
       'كنيسته': s.church || '',
       'الوظيفة': s.occupation || '',
       'مكان العمل': s.workplace || '',
       'الأبناء': formatChildrenForExcel(s.children),
-      'الزوج/الزوجة': s.spouseName || '',
+      'الزوج/الزوجة': s.spouseName || ''
+    });
+    Object.assign(row, {
       'الاجتماعات': s.groups.filter(gid=>visible.includes(gid)).map(gid=>groupName(gid)).join(' - '),
       'مطلوب يحضر (اجتماع الخدام)': s.groups.includes(SERVANTS_GID) ? SERV_DAYS[s.servDays||'both'] : '',
-      ...dayCols,
-      'أضافه': s.addedBy || ''
-    };
+      ...dayCols
+    });
+    if(can('addedBy')) row['أضافه'] = s.addedBy || '';
+    return row;
   });
   const ws2 = XLSX.utils.json_to_sheet(servantRows);
   XLSX.utils.book_append_sheet(wb, ws2, 'تقرير الخدام والمخدومين');
@@ -5454,7 +5693,7 @@ document.getElementById('exportExcelBtn').addEventListener('click', async ()=>{
         'التاريخ': sess.date,
         'عدد الحاضرين': sess.present.length,
         'الحاضرون': presentNames,
-        'سجّله': sess.recordedBy || ''
+        'سجّله': can('addedBy') ? (sess.recordedBy || '') : ''
       });
     });
   });
@@ -5466,6 +5705,7 @@ document.getElementById('exportExcelBtn').addEventListener('click', async ()=>{
 
 /* ---------- BULK DATA EXPORT / IMPORT (admin only) ---------- */
 document.getElementById('exportAllDataBtn').addEventListener('click', async ()=>{
+  if(!isAdmin()) return;
   if(typeof XLSX === 'undefined'){ alert('مكتبة تصدير الإكسل مش محمّلة. جرّب تفتح البرنامج على متصفح تاني أو حاول تاني بعد شوية.'); return; }
   await refreshLatestDataForExport();
   const rows = sortByName(DATA.servants).map(s=>{
@@ -5519,11 +5759,13 @@ async function performFullBackupDownload(){
 }
 
 document.getElementById('downloadBackupBtn').addEventListener('click', async ()=>{
+  if(!isAdmin()) return;
   await performFullBackupDownload();
   flashSaved('fullBackupSavedMsg');
 });
 
 document.getElementById('downloadBackupExcelBtn').addEventListener('click', async ()=>{
+  if(!isAdmin()) return;
   if(typeof XLSX === 'undefined'){ alert('مكتبة تصدير الإكسل مش محمّلة. جرّب تفتح البرنامج على متصفح تاني أو حاول تاني بعد شوية.'); return; }
   await refreshLatestDataForExport();
   const wb = XLSX.utils.book_new();
@@ -5585,7 +5827,7 @@ document.getElementById('downloadBackupExcelBtn').addEventListener('click', asyn
 
 document.getElementById('restoreBackupFile').addEventListener('change', (e)=>{
   const file = e.target.files[0];
-  if(!file) return;
+  if(!file || !isAdmin()){ e.target.value = ''; return; }
   const reader = new FileReader();
   reader.onload = async (ev)=>{
     try{
@@ -5643,7 +5885,7 @@ document.getElementById('restoreBackupFile').addEventListener('change', (e)=>{
 
 document.getElementById('importAllDataFile').addEventListener('change', (e)=>{
   const file = e.target.files[0];
-  if(!file) return;
+  if(!file || !isAdmin()){ e.target.value = ''; return; }
   if(typeof XLSX === 'undefined'){ alert('مكتبة قراءة الإكسل مش محمّلة. جرّب تفتح البرنامج على متصفح تاني أو حاول تاني بعد شوية.'); e.target.value=''; return; }
   const reader = new FileReader();
   reader.onload = async (ev)=>{
@@ -5700,7 +5942,7 @@ document.getElementById('importAllDataFile').addEventListener('change', (e)=>{
             id: 's_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
             personCode: (codeFromFile && !DATA.servants.some(s=>s.personCode===codeFromFile)) ? codeFromFile : generateUniquePersonCode(),
             ...fields,
-            addedBy: currentUser ? currentUser.name : 'استيراد Excel'
+            addedBy: currentUser ? currentUser.name : 'استيراد Excel', addedAt: todayStr()
           });
           added++;
         }
@@ -5770,6 +6012,16 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
     return;
   }
 
+  // personal data follows the same permissions as the screens
+  const canPh = can('phones'), canAddr = can('addresses'), canOther = can('otherDetails'), canBy = can('addedBy');
+  const needs = { confessionfather: canOther, editlog: canBy, area: canAddr };
+  if(needs[type] === false){
+    preview.innerHTML = '<div class="empty-note">التقرير ده فيه بيانات معندكش صلاحية تشوفها. كلّم المدير.</div>';
+    actions.style.display = 'none';
+    lastCustomReport = null;
+    return;
+  }
+  const ph = s=> canPh ? (s.phone||'') : '—';
   let title = '';
   let sections = []; // [{heading, columns, rows}]
   let chartConfig = null; // {kind, labels, datasets}
@@ -5804,7 +6056,7 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
           const s = DATA.servants.find(x=>x.id===id);
           return s ? s.name : id;
         }).join('، ');
-        rows.push([groupName(gid), sess.date, sess.present.length, names, sess.recordedBy||'']);
+        rows.push([groupName(gid), sess.date, sess.present.length, names, canBy ? (sess.recordedBy||'') : '—']);
       });
     });
     sections.push({ heading: null, columns, rows });
@@ -5824,7 +6076,7 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
     members.forEach(s=>{
       const { days } = personAttendance(s, selectedGroups, sess=>inRange(sess.date, from, to));
       const dc = d => d.possible ? [d.attended, d.absent, d.pct+'%'] : ['—','—','—'];
-      rows.push([s.name, s.phone||'', ...dc(days.friday), ...dc(days.sunday)]);
+      rows.push([s.name, ph(s), ...dc(days.friday), ...dc(days.sunday)]);
     });
     sections.push({ heading: null, columns, rows });
   } else if(type === 'birthdays'){
@@ -5841,7 +6093,7 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
         return { s, day: parts[0], month: parts[1] };
       }).filter(x=>x.month === month && !isNaN(x.day));
       withDay.sort((a,b)=>a.day-b.day);
-      const rows = withDay.map(x=>[x.day, x.s.name, x.s.phone||'']);
+      const rows = withDay.map(x=>[x.day, x.s.name, ph(x.s)]);
       sections.push({ heading: groupName(gid), columns, rows });
     });
   } else if(type === 'area'){
@@ -5855,7 +6107,7 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
       byArea[area].push(s);
     });
     Object.keys(byArea).sort((a,b)=>a==='غير محدد'?1:b==='غير محدد'?-1:a.localeCompare(b,'ar')).forEach(area=>{
-      const rows = byArea[area].map(s=>[s.name, s.phone||'', s.address||'', s.groups.filter(g=>selectedGroups.includes(g)).map(g=>groupName(g)).join(' - ')]);
+      const rows = byArea[area].map(s=>[s.name, ph(s), s.address||'', s.groups.filter(g=>selectedGroups.includes(g)).map(g=>groupName(g)).join(' - ')]);
       sections.push({ heading: area, columns, rows });
     });
   } else if(type === 'editlog'){
@@ -5879,7 +6131,7 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
       byFather[s.confessionFather].push(s);
     });
     Object.keys(byFather).sort((a,b)=>a.localeCompare(b,'ar')).forEach(father=>{
-      const rows = sortByName(byFather[father]).map(s=>[s.name, s.phone||'', s.area||'']);
+      const rows = sortByName(byFather[father]).map(s=>[s.name, ph(s), canAddr ? (s.area||'') : '—']);
       sections.push({ heading: `${father} (${rows.length})`, columns, rows });
     });
   }
@@ -5900,13 +6152,13 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
   }
   sections.forEach((sec, idx)=>{
     const pageBreak = (type === 'confessionfather' && idx > 0) ? 'page-break-before:always;' : '';
-    if(sec.heading) html += `<div style="${pageBreak}"><h4 style="font-family:'Amiri',serif;margin:14px 0 6px;color:var(--wine);">${sec.heading}</h4></div>`;
+    if(sec.heading) html += `<div style="${pageBreak}"><h4 style="font-family:'Amiri',serif;margin:14px 0 6px;color:var(--wine);">${escHtml(sec.heading)}</h4></div>`;
     if(sec.rows.length === 0){
-      html += `<div class="empty-note">لا يوجد نتائج${sec.heading ? ' لـ'+sec.heading : ''}</div>`;
+      html += `<div class="empty-note">لا يوجد نتائج${sec.heading ? ' لـ'+escHtml(sec.heading) : ''}</div>`;
     } else {
       html += `<table class="report-table">
         <thead><tr>${sec.columns.map(c=>`<th>${c}</th>`).join('')}</tr></thead>
-        <tbody>${sec.rows.map(r=>`<tr>${r.map(v=>`<td>${v}</td>`).join('')}</tr>`).join('')}</tbody>
+        <tbody>${sec.rows.map(r=>`<tr>${r.map(v=>`<td>${escHtml(v)}</td>`).join('')}</tr>`).join('')}</tbody>
       </table>`;
     }
   });
@@ -7602,7 +7854,7 @@ function initialsOf(name){
 }
 function avatarHtml(p, size){
   size = size || 44;
-  if(p.photo) return `<img src="${p.photo}" alt="" loading="lazy" decoding="async" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;flex:none;">`;
+  if(p.photo) return `<img src="${escHtml(p.photo)}" alt="" loading="lazy" decoding="async" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;flex:none;">`;
   const g = (p.groups||[])[0] || '';
   return `<span class="avatar g-${g}" style="width:${size}px;height:${size}px;font-size:${Math.round(size*0.34)}px;" aria-hidden="true">${escHtml(initialsOf(p.name))}</span>`;
 }
@@ -7735,7 +7987,7 @@ function renderAll(){
   try{ updateUserAvatar(); }catch(e){}
   renderServantList();
   renderMeetingPicker();
-  document.getElementById('attendDate').value = nearestMeetingDateStr();
+  document.getElementById('attendDate').value = nearestMeetingDateStr('', currentGroupId);
 }
 
 function showLoadErrorScreen(){
@@ -7812,9 +8064,12 @@ async function init(){
 
   APP_READY = true;
   const personal = await getPersonalLogin();
-  if(personal && personal.name){
+  // closing the app doesn't stop the 3-minute auto-logout: after that the password (or face) is needed again,
+  // and a locked account never opens by itself
+  const fresh = personal && personal.at && Date.now() - personal.at < INACTIVITY_LIMIT_MS;
+  if(personal && personal.name && fresh){
     const user = USERS.find(u=>u.name === personal.name);
-    if(user){
+    if(user && !(user.role !== 'admin' && user.locked)){
       currentUser = user; auditLastUser = user.name;
       hideLoginOverlay();
       try{ applyUserUI(); }catch(uiErr){ console.error('applyUserUI failed on auto-login', uiErr); showLoginOverlay(); document.getElementById('loginNote').textContent = 'حصلت مشكلة في تحميل بياناتك، سجّل دخول تاني: ' + uiErr.message; }
