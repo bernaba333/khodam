@@ -2545,6 +2545,29 @@ function sameObj(a, b){
 function threeWayPick(b, l, r){
   return sameObj(b, l) ? r : l;
 }
+// Same person (or user) changed on two devices at once: keep both sides' changes field by field
+// (e.g. one edits the phone while another records a visit), and keep every visit from both.
+function mergeFields(b, l, r){
+  if(!b || !l || !r) return threeWayPick(b, l, r);
+  if(sameObj(b, l)) return r;
+  if(sameObj(b, r)) return l;
+  const out = {};
+  let visitsMerged = false;
+  new Set([...Object.keys(r), ...Object.keys(l), ...Object.keys(b)]).forEach(k=>{
+    let v;
+    if(k === 'visits' && (Array.isArray(l.visits) || Array.isArray(r.visits))){
+      const key = x=>(x.at||'') + '|' + x.date + '|' + (x.type||'');
+      v = mergeList(b.visits, l.visits, r.visits, key, threeWayPick);
+      visitsMerged = !sameObj(b[k], l[k]) && !sameObj(b[k], r[k]);
+    } else v = sameObj(b[k], l[k]) ? r[k] : l[k];
+    if(v !== undefined) out[k] = v;
+  });
+  if(visitsMerged && out.visits && out.visits.length){
+    const newest = out.visits.slice().sort((a,c)=>String(c.date).localeCompare(String(a.date)))[0];
+    out.lastVisitDate = newest.date; out.lastVisitType = newest.type || '';
+  }
+  return out;
+}
 function mergeList(bArr, lArr, rArr, keyOf, mergeItem){
   const bm = new Map((bArr||[]).map(x=>[keyOf(x), x]));
   const lm = new Map((lArr||[]).map(x=>[keyOf(x), x]));
@@ -2579,7 +2602,7 @@ function mergeSession(b, l, r){
 }
 function mergeData(base, local, remote){
   const merged = { servants: [], sessions: {} };
-  merged.servants = mergeList(base.servants, local.servants, remote.servants, x=>x.id, threeWayPick);
+  merged.servants = mergeList(base.servants, local.servants, remote.servants, x=>x.id, mergeFields);
   const gids = new Set([...Object.keys(base.sessions||{}), ...Object.keys(local.sessions||{}), ...Object.keys(remote.sessions||{})]);
   gids.forEach(gid=>{
     const list = mergeList((base.sessions||{})[gid], (local.sessions||{})[gid], (remote.sessions||{})[gid], x=>x.date, mergeSession);
@@ -2640,9 +2663,11 @@ function refreshScreensAfterRemoteChange(){
 }
 async function pullRemoteData(){
   if(dataSaving || !window.storage.getWithRev) return;
+  const startRev = DATA_REV;
   try{
     const r = await window.storage.getWithRev(STORAGE_KEY, DATA_REV);
-    if(r.same || !r.exists || dataSaving) return;
+    // a save (or another update) finished while this read was on its way: this copy is already old
+    if(r.same || !r.exists || dataSaving || DATA_REV !== startRev || r.rev <= DATA_REV) return;
     const remoteStr = stripPhotos(r.value);
     const remote = JSON.parse(remoteStr);
     remote.servants = remote.servants || []; remote.sessions = remote.sessions || {};
@@ -2662,7 +2687,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '20-Oct-2026 L';
+const APP_VERSION = '20-Oct-2026 N';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -2703,7 +2728,8 @@ function saveData(){
   return Promise.resolve(true);
 }
 window.addEventListener('beforeunload', e=>{
-  if(dataDirty || dataSaving){ e.preventDefault(); e.returnValue = ''; }
+  let unsavedTicks = false; try{ unsavedTicks = attendHasUnsaved() || !!spTrackPending; }catch(err){}
+  if(dataDirty || dataSaving || unsavedTicks){ e.preventDefault(); e.returnValue = ''; }
 });
 
 // Saves and waits until it is really stored (used before reloading the page).
@@ -3740,6 +3766,7 @@ function renderMeetingPicker(){
   }).join('');
   picker.querySelectorAll('.meeting-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
+      if(!confirmDropAttendance()) return;
       currentGroupId = btn.dataset.gid;
       document.getElementById('attendDate').value = nearestMeetingDateStr('', currentGroupId);
       renderMeetingPicker();
@@ -3750,6 +3777,19 @@ function renderMeetingPicker(){
 
 let attendCheckedIds = new Set();
 let attendSearchTerm = '';
+let attendShown = { gid: null, date: '' };   // the meeting + day the ticks on screen belong to
+// ticks only reach the data when "حفظ الحضور" is pressed: don't drop them without asking
+function attendHasUnsaved(){
+  if(!attendShown.gid || !currentUser || !can('editAttendance')) return false;
+  const sess = (DATA.sessions[attendShown.gid]||[]).find(x=>x.date===attendShown.date);
+  const saved = new Set(sess ? sess.present : []);
+  if(saved.size !== attendCheckedIds.size) return true;
+  for(const id of attendCheckedIds) if(!saved.has(id)) return true;
+  return false;
+}
+function confirmDropAttendance(){
+  return !attendHasUnsaved() || confirm('فيه علامات حضور لسه ما اتحفظتش (محتاج تدوس "حفظ الحضور"). تسيبها من غير حفظ؟');
+}
 
 function renderAttendPanel(){
   const attendCard = document.getElementById('attendCard');
@@ -3762,6 +3802,7 @@ function renderAttendPanel(){
   const date = document.getElementById('attendDate').value || todayStr();
   const existing = (DATA.sessions[currentGroupId]||[]).find(s=>s.date===date);
   attendCheckedIds = new Set(existing ? existing.present : []);
+  attendShown = { gid: currentGroupId, date };
   attendSearchTerm = '';
   document.getElementById('attendSearch').value = '';
   renderAttendList();
@@ -3814,6 +3855,7 @@ document.getElementById('attendSearch').addEventListener('input', (e)=>{
 });
 
 document.getElementById('attendDate').addEventListener('change', (e)=>{
+  if(!confirmDropAttendance()){ e.target.value = attendShown.date; return; }
   const picked = e.target.value;
   if(picked && !isMeetingDay(picked)){
     const fixed = nearestMeetingDateStr(picked, currentGroupId);
@@ -3867,6 +3909,7 @@ function renderHistory(){
   `).join('');
   body.querySelectorAll('[data-open]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
+      if(!(btn.dataset.open === attendShown.date || confirmDropAttendance())) return;
       document.getElementById('attendDate').value = btn.dataset.open;
       renderAttendPanel();
       window.scrollTo({top: document.getElementById('attendCard').offsetTop-20, behavior:'smooth'});
@@ -4436,7 +4479,7 @@ async function saveUsers(){
       for(let attempt=0; attempt<5 && !ok; attempt++){
         const r = await window.storage.getWithRev(USERS_KEY);
         const remote = r.exists ? JSON.parse(r.value) : [];
-        const merged = mergeList(JSON.parse(USERS_BASE), USERS, remote, u=>u.name, threeWayPick);
+        const merged = mergeList(JSON.parse(USERS_BASE), USERS, remote, u=>u.name, mergeFields);
         const res = await window.storage.setIfRev(USERS_KEY, JSON.stringify(merged), r.rev || 0);
         if(res.ok){
           ok = true;
@@ -4710,8 +4753,8 @@ function renderBackupStatus(){
   }
 }
 async function savePermissions(){
-  try{ await window.storage.set(PERMISSIONS_KEY, JSON.stringify(PERMISSIONS), true); }
-  catch(e){ console.error('permissions save error', e); }
+  try{ await window.storage.set(PERMISSIONS_KEY, JSON.stringify(PERMISSIONS), true); return true; }
+  catch(e){ console.error('permissions save error', e); alert('⚠️ الصلاحيات ما اتحفظتش. اتأكد من النت وجرّب تاني.'); return false; }
 }
 async function getPersonalLogin(){
   const result = await storageGetWithRetry(PERSONAL_LOGIN_KEY, false);
@@ -4809,6 +4852,11 @@ function profileOf(u){
     return ALL_PERM_KEYS.every(k=>effectivePerm(u,k) === !!pr[k]);
   });
   return hit || 'custom';
+}
+// users always listed by role: مدير, مشرف, خادم, the preset types, then مخصص (stable within a role)
+function usersByRole(){
+  const rank = u=>{ const i = USER_PROFILES.findIndex(p=>p.id===profileOf(u)); return i < 0 ? USER_PROFILES.length : i; };
+  return USERS.map((u,i)=>({u,i,r:rank(u)})).sort((a,b)=>a.r-b.r || a.i-b.i).map(x=>x.u);
 }
 function profileLabel(id){ const p = USER_PROFILES.find(x=>x.id===id); return p ? p.label : id; }
 const PERM_DATA_SHORT = { phones:'التليفون', addresses:'العنوان', otherDetails:'الميلاد وأب الاعتراف والكنيسة', addedBy:'مين أضاف' };
@@ -5413,8 +5461,8 @@ document.getElementById('savePermissionsBtn').addEventListener('click', async ()
   const before = Object.assign({}, PERMISSIONS);
   PERMISSIONS = Object.assign({}, PERMISSIONS, readPermMatrix(document.getElementById('globalPermMatrix')));
   const changes = ALL_PERM_KEYS.filter(k=>!!before[k] !== !!PERMISSIONS[k]).map(k=>({ f: PERM_LABELS[k], from: before[k] ? 'مسموح' : 'ممنوع', to: PERMISSIONS[k] ? 'مسموح' : 'ممنوع' }));
+  if(!(await savePermissions())){ PERMISSIONS = before; return; }
   if(changes.length) auditPush({ area:'الصلاحيات', action:'تعديل الصلاحيات العامة', target:'كل المستخدمين العاديين', changes });
-  await savePermissions();
   flashSaved('permissionsSavedMsg');
   applyTabGating();
   renderServantList();
@@ -5503,7 +5551,7 @@ document.getElementById('newUserToggleBtn').addEventListener('click', ()=>{
 function renderUsersList(){
   const list = document.getElementById('usersList');
   document.getElementById('userCount').textContent = USERS.length;
-  list.innerHTML = USERS.map(u=>`
+  list.innerHTML = usersByRole().map(u=>`
     <div class="user-row${USER_ROWS_OPEN.has(u.name) ? ' open' : ''}" data-name="${escHtml(u.name)}">
       ${avatarHtml(u, 38)}
       <div class="user-info">
@@ -5804,8 +5852,7 @@ document.getElementById('resetAllBtn').addEventListener('click', async ()=>{
   if(txt !== 'تصفير كامل') return;
   DATA = { servants: [], sessions: {} };
   USERS = [];
-  await saveDataNow();
-  await saveUsers();
+  if(!((await saveDataNow()) && (await saveUsers()))){ alert('⚠️ التصفير ما كملش لأن الحفظ فشل. اتأكد من النت وجرّب تاني.'); location.reload(); return; }
   await clearPersonalLogin();
   location.reload();
 });
@@ -5993,7 +6040,7 @@ document.getElementById('downloadBackupExcelBtn').addEventListener('click', asyn
   });
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sessionRows), 'سجلات الحضور');
 
-  const userRows = USERS.map(u=>({
+  const userRows = usersByRole().map(u=>({
     'الاسم': u.name,
     'الدور': roleLabelFor(u.role),
     'الاجتماعات المسموحة': u.role === 'user' ? allowedGroupsFor(u).map(groupName).join(' - ') : 'الكل',
@@ -6045,9 +6092,9 @@ document.getElementById('restoreBackupFile').addEventListener('change', (e)=>{
       USERS = parsed.USERS || [];
       if(parsed.PERMISSIONS) PERMISSIONS = Object.assign({}, PERMISSIONS, parsed.PERMISSIONS);
 
-      await saveDataNow();
-      await saveUsers();
-      await savePermissions();
+      // a failed save must not say "done" and reload: the old data would come back silently
+      const savedOk = (await saveDataNow()) && (await saveUsers()) && (await savePermissions());
+      if(!savedOk){ alert('⚠️ الاستعادة ما كملتش لأن الحفظ فشل. اتأكد من النت وجرّب تاني (هنفتح البرنامج من جديد).'); location.reload(); return; }
       try{
         if(parsed.brandingTitle) await window.storage.set(BRANDING_TITLE_KEY, parsed.brandingTitle, true);
         if(parsed.brandingLogo) await window.storage.set(BRANDING_LOGO_KEY, parsed.brandingLogo, true);
@@ -8631,11 +8678,20 @@ async function spLoadTrack(force){
   spTrack = r.value ? JSON.parse(r.value) : { days:{} }; if(!spTrack.days) spTrack.days = {}; spTrackFor = key;
   return spTrack;
 }
+let spTrackPending = null;
+function spFlushTrack(){
+  clearTimeout(spTrackTimer); spTrackTimer = null;
+  const p = spTrackPending; spTrackPending = null;
+  if(p) window.storage.set(p.key, p.val, true).catch(()=>alert('المتابعة متحفظتش. اتأكد من النت.'));
+}
 function spSaveTrackSoon(){
   clearTimeout(spTrackTimer);
-  const key = spTrackKey(), val = JSON.stringify(spTrack);
-  spTrackTimer = setTimeout(()=>{ window.storage.set(key, val, true).catch(()=>alert('المتابعة متحفظتش. اتأكد من النت.')); }, 700);
+  spTrackPending = { key: spTrackKey(), val: JSON.stringify(spTrack) };
+  spTrackTimer = setTimeout(spFlushTrack, 700);
 }
+// closing the app or switching away right after a tick must not lose it
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'hidden') spFlushTrack(); });
+window.addEventListener('pagehide', spFlushTrack);
 function spDaysAgo(iso){ const a = new Date(iso + 'T12:00:00'), b = new Date(); b.setHours(12,0,0,0); return Math.round((b - a) / 86400000); }
 function spLastDone(id){ return Object.keys(spTrack.days).filter(k=>(spTrack.days[k].i||[]).includes(id)).sort().pop() || ''; }
 async function spRenderNotes(body){
