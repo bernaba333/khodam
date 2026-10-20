@@ -137,6 +137,7 @@ header h1{
 .app-brand{display:inline-flex;flex-direction:column;align-items:center;gap:0;line-height:1.15;}
 .app-brand .cop{font-family:'Noto Sans Coptic','Antinoou','Segoe UI Historic','Segoe UI Symbol',sans-serif;font-size:1.45em;font-weight:700;letter-spacing:1px;display:inline-flex;direction:ltr;}
 .app-brand .mean{font-size:.72em;opacity:.8;margin-top:1px;}
+header .app-brand .mean, html[data-theme="dark"] .app-brand .mean{color:#fff;opacity:.95;}
 header .app-brand{color:var(--gold-soft);font-size:.92rem;margin-bottom:3px;}
 .brand-center{display:flex;color:#7A2E2E;margin:6px auto 4px;}
 html[data-theme="dark"] .brand-center{color:var(--gold-soft);}
@@ -2661,7 +2662,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '20-Oct-2026 K';
+const APP_VERSION = '20-Oct-2026 L';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
