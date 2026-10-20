@@ -977,6 +977,27 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
 .sp-story-title{font-family:'Noto Naskh Arabic','Amiri',serif;font-size:calc(1.35rem * var(--sp-scale,1));font-weight:700;color:var(--wine);margin:6px 0 10px;}
 .sp-story-src{font-size:.82rem;color:var(--muted);margin-top:6px;}
 .sp-empty{color:var(--muted);text-align:center;padding:18px 6px;}
+.sp-sub{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.sp-sub button{flex:1 1 0;min-width:90px;padding:7px 8px;font-size:.85rem;}
+.sp-grp{margin-top:12px;}
+.sp-grp h4{margin:0 0 8px;font-size:.92rem;color:var(--wine);}
+.sp-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;}
+.sp-item{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--input);color:var(--ink);font-family:'Cairo',sans-serif;font-size:.9rem;font-weight:600;cursor:pointer;text-align:start;}
+.sp-item .ck{width:22px;height:22px;border-radius:50%;border:2px solid var(--line);flex:none;display:flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;}
+.sp-item.on{border-color:#0F766E;background:rgba(15,118,110,.10);}
+.sp-item.on .ck{background:#0F766E;border-color:#0F766E;}
+.sp-prog{height:10px;border-radius:6px;background:var(--line-soft);overflow:hidden;margin-top:6px;}
+.sp-prog > i{display:block;height:100%;background:linear-gradient(90deg,#7DD3C0,#0F766E);}
+.sp-stat-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;}
+.sp-tile{border:1px solid var(--line-soft);border-radius:12px;padding:10px;text-align:center;background:var(--card);}
+.sp-tile b{display:block;font-size:1.3rem;color:var(--wine);}
+.sp-tile span{font-size:.78rem;color:var(--muted);}
+.sp-week{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:8px;}
+.sp-week th,.sp-week td{padding:5px 3px;text-align:center;border-bottom:1px solid var(--line-soft);}
+.sp-week{table-layout:fixed;}
+.sp-week td:first-child,.sp-week th:first-child{text-align:start;width:40%;font-size:.76rem;line-height:1.3;}
+.sp-week .y{color:#0F766E;font-weight:700;}
+.sp-week .n{color:var(--faint);}
 </style>
 </head>
 <body>
@@ -2620,7 +2641,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '20-Oct-2026 F';
+const APP_VERSION = '20-Oct-2026 G';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -8525,7 +8546,7 @@ async function renderSpirit(){
   const d = spDate();
   document.getElementById('spDayLabel').textContent = (spOffset === 0 ? 'النهارده، ' : '') + d.toLocaleDateString('ar-EG', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
   try{ document.getElementById('spCopticLabel').textContent = typeof copticDateStr === 'function' ? copticDateStr(d) : ''; }catch(e){ document.getElementById('spCopticLabel').textContent = ''; }
-  const showDay = spTab !== 'notes';
+  const showDay = spTab !== 'notes' || spSub === 'today';
   panel.querySelector('.sp-daybar').querySelectorAll('#spPrevDay,#spToday,#spNextDay').forEach(b=>b.style.display = showDay ? '' : 'none');
   const body = document.getElementById('spBody');
   if(spTab === 'readings') return spRenderReadings(body, d);
@@ -8563,10 +8584,118 @@ async function spRenderReadings(body, d){
         </div></div>`; }).join('')}
     </details></div>`).join('') + '<div style="text-align:center;font-size:.75rem;color:var(--muted);margin:4px 0 12px;">القراءات من القطمارس (katameros.app)</div>';
   body.querySelectorAll('[data-sp-share]').forEach(b=>b.onclick = ()=>{ const it = items[+b.dataset.spShare]; spShare('📖 ' + spReadingHead(it) + (it.ref ? ' (' + it.ref + ')' : '') + ' — ' + spDayLabelShort(d), spReadingText(it)); });
-  body.querySelectorAll('[data-sp-note]').forEach(b=>b.onclick = ()=>{ const it = items[+b.dataset.spNote]; spEditNote = ''; spTab = 'notes'; spPrefill = spReadingHead(it) + (it.ref ? ' (' + it.ref + ')' : '') + '\n'; renderSpirit(); });
+  body.querySelectorAll('[data-sp-note]').forEach(b=>b.onclick = ()=>{ const it = items[+b.dataset.spNote]; spEditNote = ''; spTab = 'notes'; spSub = 'free'; spPrefill = spReadingHead(it) + (it.ref ? ' (' + it.ref + ')' : '') + '\n'; renderSpirit(); });
 }
 function spDayLabelShort(d){ return d.toLocaleDateString('ar-EG', { day:'numeric', month:'long' }); }
 let spPrefill = '';
+/* Spiritual follow-up (القانون الروحي): a daily checklist like the
+   "متابعة روحية" apps, grouped by kind, plus a day note; stats over the last
+   7/30 days. Saved per user in khodam_strack_<name>: {days:{'YYYY-MM-DD':{i:[ids], bible, note}}} */
+const SP_TRACK_GROUPS = [
+  { t:'🙏 الصلاة', items:[ ['pmorning','صلاة باكر'], ['psleep','صلاة النوم'], ['phours','صلوات الأجبية التانية'], ['ppersonal','صلاة شخصية (المخدع)'] ] },
+  { t:'📖 كلمة ربنا', items:[ ['bible','قراءة الكتاب المقدس'], ['verse','حفظ آية'], ['sread','قراءة روحية / سير قديسين'] ] },
+  { t:'⛪ الكنيسة والأسرار', items:[ ['liturgy','حضور القداس'], ['communion','التناول'], ['confession','الاعتراف'], ['praise','التسبحة / العشية'] ] },
+  { t:'🕯️ الجهاد الروحي', items:[ ['fast','الصوم'], ['metania','المطانيات'], ['service','عمل محبة / خدمة'] ] }
+];
+const SP_TRACK_ALL = SP_TRACK_GROUPS.flatMap(g=>g.items);
+const SP_TRACK_DAILY = ['pmorning','psleep','ppersonal','bible']; // the "every day" core used for the streak
+let spNoteQ = '', spSub = 'today', spTrack = null, spTrackFor = '', spTrackTimer = null;
+function spTrackKey(){ return 'khodam_strack_' + encodeURIComponent(currentUser ? currentUser.name : '').slice(0, 300); }
+function spIso(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+async function spLoadTrack(force){
+  const key = spTrackKey();
+  if(spTrack && spTrackFor === key && !force) return spTrack;
+  const r = await storageGetWithRetry(key, true);
+  if(!r.confirmed) throw new Error('track not confirmed');
+  spTrack = r.value ? JSON.parse(r.value) : { days:{} }; if(!spTrack.days) spTrack.days = {}; spTrackFor = key;
+  return spTrack;
+}
+function spSaveTrackSoon(){
+  clearTimeout(spTrackTimer);
+  const key = spTrackKey(), val = JSON.stringify(spTrack);
+  spTrackTimer = setTimeout(()=>{ window.storage.set(key, val, true).catch(()=>alert('المتابعة متحفظتش. اتأكد من النت.')); }, 700);
+}
+function spDaysAgo(iso){ const a = new Date(iso + 'T12:00:00'), b = new Date(); b.setHours(12,0,0,0); return Math.round((b - a) / 86400000); }
+function spLastDone(id){ return Object.keys(spTrack.days).filter(k=>(spTrack.days[k].i||[]).includes(id)).sort().pop() || ''; }
+async function spRenderNotes(body){
+  if(!currentUser){ body.innerHTML = ''; return; }
+  const head = `<div class="card" style="padding-bottom:6px;"><div class="sp-sub">
+      <button class="${spSub==='today'?'primary':'ghost'}" data-sub="today">✅ متابعة اليوم</button>
+      <button class="${spSub==='stats'?'primary':'ghost'}" data-sub="stats">📊 متابعتي</button>
+      <button class="${spSub==='free'?'primary':'ghost'}" data-sub="free">✍️ خواطري</button></div>
+      <p style="margin:0 0 6px;font-size:.8rem;color:var(--muted);">🔒 النوتة دي بتاعتك إنت بس، محدش غيرك بيشوفها في البرنامج.</p></div>`;
+  const wire = ()=>body.querySelectorAll('[data-sub]').forEach(b=>b.onclick = ()=>{ spSub = b.dataset.sub; renderSpirit(); });
+  if(spSub === 'free'){
+    body.innerHTML = head + '<div id="spFreeHolder"></div>'; wire();
+    await spRenderNotesFree(document.getElementById('spFreeHolder')); return;
+  }
+  if(!(spTrack && spTrackFor === spTrackKey())) body.innerHTML = head + '<div class="card sp-empty">جاري التحميل…</div>';
+  try{ await spLoadTrack(); }catch(e){ body.innerHTML = head + '<div class="card sp-empty">معرفناش نفتح المتابعة. اتأكد من النت وجرّب تاني.</div>'; wire(); return; }
+  if(spTab !== 'notes') return;
+  if(spSub === 'today') spRenderTrackDay(body, head); else spRenderTrackStats(body, head);
+  wire();
+}
+function spRenderTrackDay(body, head){
+  const d = spDate(), iso = spIso(d);
+  if(spOffset > 0){ body.innerHTML = head + '<div class="card sp-empty">مينفعش تسجّل ليوم لسه مجاش. ارجع للنهارده.</div>'; return; }
+  const day = spTrack.days[iso] || { i:[] };
+  const done = new Set(day.i||[]);
+  const pct = Math.round(done.size / SP_TRACK_ALL.length * 100);
+  body.innerHTML = head + `<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><b>عملت إيه ${spOffset === 0 ? 'النهارده' : 'اليوم ده'}؟</b><span id="spTrCount" style="color:var(--muted);font-size:.85rem;">${done.size} من ${SP_TRACK_ALL.length}</span></div>
+    <div class="sp-prog"><i style="width:${pct}%"></i></div>
+    ${SP_TRACK_GROUPS.map(g=>`<div class="sp-grp"><h4>${g.t}</h4><div class="sp-items">
+      ${g.items.map(([id, label])=>`<button type="button" class="sp-item${done.has(id)?' on':''}" data-tr="${id}"><span class="ck">${done.has(id)?'✓':''}</span>${escHtml(label)}</button>`).join('')}
+    </div></div>`).join('')}
+    <div class="sp-grp"><h4>📖 قريت إيه في الكتاب المقدس؟</h4>
+      <input type="text" id="spTrBible" placeholder="مثلاً: يوحنا ٣" value="${escHtml(day.bible||'')}" style="width:100%;"></div>
+    <div class="sp-grp sp-note-form"><h4>💭 تأمل أو قرار اليوم</h4>
+      <textarea id="spTrNote" placeholder="آية لمستني، قرار، طلبة…" style="min-height:90px;">${escHtml(day.note||'')}</textarea></div>
+    <div style="font-size:.78rem;color:var(--muted);margin-top:6px;">بيتحفظ لوحده أول ما تختار أو تكتب ✓</div>
+  </div>`;
+  const cur = ()=>{ const x = spTrack.days[iso] || (spTrack.days[iso] = { i:[] }); if(!x.i) x.i = []; return x; };
+  const clean = ()=>{ const x = spTrack.days[iso]; if(x && !(x.i||[]).length && !x.bible && !x.note) delete spTrack.days[iso]; };
+  body.querySelectorAll('[data-tr]').forEach(b=>b.onclick = ()=>{
+    const x = cur(), id = b.dataset.tr, k = x.i.indexOf(id);
+    if(k >= 0) x.i.splice(k, 1); else x.i.push(id);
+    clean(); spSaveTrackSoon();
+    const on = k < 0; b.classList.toggle('on', on); b.querySelector('.ck').textContent = on ? '✓' : '';
+    const n = (spTrack.days[iso] ? spTrack.days[iso].i.length : 0);
+    body.querySelector('.sp-prog > i').style.width = Math.round(n / SP_TRACK_ALL.length * 100) + '%';
+    document.getElementById('spTrCount').textContent = n + ' من ' + SP_TRACK_ALL.length;
+  });
+  document.getElementById('spTrBible').oninput = e=>{ cur().bible = e.target.value.slice(0, 200); clean(); spSaveTrackSoon(); };
+  document.getElementById('spTrNote').oninput = e=>{ cur().note = e.target.value.slice(0, 3000); clean(); spSaveTrackSoon(); };
+}
+function spRenderTrackStats(body, head){
+  const today = new Date(); today.setHours(12,0,0,0);
+  const back = n=>{ const x = new Date(today); x.setDate(x.getDate() - n); return x; };
+  const has = (iso, id)=>!!(spTrack.days[iso] && (spTrack.days[iso].i||[]).includes(id));
+  // streak: consecutive days (ending today or yesterday) with at least one core daily item
+  let streak = 0;
+  for(let n = has(spIso(today), 'x') || SP_TRACK_DAILY.some(id=>has(spIso(today), id)) ? 0 : 1; n < 400; n++){
+    if(SP_TRACK_DAILY.some(id=>has(spIso(back(n)), id))) streak++; else break;
+  }
+  const last30 = Array.from({length:30}, (_, n)=>spIso(back(n)));
+  const pct30 = id=>Math.round(last30.filter(k=>has(k, id)).length / 30 * 100);
+  const lastLbl = id=>{ const k = spLastDone(id); if(!k) return 'لسه'; const a = spDaysAgo(k); return a === 0 ? 'النهارده' : a === 1 ? 'امبارح' : 'من ' + a + ' يوم'; };
+  const week = Array.from({length:7}, (_, n)=>back(6 - n));
+  body.innerHTML = head + `<div class="card">
+      <div class="sp-stat-tiles">
+        <div class="sp-tile"><b>${streak}</b><span>يوم ورا بعض في الصلاة والإنجيل</span></div>
+        <div class="sp-tile"><b>${lastLbl('confession')}</b><span>آخر اعتراف</span></div>
+        <div class="sp-tile"><b>${lastLbl('communion')}</b><span>آخر تناول</span></div>
+        <div class="sp-tile"><b>${lastLbl('liturgy')}</b><span>آخر قداس</span></div>
+      </div>
+    </div>
+    <div class="card"><b>آخر ٧ أيام</b>
+      <div style="overflow-x:auto;"><table class="sp-week"><thead><tr><th></th>${week.map(d=>`<th>${'حنثرخجس'[d.getDay()]}<br><small>${d.getDate()}</small></th>`).join('')}</tr></thead>
+      <tbody>${SP_TRACK_ALL.map(([id, label])=>`<tr><td>${escHtml(label)}</td>${week.map(d=>has(spIso(d), id) ? '<td class="y">✓</td>' : '<td class="n">·</td>').join('')}</tr>`).join('')}</tbody></table></div>
+    </div>
+    <div class="card"><b>آخر ٣٠ يوم</b>
+      ${SP_TRACK_ALL.map(([id, label])=>{ const v = pct30(id); return `<div style="margin-top:8px;"><div style="display:flex;justify-content:space-between;font-size:.85rem;"><span>${escHtml(label)}</span><span style="color:var(--muted);">${v}%</span></div><div class="sp-prog"><i style="width:${v}%"></i></div></div>`; }).join('')}
+    </div>`;
+}
 async function spLoadNotes(){
   const key = spNotesKey();
   if(spNotes && spNotesFor === key) return spNotes;
@@ -8576,17 +8705,17 @@ async function spLoadNotes(){
   return spNotes;
 }
 async function spSaveNotes(){ await window.storage.set(spNotesKey(), JSON.stringify(spNotes), true); }
-async function spRenderNotes(body){
+async function spRenderNotesFree(body){
   if(!currentUser){ body.innerHTML = ''; return; }
   if(!(spNotes && spNotesFor === spNotesKey())) body.innerHTML = '<div class="card sp-empty">جاري التحميل…</div>';
   try{ await spLoadNotes(); }catch(e){ body.innerHTML = '<div class="card sp-empty">معرفناش نفتح النوتة. اتأكد من النت وجرّب تاني.</div>'; return; }
   if(spTab !== 'notes') return;
   const editing = spEditNote ? spNotes.find(n=>n.id === spEditNote) : null;
-  const q = (document.getElementById('spNoteSearch')||{}).value || '';
+  const q = spNoteQ;
   const list = spNotes.slice().sort((a,b)=>(b.at||0)-(a.at||0)).filter(n=>!q || n.text.includes(q));
   body.innerHTML = `
     <div class="card sp-note-form">
-      <p style="margin:0 0 8px;font-size:.85rem;color:var(--muted);">🔒 النوتة دي بتاعتك إنت بس، محدش غيرك بيشوفها في البرنامج. اكتب آية لمستك، قرار، أو صلاة.</p>
+      <p style="margin:0 0 8px;font-size:.85rem;color:var(--muted);">اكتب آية لمستك، قرار، أو صلاة.</p>
       <textarea id="spNoteText" placeholder="اكتب هنا…">${escHtml(editing ? editing.text : spPrefill)}</textarea>
       <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
         <button class="primary" id="spNoteSave">${editing ? 'حفظ التعديل' : '💾 حفظ'}</button>
@@ -8619,7 +8748,7 @@ async function spRenderNotes(body){
   };
   const cancel = document.getElementById('spNoteCancel'); if(cancel) cancel.onclick = ()=>{ spEditNote = ''; renderSpirit(); };
   const search = document.getElementById('spNoteSearch');
-  if(search) search.oninput = ()=>{ const pos = search.selectionStart; spRenderNotes(body).then(()=>{ const s2 = document.getElementById('spNoteSearch'); if(s2){ s2.focus(); s2.setSelectionRange(pos, pos); } }); };
+  if(search) search.oninput = ()=>{ const pos = search.selectionStart; spNoteQ = search.value; renderSpirit().then(()=>{ const s2 = document.getElementById('spNoteSearch'); if(s2){ s2.focus(); s2.setSelectionRange(pos, pos); } }); };
   body.querySelectorAll('[data-n-edit]').forEach(b=>b.onclick = ()=>{ spEditNote = b.dataset.nEdit; renderSpirit(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
   body.querySelectorAll('[data-n-share]').forEach(b=>b.onclick = ()=>{ const n = spNotes.find(x=>x.id === b.dataset.nShare); if(n) spShare('📝 من نوتتي الروحية', n.text); });
   body.querySelectorAll('[data-n-del]').forEach(b=>b.onclick = async ()=>{
