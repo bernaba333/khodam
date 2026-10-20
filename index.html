@@ -76,10 +76,8 @@ body{
   .sticky-top-bar{ padding-top:12px; }
 }
 .verse-ticker{
-  /* sky-blue strip whose colours keep flowing sideways */
-  background:linear-gradient(90deg, #0b6fb3 0%, #2aa6e8 25%, #7fd3ff 50%, #2aa6e8 75%, #0b6fb3 100%);
-  background-size:300% 100%;
-  animation:skyFlow 9s linear infinite;
+  /* sky-blue strip; the verse itself runs across it like a news ticker */
+  background:linear-gradient(90deg, #0b6fb3 0%, #2aa6e8 30%, #7fd3ff 50%, #2aa6e8 70%, #0b6fb3 100%);
   color:#fff;
   text-shadow:0 1px 3px rgba(4,40,80,.75), 0 0 10px rgba(4,40,80,.35);
   padding:16px 18px;
@@ -102,8 +100,10 @@ body{
 }
 @media(max-width:560px){ .verse-current{font-size:1rem;} }
 @media print{ .verse-ticker{display:none !important;} }
-@keyframes skyFlow{from{background-position:0% 50%;}to{background-position:-150% 50%;}}
-@media (prefers-reduced-motion: reduce){ .verse-ticker{animation:none;} }
+.verse-current.running{position:relative;width:100%;height:1.6em;overflow:hidden;}
+.verse-run{position:absolute;top:0;left:0;white-space:nowrap;will-change:transform;}
+/* the three pinned blocks (verse, title, greeting) get a gold frame: outer line + faint inner line */
+.verse-ticker, header, .welcome-banner{border:1px solid rgba(201,162,39,.7) !important;outline:1px solid rgba(201,162,39,.35);outline-offset:-6px;}
 
 /* ---- header with halo motif ---- */
 header{
@@ -2568,7 +2568,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '20-Oct-2026 C';
+const APP_VERSION = '20-Oct-2026 D';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -4421,6 +4421,8 @@ function applyVerseTicker(verses){
   if(!el) return;
   if(verseRotationTimer){ clearInterval(verseRotationTimer); verseRotationTimer = null; }
   verseRotationIndex = 0;
+  if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){ runVerseTicker(el, verses); return; }
+  el.classList.remove('running');
   const showCurrent = ()=>{
     el.style.opacity = '0';
     setTimeout(()=>{
@@ -4431,6 +4433,30 @@ function applyVerseTicker(verses){
   };
   showCurrent();
   verseRotationTimer = setInterval(showCurrent, 7000);
+}
+
+/* news-ticker style: each verse enters from the left edge, crosses to the right and the next one follows */
+let verseRunAnim = null;
+function runVerseTicker(el, verses){
+  if(verseRunAnim){ verseRunAnim.onfinish = null; verseRunAnim.cancel(); verseRunAnim = null; }
+  el.classList.add('running');
+  el.style.opacity = '1';
+  el.innerHTML = '';
+  const span = document.createElement('span');
+  span.className = 'verse-run';
+  el.appendChild(span);
+  const next = ()=>{
+    span.textContent = '✝️ ' + verses[verseRotationIndex % verses.length];
+    verseRotationIndex++;
+    const w = span.offsetWidth, cw = el.clientWidth;
+    if(!cw){ setTimeout(next, 1000); return; } // hidden (e.g. behind the login gate): try again shortly
+    verseRunAnim = span.animate([{transform:`translateX(${-w}px)`},{transform:`translateX(${cw}px)`}],
+      {duration:(w + cw) / 70 * 1000, easing:'linear'});
+    verseRunAnim.onfinish = next;
+  };
+  el.onmouseenter = ()=>{ if(verseRunAnim) verseRunAnim.pause(); };
+  el.onmouseleave = ()=>{ if(verseRunAnim && verseRunAnim.playState === 'paused') verseRunAnim.play(); };
+  next();
 }
 
 async function loadBrandingAndApply(){
