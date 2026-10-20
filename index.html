@@ -15,7 +15,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;600;700&display=swap');
 
 :root{
   --ink:#1B2A4A;
@@ -884,6 +884,7 @@ nav.tabs .tab-short{display:none;}
 [data-tab="tenmin"],[data-go="tenmin"]{--tc1:#FF7A7A;--tc2:#DC2626;}
 [data-tab="reports"],[data-go="reports"]{--tc1:#8B93FF;--tc2:#4F46E5;}
 [data-tab="settings"],[data-go="settings"]{--tc1:#A3B1C6;--tc2:#5B6B84;}
+[data-tab="spirit"],[data-go="spirit"]{--tc1:#7DD3C0;--tc2:#0F766E;}
 [data-more]{--tc1:#A3B1C6;--tc2:#5B6B84;}
 :is(nav.tabs,.bottom-nav,.more-sheet) button .tab-ic{color:#fff;stroke-width:2;border-radius:30%;
   background:linear-gradient(140deg,var(--tc1,#A3B1C6),var(--tc2,#5B6B84));box-shadow:0 3px 8px -3px var(--tc2,#5B6B84),inset 0 1px 0 rgba(255,255,255,.35);transition:transform .18s;}
@@ -949,6 +950,33 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
   .user-row .role-tag,.user-row .chip{white-space:nowrap;display:inline-block;}
 }
 
+/* ---- spiritual screen (readings / notebook / daily message) ---- */
+.sp-seg{display:flex;gap:6px;flex-wrap:wrap;}
+.sp-seg button{flex:1 1 0;min-width:96px;}
+.sp-daybar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:12px;}
+.sp-daybar .d{font-weight:700;color:var(--ink);}
+.sp-daybar .cd{font-size:.82rem;color:var(--muted);}
+.sp-tools{display:flex;gap:6px;align-items:center;}
+.sp-read{font-family:'Noto Naskh Arabic','Amiri',serif;font-size:calc(1.12rem * var(--sp-scale,1));line-height:2.05;color:var(--ink);}
+.sp-read p{margin:0 0 .7em;}
+.sp-sec > summary{cursor:pointer;list-style:none;font-weight:700;font-size:1.05rem;padding:4px 0;color:var(--ink);}
+.sp-sec > summary::-webkit-details-marker{display:none;}
+.sp-sec > summary::before{content:'▸ ';color:var(--gold);}
+.sp-sec[open] > summary::before{content:'▾ ';}
+.sp-reading{border-top:1px dashed var(--line);padding:12px 0 6px;}
+.sp-reading h3{font-family:'Cairo',sans-serif;font-size:.98rem;margin:0 0 4px;color:var(--wine);display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;}
+.sp-reading .ref{font-family:'Cairo',sans-serif;font-size:.82rem;color:var(--muted);font-weight:600;}
+.sp-reading .intro,.sp-reading .concl{color:var(--ink-soft);font-size:.92em;}
+.sp-reading .vn{font-family:'Cairo',sans-serif;font-size:.68em;color:var(--gold);vertical-align:super;margin-inline-end:2px;}
+.sp-actions{display:flex;gap:6px;flex-wrap:wrap;}
+.sp-actions button{padding:4px 10px;font-size:.78rem;}
+.sp-note-form textarea,.sp-story-form textarea{width:100%;min-height:120px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--input);color:var(--ink);font-family:'Noto Naskh Arabic','Amiri',serif;font-size:1.05rem;line-height:1.9;box-sizing:border-box;}
+.sp-note{border:1px solid var(--line-soft);border-radius:12px;padding:10px 12px;margin-top:10px;background:var(--card);}
+.sp-note .meta{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:.8rem;color:var(--muted);margin-bottom:4px;}
+.sp-note .txt{white-space:pre-wrap;}
+.sp-story-title{font-family:'Noto Naskh Arabic','Amiri',serif;font-size:calc(1.35rem * var(--sp-scale,1));font-weight:700;color:var(--wine);margin:6px 0 10px;}
+.sp-story-src{font-size:.82rem;color:var(--muted);margin-top:6px;}
+.sp-empty{color:var(--muted);text-align:center;padding:18px 6px;}
 </style>
 </head>
 <body>
@@ -1003,6 +1031,7 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
 </div>
 <nav class="tabs">
   <button data-tab="dashboard" class="active">لوحة المعلومات</button>
+  <button data-tab="spirit">الغذاء اليومي والنوتة الروحية</button>
   <button data-tab="servants">الخدام</button>
   <button data-tab="attendance">تسجيل الحضور</button>
   <button data-tab="afeqad">الافتقاد</button>
@@ -1061,6 +1090,29 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
     <h2>محتاجين افتقاد</h2>
     <div id="dashboardAfeqad"></div>
   </div>
+</section>
+
+<!-- SPIRITUAL TAB: daily readings, personal notebook, daily message -->
+<section class="panel" id="panel-spirit">
+  <div class="card">
+    <h2 style="margin-top:0;">🕊️ الغذاء اليومي والنوتة الروحية</h2>
+    <div class="sp-seg">
+      <button class="primary" data-sp="readings">📖 القراءات</button>
+      <button class="ghost" data-sp="notes">📝 نوتتي الروحية</button>
+      <button class="ghost" data-sp="story">💌 رسالة اليوم</button>
+    </div>
+    <div class="sp-daybar">
+      <div><div class="d" id="spDayLabel"></div><div class="cd" id="spCopticLabel"></div></div>
+      <div class="sp-tools">
+        <button class="ghost" id="spPrevDay" title="اليوم اللي فات">›</button>
+        <button class="ghost" id="spToday">النهارده</button>
+        <button class="ghost" id="spNextDay" title="اليوم اللي جاي">‹</button>
+        <button class="ghost" id="spFontDown" title="تصغير الخط">أ-</button>
+        <button class="ghost" id="spFontUp" title="تكبير الخط">أ+</button>
+      </div>
+    </div>
+  </div>
+  <div id="spBody"></div>
 </section>
 
 <!-- SERVICE PROGRAM TAB -->
@@ -2568,7 +2620,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '20-Oct-2026 D';
+const APP_VERSION = '20-Oct-2026 F';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -2797,6 +2849,7 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
     if(btn.dataset.tab === 'moves') renderMovesPanel();
     if(btn.dataset.tab === 'program') renderProgramPanel();
     if(btn.dataset.tab === 'tenmin') renderTenMinPanel();
+    if(btn.dataset.tab === 'spirit') renderSpirit();
     if(btn.dataset.tab === 'settings' && isAdmin()){ loadAuditLog(); if(!settingsWideMq.matches) settingsSection = ''; renderSettingsHub(); }
   });
 });
@@ -5276,6 +5329,7 @@ function applyTabGating(){
   let activeHidden = false;
   document.querySelectorAll('nav.tabs button').forEach(btn=>{
     const permKey = tabMap[btn.dataset.tab];
+    if(btn.dataset.tab === 'spirit'){ btn.style.display = ''; return; } // everyone
     if(!permKey){ // settings: admin only
       btn.style.display = isAdmin() ? '' : 'none';
       if(!isAdmin() && btn.classList.contains('active')) activeHidden = true;
@@ -8019,6 +8073,7 @@ function prettyDate(iso, withYear){
   return `${AR_DAYS[d.getDay()]} ${d.getDate()} ${AR_MONTHS[d.getMonth()+1]}` + (withYear === false ? '' : ` ${d.getFullYear()}`);
 }
 const TAB_ICONS = {
+  spirit:'<path d="M12 3v18"/><path d="M7 8h10"/><path d="M5 21h14"/>',
   dashboard:'<path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
   servants:'<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.9-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.2c2.4-.3 4.4 1.2 5 4.3"/>',
   attendance:'<rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/>',
@@ -8031,8 +8086,8 @@ const TAB_ICONS = {
   settings:'<circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.2 7.5l2 1.2M17.8 15.3l2 1.2M4.2 16.5l2-1.2M17.8 8.7l2-1.2"/>',
   more:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>'
 };
-const TAB_SHORT = { dashboard:'الرئيسية', servants:'الخدام', attendance:'الحضور', afeqad:'الافتقاد', kfollow:'متابعة الخدام', reports:'التقارير', moves:'النقل', program:'البرنامج', tenmin:'فقرة ١٠ ق', settings:'الإعدادات' };
-const BOTTOM_PRIORITY = ['dashboard','attendance','servants','program','tenmin','afeqad','kfollow','reports','moves','settings'];
+const TAB_SHORT = { spirit:'الغذاء اليومي', dashboard:'الرئيسية', servants:'الخدام', attendance:'الحضور', afeqad:'الافتقاد', kfollow:'متابعة الخدام', reports:'التقارير', moves:'النقل', program:'البرنامج', tenmin:'فقرة ١٠ ق', settings:'الإعدادات' };
+const BOTTOM_PRIORITY = ['dashboard','attendance','spirit','servants','program','tenmin','afeqad','kfollow','reports','moves','settings'];
 const tabIcon = k=>`<svg class="tab-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TAB_ICONS[k]||''}</svg>`;
 function decorateTopTabs(){
   document.querySelectorAll('nav.tabs button[data-tab]').forEach(b=>{
@@ -8395,6 +8450,284 @@ document.getElementById('chatForm').addEventListener('submit', async e=>{
     inp.value = text;
     alert('الرسالة متبعتتش. اتأكد من النت وجرّب تاني.');
   }
+});
+
+/* ---------- SPIRITUAL SCREEN ----------
+   Readings: the Coptic Katameros for the day, fetched live from the public
+   Katameros API (Arabic, Van Dyck) and cached per day on this device.
+   Notebook: each user's own entries, one shared key per user, shown only to
+   that user. Daily message: stories the admin adds (khodam_daily_stories);
+   one per day in turn, or the day's Synaxarium story when the list is empty. */
+const SP_STORIES_KEY = 'khodam_daily_stories';
+const SP_API = 'https://api.katameros.app/readings/gregorian/';
+let spTab = 'readings', spOffset = 0, spStories = null, spNotes = null, spNotesFor = '', spEditNote = '', spEditStory = '', spShowStoryForm = false;
+const spReadCache = {};
+function spDate(){ const d = new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate() + spOffset); return d; }
+function spKeyDate(d){ return String(d.getDate()).padStart(2,'0') + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + d.getFullYear(); }
+function spDayIndex(d){ return Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000); }
+function spScale(){ try{ return +localStorage.getItem('khodam_sp_scale') || 1; }catch(e){ return 1; } }
+function spSetScale(v){ v = Math.min(1.8, Math.max(0.85, Math.round(v*100)/100)); try{ localStorage.setItem('khodam_sp_scale', String(v)); }catch(e){} document.getElementById('panel-spirit').style.setProperty('--sp-scale', v); }
+function spNotesKey(){ return 'khodam_snote_' + encodeURIComponent(currentUser ? currentUser.name : '').slice(0, 300); }
+function spAppLink(){ return location.origin + location.pathname; }
+async function spShare(title, text){
+  const body = title + '\n\n' + text + '\n\n— من برنامج الخدمة: ' + spAppLink();
+  try{
+    if(navigator.share){ await navigator.share({ title, text: body }); return; }
+  }catch(e){ if(e && e.name === 'AbortError') return; }
+  window.open('https://wa.me/?text=' + encodeURIComponent(body), '_blank');
+}
+async function spLoadReadings(d){
+  const k = spKeyDate(d);
+  if(spReadCache[k]) return spReadCache[k];
+  try{ const c = localStorage.getItem('khodam_sp_read_' + k); if(c){ spReadCache[k] = JSON.parse(c); return spReadCache[k]; } }catch(e){}
+  const res = await fetch(SP_API + k + '?languageId=3');
+  if(!res.ok) throw new Error('HTTP ' + res.status);
+  const j = await res.json();
+  spReadCache[k] = j;
+  try{
+    // keep only a week of cached days on the device
+    Object.keys(localStorage).filter(x=>x.indexOf('khodam_sp_read_') === 0).sort().slice(0, -6).forEach(x=>localStorage.removeItem(x));
+    localStorage.setItem('khodam_sp_read_' + k, JSON.stringify(j));
+  }catch(e){}
+  return j;
+}
+function spHtmlToParas(html){
+  const doc = new DOMParser().parseFromString('<div>' + (html||'') + '</div>', 'text/html');
+  const ps = Array.from(doc.querySelectorAll('p')).map(p=>p.textContent.trim()).filter(Boolean);
+  return ps.length ? ps : [doc.body.textContent.trim()].filter(Boolean);
+}
+// flat list of the day's readings: {sec, sub, title, intro, concl, ref, verses:[{n,t}], paras}
+function spFlatten(j){
+  const out = [];
+  (j.sections||[]).forEach(sec=>(sec.subSections||[]).forEach(sub=>(sub.readings||[]).forEach(r=>{
+    const item = { sec: sec.title, sub: sub.title, title: r.title || '', intro: r.introduction || '', concl: r.conclusion || '', ref: '', verses: [], paras: [] };
+    if(r.passages && r.passages.length){
+      item.ref = r.passages.map(ps=>(ps.bookTranslation||'') + ' ' + (ps.ref||'')).join(' ، ');
+      r.passages.forEach(ps=>(ps.verses||[]).forEach(v=>item.verses.push({ n: v.number, t: v.text })));
+    } else if(r.html){ item.paras = spHtmlToParas(r.html); }
+    out.push(item);
+  })));
+  return out;
+}
+function spReadingText(it){
+  const lines = [];
+  if(it.intro) lines.push(it.intro);
+  if(it.verses.length) lines.push(it.verses.map(v=>v.n + ' ' + v.t).join(' '));
+  if(it.paras.length) lines.push(it.paras.join('\n'));
+  if(it.concl) lines.push(it.concl);
+  return lines.join('\n');
+}
+function spReadingHead(it){ return it.sec + ' — ' + (it.sub === 'المزمور والإنجيل' ? (it.verses.length && /مزامير/.test(it.ref) ? 'المزمور' : 'الإنجيل') : it.sub) + (it.title ? ': ' + it.title : ''); }
+async function renderSpirit(){
+  const panel = document.getElementById('panel-spirit');
+  panel.style.setProperty('--sp-scale', spScale());
+  panel.querySelectorAll('[data-sp]').forEach(b=>{ b.className = b.dataset.sp === spTab ? 'primary' : 'ghost'; });
+  const d = spDate();
+  document.getElementById('spDayLabel').textContent = (spOffset === 0 ? 'النهارده، ' : '') + d.toLocaleDateString('ar-EG', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  try{ document.getElementById('spCopticLabel').textContent = typeof copticDateStr === 'function' ? copticDateStr(d) : ''; }catch(e){ document.getElementById('spCopticLabel').textContent = ''; }
+  const showDay = spTab !== 'notes';
+  panel.querySelector('.sp-daybar').querySelectorAll('#spPrevDay,#spToday,#spNextDay').forEach(b=>b.style.display = showDay ? '' : 'none');
+  const body = document.getElementById('spBody');
+  if(spTab === 'readings') return spRenderReadings(body, d);
+  if(spTab === 'notes') return spRenderNotes(body);
+  return spRenderStory(body, d);
+}
+async function spRenderReadings(body, d){
+  const k = spKeyDate(d);
+  if(!spReadCache[k]) body.innerHTML = '<div class="card sp-empty">جاري تحميل قراءات اليوم…</div>';
+  let j;
+  try{ j = await spLoadReadings(d); }
+  catch(e){
+    console.error('readings load failed', e);
+    body.innerHTML = `<div class="card sp-empty">معرفناش نجيب القراءات دلوقتي. اتأكد إن النت شغال وجرّب تاني.<br><br>
+      <button class="ghost" id="spRetry">🔄 جرّب تاني</button> <a href="https://katameros.app/" target="_blank" rel="noopener" class="ghost" style="padding:8px 14px;border-radius:10px;display:inline-block;">افتح القطمارس على النت</a></div>`;
+    document.getElementById('spRetry').onclick = ()=>renderSpirit();
+    return;
+  }
+  if(spKeyDate(spDate()) !== k || spTab !== 'readings') return; // user moved on meanwhile
+  const items = spFlatten(j);
+  if(!items.length){ body.innerHTML = '<div class="card sp-empty">مفيش قراءات متسجلة لليوم ده.</div>'; return; }
+  const secs = [];
+  items.forEach((it, i)=>{ let s = secs.find(x=>x.t === it.sec); if(!s){ s = { t: it.sec, list: [] }; secs.push(s); } s.list.push(i); });
+  body.innerHTML = (j.title ? `<div class="card"><b>${escHtml(j.title)}</b></div>` : '') + secs.map((s, si)=>`
+    <div class="card"><details class="sp-sec" ${s.t === 'قداس' || secs.length === 1 ? 'open' : ''}>
+      <summary>${escHtml(s.t)}</summary>
+      ${s.list.map(i=>{ const it = items[i]; return `<div class="sp-reading">
+        <h3><span>${escHtml(spReadingHead(it).replace(it.sec + ' — ', ''))}${it.ref ? ` <span class="ref">(${escHtml(it.ref)})</span>` : ''}</span>
+          <span class="sp-actions"><button class="ghost" data-sp-share="${i}">📤 مشاركة</button><button class="ghost" data-sp-note="${i}">📝 في نوتتي</button></span></h3>
+        <div class="sp-read">
+          ${it.intro ? `<p class="intro">${escHtml(it.intro)}</p>` : ''}
+          ${it.verses.length ? `<p>${it.verses.map(v=>`<span class="vn">${escHtml(v.n)}</span>${escHtml(v.t)}`).join(' ')}</p>` : ''}
+          ${it.paras.map(t=>`<p>${escHtml(t)}</p>`).join('')}
+          ${it.concl ? `<p class="concl">${escHtml(it.concl)}</p>` : ''}
+        </div></div>`; }).join('')}
+    </details></div>`).join('') + '<div style="text-align:center;font-size:.75rem;color:var(--muted);margin:4px 0 12px;">القراءات من القطمارس (katameros.app)</div>';
+  body.querySelectorAll('[data-sp-share]').forEach(b=>b.onclick = ()=>{ const it = items[+b.dataset.spShare]; spShare('📖 ' + spReadingHead(it) + (it.ref ? ' (' + it.ref + ')' : '') + ' — ' + spDayLabelShort(d), spReadingText(it)); });
+  body.querySelectorAll('[data-sp-note]').forEach(b=>b.onclick = ()=>{ const it = items[+b.dataset.spNote]; spEditNote = ''; spTab = 'notes'; spPrefill = spReadingHead(it) + (it.ref ? ' (' + it.ref + ')' : '') + '\n'; renderSpirit(); });
+}
+function spDayLabelShort(d){ return d.toLocaleDateString('ar-EG', { day:'numeric', month:'long' }); }
+let spPrefill = '';
+async function spLoadNotes(){
+  const key = spNotesKey();
+  if(spNotes && spNotesFor === key) return spNotes;
+  const r = await storageGetWithRetry(key, true);
+  if(!r.confirmed) throw new Error('notes not confirmed');
+  spNotes = r.value ? JSON.parse(r.value) : []; spNotesFor = key;
+  return spNotes;
+}
+async function spSaveNotes(){ await window.storage.set(spNotesKey(), JSON.stringify(spNotes), true); }
+async function spRenderNotes(body){
+  if(!currentUser){ body.innerHTML = ''; return; }
+  if(!(spNotes && spNotesFor === spNotesKey())) body.innerHTML = '<div class="card sp-empty">جاري التحميل…</div>';
+  try{ await spLoadNotes(); }catch(e){ body.innerHTML = '<div class="card sp-empty">معرفناش نفتح النوتة. اتأكد من النت وجرّب تاني.</div>'; return; }
+  if(spTab !== 'notes') return;
+  const editing = spEditNote ? spNotes.find(n=>n.id === spEditNote) : null;
+  const q = (document.getElementById('spNoteSearch')||{}).value || '';
+  const list = spNotes.slice().sort((a,b)=>(b.at||0)-(a.at||0)).filter(n=>!q || n.text.includes(q));
+  body.innerHTML = `
+    <div class="card sp-note-form">
+      <p style="margin:0 0 8px;font-size:.85rem;color:var(--muted);">🔒 النوتة دي بتاعتك إنت بس، محدش غيرك بيشوفها في البرنامج. اكتب آية لمستك، قرار، أو صلاة.</p>
+      <textarea id="spNoteText" placeholder="اكتب هنا…">${escHtml(editing ? editing.text : spPrefill)}</textarea>
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+        <button class="primary" id="spNoteSave">${editing ? 'حفظ التعديل' : '💾 حفظ'}</button>
+        ${editing ? '<button class="ghost" id="spNoteCancel">إلغاء</button>' : ''}
+      </div>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;">
+        <b>كتاباتي (${spNotes.length})</b>
+        ${spNotes.length > 3 ? `<input type="text" id="spNoteSearch" placeholder="🔎 دوّر في النوتة" value="${escHtml(q)}" style="max-width:220px;">` : ''}
+      </div>
+      ${list.length ? list.map(n=>`<div class="sp-note">
+        <div class="meta"><span>${escHtml(new Date(n.at).toLocaleDateString('ar-EG', { weekday:'long', day:'numeric', month:'long', year:'numeric' }))}</span>
+          <span class="sp-actions"><button class="ghost" data-n-share="${escHtml(n.id)}">📤</button><button class="ghost" data-n-edit="${escHtml(n.id)}">✏️</button><button class="ghost danger" data-n-del="${escHtml(n.id)}">حذف</button></span></div>
+        <div class="txt sp-read">${escHtml(n.text)}</div></div>`).join('') : `<div class="sp-empty">${q ? 'مفيش حاجة بالكلام ده.' : 'لسه مكتبتش حاجة.'}</div>`}
+    </div>`;
+  spPrefill = '';
+  const ta = document.getElementById('spNoteText');
+  if(editing || ta.value) setTimeout(()=>{ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }, 30);
+  document.getElementById('spNoteSave').onclick = async ()=>{
+    const text = ta.value.trim();
+    if(!text){ ta.focus(); return; }
+    const btn = document.getElementById('spNoteSave'); btn.disabled = true;
+    try{
+      spNotesFor = ''; await spLoadNotes(); // fresh copy in case another device added one
+      if(editing){ const n = spNotes.find(x=>x.id === editing.id); if(n){ n.text = text; n.edited = Date.now(); } }
+      else spNotes.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2,6), text: text.slice(0, 5000), at: Date.now() });
+      await spSaveNotes(); spEditNote = ''; renderSpirit();
+    }catch(e){ btn.disabled = false; alert('متحفظش. اتأكد من النت وجرّب تاني.'); }
+  };
+  const cancel = document.getElementById('spNoteCancel'); if(cancel) cancel.onclick = ()=>{ spEditNote = ''; renderSpirit(); };
+  const search = document.getElementById('spNoteSearch');
+  if(search) search.oninput = ()=>{ const pos = search.selectionStart; spRenderNotes(body).then(()=>{ const s2 = document.getElementById('spNoteSearch'); if(s2){ s2.focus(); s2.setSelectionRange(pos, pos); } }); };
+  body.querySelectorAll('[data-n-edit]').forEach(b=>b.onclick = ()=>{ spEditNote = b.dataset.nEdit; renderSpirit(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+  body.querySelectorAll('[data-n-share]').forEach(b=>b.onclick = ()=>{ const n = spNotes.find(x=>x.id === b.dataset.nShare); if(n) spShare('📝 من نوتتي الروحية', n.text); });
+  body.querySelectorAll('[data-n-del]').forEach(b=>b.onclick = async ()=>{
+    if(!confirm('تحذف الكتابة دي؟')) return;
+    try{ spNotesFor = ''; await spLoadNotes(); spNotes = spNotes.filter(x=>x.id !== b.dataset.nDel); await spSaveNotes(); renderSpirit(); }
+    catch(e){ alert('متحذفتش. اتأكد من النت وجرّب تاني.'); }
+  });
+}
+async function spLoadStories(force){
+  if(spStories && !force) return spStories;
+  const r = await storageGetWithRetry(SP_STORIES_KEY, true);
+  if(!r.confirmed) throw new Error('stories not confirmed');
+  spStories = r.value ? JSON.parse(r.value) : [];
+  return spStories;
+}
+async function spRenderStory(body, d){
+  if(!spStories) body.innerHTML = '<div class="card sp-empty">جاري التحميل…</div>';
+  try{ await spLoadStories(); }catch(e){ body.innerHTML = '<div class="card sp-empty">معرفناش نجيب رسالة اليوم. اتأكد من النت وجرّب تاني.</div>'; return; }
+  if(spTab !== 'story') return;
+  const admin = isAdmin();
+  let story = null;
+  if(spStories.length){
+    const st = spStories[((spDayIndex(d) % spStories.length) + spStories.length) % spStories.length];
+    story = { title: st.title, paras: String(st.text).split(/\n+/).map(x=>x.trim()).filter(Boolean), src: st.source || 'من كتب أبونا تادرس يعقوب ملطي' };
+  } else {
+    // nothing added yet: the day's Synaxarium story
+    try{
+      const it = spFlatten(await spLoadReadings(d)).find(x=>x.sub === 'السنكسار' && x.paras.length);
+      if(it) story = { title: it.title || 'سنكسار اليوم', paras: it.paras, src: 'من السنكسار — لحد ما الأدمن يضيف قصص' };
+    }catch(e){}
+  }
+  if(spTab !== 'story') return;
+  const editing = spEditStory ? spStories.find(x=>x.id === spEditStory) : null;
+  body.innerHTML = `<div class="card">
+      ${story ? `<div class="sp-story-title">💌 ${escHtml(story.title)}</div>
+        <div class="sp-read">${story.paras.map(t=>`<p>${escHtml(t)}</p>`).join('')}</div>
+        <div class="sp-story-src">${escHtml(story.src)}</div>
+        <div style="margin-top:10px;"><button class="primary" id="spStoryShare">📤 مشاركة القصة</button></div>`
+      : '<div class="sp-empty">لسه مفيش قصص. ' + (admin ? 'ضيف أول قصة من تحت.' : 'الأدمن هيضيفها قريب.') + '</div>'}
+    </div>
+    ${admin ? `<div class="card sp-story-form">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+        <b>📚 قصص رسالة اليوم (${spStories.length})</b>
+        <button class="ghost" id="spStoryToggle">${spShowStoryForm || editing ? 'إخفاء' : '➕ إضافة / تعديل القصص'}</button>
+      </div>
+      ${spShowStoryForm || editing ? `
+        <p style="font-size:.82rem;color:var(--muted);margin:8px 0;">كل يوم بتظهر قصة واحدة منهم بالدور. تقدر تلصق كذا قصة مرة واحدة: افصل بينهم بسطر فيه <b>***</b>، وأول سطر في كل قصة هو العنوان.</p>
+        <input type="text" id="spStoryTitle" placeholder="عنوان القصة (لو قصة واحدة)" value="${escHtml(editing ? editing.title : '')}" style="width:100%;margin-bottom:8px;">
+        <textarea id="spStoryText" placeholder="نص القصة…">${escHtml(editing ? editing.text : '')}</textarea>
+        <input type="text" id="spStorySource" placeholder="المصدر (مثلاً: اسم الكتاب)" value="${escHtml(editing ? (editing.source||'') : '')}" style="width:100%;margin-top:8px;">
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+          <button class="primary" id="spStorySave">${editing ? 'حفظ التعديل' : '💾 حفظ'}</button>
+          ${editing ? '<button class="ghost" id="spStoryCancel">إلغاء</button>' : ''}
+        </div>
+        ${spStories.map((st, i)=>`<div class="sp-note"><div class="meta"><span><b>${i+1}. ${escHtml(st.title)}</b>${(spDayIndex(d) % spStories.length) === i ? ' ⭐ النهارده' : ''}</span>
+          <span class="sp-actions"><button class="ghost" data-st-edit="${escHtml(st.id)}">✏️</button><button class="ghost danger" data-st-del="${escHtml(st.id)}">حذف</button></span></div>
+          <div style="font-size:.85rem;color:var(--ink-soft);">${escHtml(String(st.text).slice(0, 120))}…</div></div>`).join('')}` : ''}
+    </div>` : ''}`;
+  const share = document.getElementById('spStoryShare');
+  if(share) share.onclick = ()=>spShare('💌 رسالة اليوم: ' + story.title, story.paras.join('\n') + '\n\n' + story.src);
+  if(!admin) return;
+  document.getElementById('spStoryToggle').onclick = ()=>{ spShowStoryForm = !(spShowStoryForm || editing); spEditStory = ''; renderSpirit(); };
+  const save = document.getElementById('spStorySave');
+  if(save) save.onclick = async ()=>{
+    const title = document.getElementById('spStoryTitle').value.trim();
+    const text = document.getElementById('spStoryText').value.trim();
+    const source = document.getElementById('spStorySource').value.trim();
+    if(!text){ alert('اكتب نص القصة.'); return; }
+    let add = [];
+    if(!editing){
+      const parts = text.split(/^\s*\*{3,}\s*$/m).map(x=>x.trim()).filter(Boolean);
+      if(parts.length > 1 || !title){
+        add = parts.map(p=>{ const ls = p.split('\n'); return { title: ls[0].trim(), text: ls.slice(1).join('\n').trim() || ls[0].trim() }; });
+      } else add = [{ title, text }];
+    }
+    save.disabled = true;
+    try{
+      await spLoadStories(true);
+      if(editing){ const st = spStories.find(x=>x.id === editing.id); if(st){ st.title = title || st.title; st.text = text; st.source = source; } }
+      else add.forEach((a, i)=>spStories.push({ id: Date.now().toString(36) + i + Math.random().toString(36).slice(2,5), title: a.title, text: a.text, source, addedBy: currentUser.name, at: Date.now() }));
+      await window.storage.set(SP_STORIES_KEY, JSON.stringify(spStories), true);
+      auditPush({ area:'الغذاء اليومي', action: editing ? 'تعديل قصة' : 'إضافة قصص', target: editing ? (title || editing.title) : add.map(a=>a.title).join('، ').slice(0, 200), changes: [] });
+      spEditStory = ''; renderSpirit();
+      if(add.length > 1) alert('اتضافت ' + add.length + ' قصص ✓');
+    }catch(e){ save.disabled = false; alert('متحفظش. اتأكد من النت وجرّب تاني.'); }
+  };
+  const cancel = document.getElementById('spStoryCancel'); if(cancel) cancel.onclick = ()=>{ spEditStory = ''; renderSpirit(); };
+  body.querySelectorAll('[data-st-edit]').forEach(b=>b.onclick = ()=>{ spEditStory = b.dataset.stEdit; renderSpirit(); });
+  body.querySelectorAll('[data-st-del]').forEach(b=>b.onclick = async ()=>{
+    const st = spStories.find(x=>x.id === b.dataset.stDel);
+    if(!st || !confirm(`تحذف قصة "${st.title}"؟`)) return;
+    try{ await spLoadStories(true); spStories = spStories.filter(x=>x.id !== st.id); await window.storage.set(SP_STORIES_KEY, JSON.stringify(spStories), true);
+      auditPush({ area:'الغذاء اليومي', action:'حذف قصة', target: st.title, changes: [] }); renderSpirit(); }
+    catch(e){ alert('متحذفتش. جرّب تاني.'); }
+  });
+}
+document.querySelectorAll('#panel-spirit [data-sp]').forEach(b=>b.addEventListener('click', ()=>{ spTab = b.dataset.sp; spEditNote = ''; spEditStory = ''; renderSpirit(); }));
+document.getElementById('spPrevDay').addEventListener('click', ()=>{ spOffset--; renderSpirit(); });
+document.getElementById('spNextDay').addEventListener('click', ()=>{ spOffset++; renderSpirit(); });
+document.getElementById('spToday').addEventListener('click', ()=>{ spOffset = 0; renderSpirit(); });
+document.getElementById('spFontUp').addEventListener('click', ()=>spSetScale(spScale() + 0.1));
+document.getElementById('spFontDown').addEventListener('click', ()=>spSetScale(spScale() - 0.1));
+// a new day while the app stays open: show the new day's readings and story
+let spLastDay = spKeyDate(new Date());
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState !== 'visible') return;
+  const now = spKeyDate(new Date());
+  if(now !== spLastDay){ spLastDay = now; spOffset = 0; spStories = null; if(document.getElementById('panel-spirit').classList.contains('active')) renderSpirit(); }
 });
 
 init();
