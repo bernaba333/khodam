@@ -76,8 +76,12 @@ body{
   .sticky-top-bar{ padding-top:12px; }
 }
 .verse-ticker{
-  background:linear-gradient(90deg, var(--brand) 0%, var(--brand-2) 100%);
-  color:#fdf8ec;
+  /* sky-blue strip whose colours keep flowing sideways */
+  background:linear-gradient(90deg, #0b6fb3 0%, #2aa6e8 25%, #7fd3ff 50%, #2aa6e8 75%, #0b6fb3 100%);
+  background-size:300% 100%;
+  animation:skyFlow 9s linear infinite;
+  color:#fff;
+  text-shadow:0 1px 3px rgba(4,40,80,.75), 0 0 10px rgba(4,40,80,.35);
   padding:16px 18px;
   margin-bottom:10px;
   border-radius:10px;
@@ -98,6 +102,8 @@ body{
 }
 @media(max-width:560px){ .verse-current{font-size:1rem;} }
 @media print{ .verse-ticker{display:none !important;} }
+@keyframes skyFlow{from{background-position:0% 50%;}to{background-position:-150% 50%;}}
+@media (prefers-reduced-motion: reduce){ .verse-ticker{animation:none;} }
 
 /* ---- header with halo motif ---- */
 header{
@@ -181,6 +187,8 @@ section.panel.active{display:block;}
 #panel-dashboard .card{border:1px solid rgba(201,162,39,.55);margin-bottom:22px;
   box-shadow:inset 0 0 0 5px var(--card), inset 0 0 0 6px rgba(201,162,39,.22), var(--shadow);}
 #panel-dashboard .card h2{border-bottom-color:rgba(201,162,39,.45);}
+nav.tabs{border:1px solid rgba(201,162,39,.55) !important;padding:9px !important;
+  box-shadow:inset 0 0 0 5px var(--card), inset 0 0 0 6px rgba(201,162,39,.22), var(--shadow) !important;}
 @media print{ #panel-dashboard .card{box-shadow:none;} }
 .card h2{
   font-family:'Amiri',serif;
@@ -516,6 +524,14 @@ html[data-theme="dark"] .dc-miss span{color:#f08a84;}
   color:var(--ink);
   font-weight:700;
 }
+#copticDate{
+  font-family:'Amiri',serif;
+  font-size:1rem;
+  font-weight:700;
+  color:var(--wine);
+  text-align:center;
+}
+html[data-theme="dark"] #copticDate{color:var(--gold);}
 #liveClock{
   font-family:'Cairo',sans-serif;
   font-size:.85rem;
@@ -827,9 +843,18 @@ html[data-theme="dark"] .avatar{color:#10182a;}
 nav.tabs button{display:inline-flex;align-items:center;justify-content:center;gap:7px;}
 input, select, textarea{background:var(--input);color:var(--ink);}
 @media (min-width:761px){
-  /* only the tab bar stays pinned while scrolling; the header scrolls away */
-  .sticky-top-bar{position:static !important;}
-  nav.tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;position:sticky;top:8px;z-index:300;}
+  /* everything from the verse down to the tab bar stays pinned; the page scrolls under it */
+  .sticky-top-bar{padding-bottom:14px;}
+  nav.tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-bottom:0;}
+  html{scroll-padding-top:calc(var(--sticky-h,0px) + 12px);}
+  .welcome-banner{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;}
+  #liveClock{justify-self:end;}
+}
+/* short screens (small laptops): pinning the whole block would eat the page, so only the tab bar stays */
+@media (min-width:761px) and (max-height:720px){
+  .sticky-top-bar{display:contents;}
+  nav.tabs{position:sticky;top:8px;z-index:300;background:var(--card);}
+  html{scroll-padding-top:120px;}
   nav.tabs button{min-width:0;flex:1 1 auto;white-space:nowrap;padding:9px 8px;font-size:.84rem;gap:5px;}
   nav.tabs .tab-ic{width:17px;height:17px;}
   .verse-ticker{padding:10px 18px !important;}
@@ -973,13 +998,9 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
 
 <div class="welcome-banner" id="welcomeBanner" style="display:none;">
   <div id="welcomeText"></div>
+  <div id="copticDate"></div>
   <div id="liveClock"></div>
 </div>
-</div>
-
-<div class="notice" id="storageModeNotice">هذه البيانات مشتركة ويطّلع عليها كل من يفتح هذه الصفحة — مفيدة لو أكتر من مسؤول هيسجّل الحضور.</div>
-<div class="notice" id="backupReminderBanner" style="display:none;background:#fde8e8;border-color:#e3a3a3;color:#7a2e2e;"></div>
-
 <nav class="tabs">
   <button data-tab="dashboard" class="active">لوحة المعلومات</button>
   <button data-tab="servants">الخدام</button>
@@ -992,6 +1013,11 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
   <button data-tab="reports">التقارير</button>
   <button data-tab="settings">الإعدادات</button>
 </nav>
+</div>
+
+<div class="notice" id="storageModeNotice">هذه البيانات مشتركة ويطّلع عليها كل من يفتح هذه الصفحة — مفيدة لو أكتر من مسؤول هيسجّل الحضور.</div>
+<div class="notice" id="backupReminderBanner" style="display:none;background:#fde8e8;border-color:#e3a3a3;color:#7a2e2e;"></div>
+
 
 <!-- DASHBOARD TAB -->
 <section class="panel active" id="panel-dashboard">
@@ -2542,7 +2568,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '19-Oct-2026 C';
+const APP_VERSION = '20-Oct-2026 C';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -3945,9 +3971,9 @@ function renderDataCompleteness(allPeople){
   el.innerHTML = `
     ${groupPicker}
     <div class="dc-summary">
-      <div class="dash-stat"><div class="num" style="color:${colorForPercent(overall)};">${overall}%</div><div class="label">نسبة اكتمال البيانات</div><div class="sub">ناقص ${100-overall}%</div></div>
-      <div class="dash-stat"><div class="num" style="color:#2e7d4f;">${complete}</div><div class="label">بياناتهم كاملة</div><div class="sub">${completePct}% من ${n}</div></div>
-      <div class="dash-stat"><div class="num" style="color:#b23b3b;">${n-complete}</div><div class="label">لسه ناقصهم حاجة</div><div class="sub">${100-completePct}% من ${n}</div></div>
+      <div class="dash-stat"><div class="num" style="color:${colorForPercent(overall)};">${overall}%</div><div class="label">نسبة اكتمال البيانات</div><div class="sub">${filledCells} خانة من ${n*F}</div></div>
+      <div class="dash-stat"><div class="num" style="color:#2e7d4f;">${completePct}%</div><div class="label">بياناتهم كاملة</div><div class="sub">${complete} من ${n}</div></div>
+      <div class="dash-stat"><div class="num" style="color:#b23b3b;">${100-completePct}%</div><div class="label">لسه ناقصهم حاجة</div><div class="sub">${n-complete} من ${n}</div></div>
     </div>
     <div class="dc-groups">${groupsHtml}</div>
     ${(n-complete) ? '<p class="dc-hint">دوس على "ناقص" جنب أي خانة علشان تشوف أسماء اللي ناقصهم.</p>' : ''}
@@ -5186,6 +5212,23 @@ function showWelcomeBanner(){
   startLiveClock();
 }
 
+const COPTIC_MONTHS = ['توت','بابه','هاتور','كيهك','طوبه','أمشير','برمهات','برموده','بشنس','بؤونه','أبيب','مسرى','النسيء'];
+/* Coptic (Alexandrian) calendar date for a local date; the Coptic day is taken as the civil day */
+function copticDateStr(d){
+  const jdn = Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000) + 2440588;
+  const toJdn = (y, m, day)=> 1825029 + 365*(y-1) + Math.floor(y/4) + 30*(m-1) + day;
+  const y = Math.floor((4*(jdn - 1825030) + 1463) / 1461);
+  const m = Math.floor((jdn - toJdn(y, 1, 1)) / 30) + 1;
+  const day = jdn - toJdn(y, m, 1) + 1;
+  return `${day} ${COPTIC_MONTHS[m-1]} ${y} ش`;
+}
+
+(function trackStickyHeight(){
+  const bar = document.querySelector('.sticky-top-bar');
+  if(!bar || !window.ResizeObserver) return;
+  new ResizeObserver(()=>document.documentElement.style.setProperty('--sticky-h', bar.offsetHeight + 'px')).observe(bar);
+})();
+
 let liveClockInterval = null;
 function startLiveClock(){
   if(liveClockInterval) return; // already running
@@ -5194,6 +5237,9 @@ function startLiveClock(){
     const time = now.toLocaleTimeString('ar-EG-u-nu-latn', {hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true});
     const date = now.toLocaleDateString('ar-EG-u-nu-latn', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
     document.getElementById('liveClock').textContent = `${date} — ${time}`;
+    const cd = copticDateStr(now);
+    const cdEl = document.getElementById('copticDate');
+    if(cdEl.textContent !== cd) cdEl.textContent = cd;
   };
   update();
   liveClockInterval = setInterval(update, 1000);
