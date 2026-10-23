@@ -629,6 +629,32 @@ html[data-theme="dark"] .chat-msg.alert .bub{background:#4a1f1c;border-color:#e0
 #alertsOverlay .al-item{border:1px solid var(--line-soft);border-inline-start:4px solid #b3261e;border-radius:10px;padding:8px 10px;margin-bottom:8px;background:var(--cream-dark);}
 #alertsOverlay .al-item.new{background:#fde8e8;}
 html[data-theme="dark"] #alertsOverlay .al-item.new{background:#4a1f1c;}
+#alertsOverlay .al-item.read{border-inline-start-color:#2e7d32;}
+#alertsOverlay .al-item.read.new{background:#e3f4e4;}
+html[data-theme="dark"] #alertsOverlay .al-item.read.new{background:#1e3a22;}
+#newsOverlay{position:fixed;inset:0;z-index:100001;background:rgba(27,42,74,.6);display:flex;align-items:center;justify-content:center;padding:calc(14px + env(safe-area-inset-top,0px)) 14px 14px;direction:rtl;}
+#newsOverlay .nw-card{background:var(--card);border-radius:18px;width:min(500px,100%);max-height:calc(100vh - 40px);display:flex;flex-direction:column;box-shadow:0 14px 40px rgba(0,0,0,.35);border:2px solid var(--gold);font-family:'Cairo',sans-serif;overflow:hidden;}
+#newsOverlay .nw-head{padding:14px 16px 10px;text-align:center;border-bottom:1px solid var(--line-soft);background:linear-gradient(180deg,rgba(201,162,39,.16),transparent);}
+#newsOverlay .nw-head h3{margin:0;font-size:1.15rem;color:var(--ink);}
+#newsOverlay .nw-head div{font-size:.8rem;color:var(--muted);margin-top:2px;}
+#newsOverlay .nw-list{flex:1;overflow:auto;padding:10px 14px;}
+#newsOverlay .nw-group{margin-bottom:12px;}
+#newsOverlay .nw-date{font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:5px;display:flex;align-items:center;gap:6px;}
+#newsOverlay .nw-tag{background:#b3261e;color:#fff;border-radius:999px;padding:0 8px;font-size:.7rem;}
+#newsOverlay .nw-item{border:1px solid var(--line-soft);border-inline-start:4px solid var(--gold);border-radius:10px;padding:7px 10px;margin-bottom:6px;background:var(--cream-dark);font-size:.88rem;color:var(--ink);line-height:1.6;}
+#newsOverlay .nw-group.old .nw-item{opacity:.75;border-inline-start-color:var(--line);}
+#newsOverlay .nw-foot{padding:10px 14px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line-soft);}
+#newsOverlay .nw-ok{width:100%;font-size:1rem;padding:11px;}
+#newsOverlay .nw-two{display:flex;gap:8px;}
+#newsOverlay .nw-two .nw-later{flex:0 0 32%;}
+#newsOverlay .nw-two .nw-save{flex:1;font-size:1rem;padding:11px;}
+#newsOverlay .nw-msg{font-size:.8rem;color:#b3261e;text-align:center;padding:0 14px 10px;}
+#newsOverlay .nw-msg:empty{display:none;}
+#newsOverlay .nw-note{font-size:.74rem;color:var(--muted);margin-top:4px;}
+#newsOverlay .nw-choice{display:flex;gap:6px;margin-top:6px;}
+#newsOverlay .nw-choice button{flex:1;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:5px 8px;font-family:inherit;font-size:.82rem;cursor:pointer;}
+#newsOverlay .nw-choice button[data-v="show"].on{background:#2e7d32;border-color:#2e7d32;color:#fff;}
+#newsOverlay .nw-choice button[data-v="hide"].on{background:#b3261e;border-color:#b3261e;color:#fff;}
 #alertsOverlay .al-txt{font-size:.86rem;white-space:pre-wrap;word-break:break-word;color:var(--ink);}
 #alertsOverlay .al-meta{display:flex;justify-content:space-between;align-items:center;font-size:.72rem;color:var(--muted);margin-top:4px;}
 #alertsOverlay .al-del{background:none;border:none;color:inherit;cursor:pointer;text-decoration:underline;font-size:.72rem;padding:0;}
@@ -1877,7 +1903,7 @@ async function flushAlerts(){
       const a = q[0];
       try{
         await Promise.race([
-          window.storage.alertSend(a.id, { by: ALERT_BY, role: '', to: 'admin', kind: 'alert', problem: a.kind, user: a.who || '', text: a.text, at: a.at }),
+          window.storage.alertSend(a.id, { by: ALERT_BY, role: '', to: 'admin', kind: a.msgKind || 'alert', problem: a.kind, user: a.who || '', text: a.text, at: a.at }),
           new Promise((_, rej)=>setTimeout(()=>rej(new Error('timeout')), 20000))
         ]);
       }catch(e){ break; }   // keep it for later (no internet / not signed in yet)
@@ -2851,7 +2877,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '23-Oct-2026 D';
+const APP_VERSION = '23-Oct-2026 G';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -5516,6 +5542,7 @@ function applyUserUI(){
   try{ startTeamChat(); }catch(e){ console.error('chat start failed', e); }
   resetInactivityTimer();
   showWelcomeBanner();
+  setTimeout(maybeShowNews, 1200);
   document.getElementById('usersCard').style.display = isAdmin() ? 'block' : 'none';
   document.getElementById('permissionsCard').style.display = isAdmin() ? 'block' : 'none';
   document.getElementById('brandingCard').style.display = isAdmin() ? 'block' : 'none';
@@ -7119,7 +7146,7 @@ function renderProgramPanel(){
           ${it.speaker ? `🎤 ${escHtml(it.speaker)}` : '<span style="color:var(--faint);">🎤 لسه محدش اتحدد</span>'}${canPhones() && it.speaker && speakerPhone(it.speaker) ? ` <a href="tel:${escHtml(speakerPhone(it.speaker).replace(/[^\d+]/g,''))}" title="${escHtml(speakerPhone(it.speaker))}" style="text-decoration:none;font-size:.78rem;">📞</a>` : ''}
           ${it.church ? ` &nbsp;—&nbsp; ⛪ ${escHtml(it.church)}` : ''}
         </div>
-        ${canEdit || it.title || it.speaker ? `<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">${canEdit ? '<button class="ghost prog-edit-btn" style="font-size:.8rem;padding:4px 12px;">✏️ تعديل</button>' : ''}${it.title || it.speaker ? '<button class="ghost prog-post-btn" style="font-size:.8rem;padding:4px 12px;">🖼️ بوستر</button>' : ''}</div>` : ''}
+        ${canEdit || it.title || it.speaker ? `<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">${canEdit ? '<button class="ghost prog-edit-btn" style="font-size:.8rem;padding:4px 12px;">✏️ تعديل</button><button class="ghost prog-swap-btn" style="font-size:.8rem;padding:4px 12px;">🔁 تبديل / نقل</button>' : ''}${it.title || it.speaker ? '<button class="ghost prog-post-btn" style="font-size:.8rem;padding:4px 12px;">🖼️ بوستر</button>' : ''}</div>` : ''}
         ${canEdit ? '<div class="prog-edit" style="display:none;margin-top:10px;"></div>' : ''}
       </div>`;
   });
@@ -7131,6 +7158,7 @@ function renderProgramPanel(){
       const row = e.target.closest('.prog-row');
       openProgEdit(row, sec.items[row.dataset.date] || {});
     }));
+    listEl.querySelectorAll('.prog-swap-btn').forEach(btn=>btn.addEventListener('click', e=>openProgSwap(e.target.closest('.prog-row').dataset.date)));
   }
   listEl.querySelectorAll('.prog-post-btn').forEach(btn=>btn.addEventListener('click', e=>openMonthPost(e.target.closest('.prog-row').dataset.date)));
   if(nextIso && filter === 'all'){
@@ -7149,7 +7177,8 @@ function openProgEdit(row, it){
     <label style="display:block;margin-bottom:4px;">الهدف والمحتوى</label>
     <textarea class="pe-goal" rows="2" style="margin-bottom:8px;width:100%;">${escHtml(it.goal||'')}</textarea>
     <label style="display:block;margin-bottom:4px;">المتكلم</label>
-    <input type="text" class="pe-speaker" value="${escHtml(it.speaker||'')}" placeholder="مثلًا: القس / انطونيوس فوزي" style="margin-bottom:8px;">
+    <input type="text" class="pe-speaker" list="${cfg.pre}SpeakerNames" value="${escHtml(it.speaker||'')}" placeholder="مثلًا: القس / انطونيوس فوزي" style="margin-bottom:8px;">
+    <datalist id="${cfg.pre}SpeakerNames">${knownSpeakerNames().map(n=>`<option value="${escHtml(n)}">`).join('')}</datalist>
     ${canPhones() ? `<label style="display:block;margin-bottom:4px;">📞 تليفون المتكلم <span style="font-size:.75rem;color:var(--muted);">(للمرجع بس، مش بيظهر في الطباعة ولا البوست)</span></label>
     <input type="tel" class="pe-phone" dir="ltr" inputmode="tel" value="${escHtml(speakerPhone(it.speaker))}" placeholder="01xxxxxxxxx" style="margin-bottom:8px;">` : ''}
     <label style="display:block;margin-bottom:4px;">كنيسته</label>
@@ -7189,13 +7218,155 @@ function openProgEdit(row, it){
   });
   box.querySelector('.pe-title').focus();
 }
+function knownSpeakerNames(){
+  const seen = {};
+  Object.values(PROGRAM.years||{}).forEach(yr=>['friday','sunday'].forEach(day=>{
+    const items = (yr && yr[day] && yr[day].items) || {};
+    Object.keys(items).sort().forEach(iso=>{ const n = String(items[iso].speaker||'').trim(), k = speakerKey(n); if(k) seen[k] = n; });
+  }));
+  Object.keys(PROGRAM.speakers||{}).forEach(k=>{ if(!seen[k] && PROGRAM.speakers[k].name) seen[k] = PROGRAM.speakers[k].name; });
+  return Object.values(seen).sort((a,b)=>a.localeCompare(b, 'ar'));
+}
+/* Swap two meetings (topic + speaker), or just their speakers; a speaker swapped with an
+   empty meeting is moved there. Works across Friday and Sunday of the same service year. */
+function openProgSwap(srcIso){
+  const old = document.getElementById('progSwapModal'); if(old) old.remove();
+  const y = progYear, srcDay = progDay;
+  const dLabel = (day, iso)=>{ const d = new Date(iso + 'T00:00:00'); return `${PROG_DAYS[day].label} ${d.getDate()} ${PROG_MONTHS[d.getMonth()]}`; };
+  const itemOf = (day, iso)=>{ const s = progSection(PROGRAM, y, day, false); return (s && s.items[iso]) || {}; };
+  const src = itemOf(srcDay, srcIso);
+  const summary = it=> (it.speaker ? '🎤 ' + it.speaker : '🎤 —') + (it.title ? ' · ' + it.title : '');
+  const opts = ['friday','sunday'].map(day=>`<optgroup label="${PROG_DAYS[day].meeting}">${programDates(y, day).map(d=>{
+    const iso = isoDate(d); if(day === srcDay && iso === srcIso) return '';
+    const it = itemOf(day, iso);
+    return `<option value="${day}|${iso}">${escHtml(dLabel(day, iso) + ' — ' + (it.speaker || 'مفيش متكلم') + (it.title ? ' · ' + it.title : ''))}</option>`;
+  }).join('')}</optgroup>`).join('');
+  const wrap = document.createElement('div');
+  wrap.id = 'progSwapModal';
+  wrap.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(27,42,74,.6);display:flex;align-items:center;justify-content:center;padding:12px;direction:rtl;';
+  wrap.innerHTML = `
+    <div style="background:var(--card);border-radius:16px;max-width:520px;width:100%;max-height:94vh;overflow:auto;padding:16px 18px;box-shadow:0 10px 30px rgba(0,0,0,.25);">
+      <h2 style="margin:0 0 6px;font-family:'Amiri',serif;color:var(--ink);">🔁 تبديل / نقل</h2>
+      <div style="font-size:.88rem;margin-bottom:12px;color:var(--text-2);"><b>${escHtml(dLabel(srcDay, srcIso))}</b><br>${escHtml(summary(src))}</div>
+      <label style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px;cursor:pointer;"><input type="radio" name="psMode" value="speaker" checked style="width:auto;margin-top:4px;"> <span><b>المتكلم بس</b><br><span style="font-size:.78rem;color:var(--muted);">المتكلمين يتبدلوا والموضوعات تفضل مكانها. لو الميعاد التاني مفيهوش متكلم، المتكلم ينتقل له.</span></span></label>
+      <label style="display:flex;gap:8px;align-items:flex-start;margin-bottom:12px;cursor:pointer;"><input type="radio" name="psMode" value="all" style="width:auto;margin-top:4px;"> <span><b>الميعاد كله</b><br><span style="font-size:.78rem;color:var(--muted);">الموضوع والهدف والمتكلم وكنيسته يتبدلوا بين اليومين.</span></span></label>
+      <label style="display:block;margin-bottom:4px;">مع ميعاد</label>
+      <select id="psTarget" style="width:100%;margin-bottom:10px;">${opts}</select>
+      <div id="psPreview" style="font-size:.82rem;background:var(--hi);border-radius:10px;padding:8px 10px;margin-bottom:12px;line-height:1.7;"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="primary" id="psDo">تنفيذ</button>
+        <button class="ghost" id="psCancel">إلغاء</button>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap);
+  const close = ()=>wrap.remove();
+  wrap.addEventListener('click', e=>{ if(e.target === wrap) close(); });
+  document.getElementById('psCancel').addEventListener('click', close);
+  const sel = document.getElementById('psTarget');
+  // start on the same weekday's next meeting
+  const nextSame = programDates(y, srcDay).map(isoDate).find(iso=>iso > srcIso);
+  if(nextSame) sel.value = srcDay + '|' + nextSame;
+  const mode = ()=>wrap.querySelector('input[name="psMode"]:checked').value;
+  const result = (a, b, m)=> m === 'all' ? [Object.assign({}, b), Object.assign({}, a)]
+    : [Object.assign({}, a, { speaker: b.speaker || '', church: b.church || '' }), Object.assign({}, b, { speaker: a.speaker || '', church: a.church || '' })];
+  const preview = ()=>{
+    const [dstDay, dstIso] = sel.value.split('|');
+    const [na, nb] = result(src, itemOf(dstDay, dstIso), mode());
+    document.getElementById('psPreview').innerHTML = `بعد التنفيذ:<br>• <b>${escHtml(dLabel(srcDay, srcIso))}</b>: ${escHtml(summary(na))}<br>• <b>${escHtml(dLabel(dstDay, dstIso))}</b>: ${escHtml(summary(nb))}`;
+  };
+  sel.addEventListener('change', preview);
+  wrap.querySelectorAll('input[name="psMode"]').forEach(r=>r.addEventListener('change', preview));
+  preview();
+  document.getElementById('psDo').addEventListener('click', async ()=>{
+    const [dstDay, dstIso] = sel.value.split('|'), m = mode();
+    const a0 = src, b0 = itemOf(dstDay, dstIso);
+    if(m === 'speaker' && !a0.speaker && !b0.speaker){ alert('الميعادين مفيهمش متكلم، مفيش حاجة تتنقل.'); return; }
+    if(m === 'all' && !Object.keys(a0).length && !Object.keys(b0).length){ alert('الميعادين فاضيين، مفيش حاجة تتبدل.'); return; }
+    const by = currentUser ? currentUser.name : '';
+    const btn = document.getElementById('psDo'); btn.disabled = true;
+    let na, nb;
+    const ok = await saveProgramChange(obj=>{
+      const sa = progSection(obj, y, srcDay, true), sb = progSection(obj, y, dstDay, true);
+      [na, nb] = result(sa.items[srcIso] || {}, sb.items[dstIso] || {}, m);
+      const put = (s, iso, v)=>{
+        ['title','goal','speaker','church'].forEach(f=>{ if(!v[f]) delete v[f]; });
+        if(!v.title && !v.goal && !v.speaker && !v.church) delete s.items[iso]; else s.items[iso] = Object.assign(v, { by });
+      };
+      put(sa, srcIso, na); put(sb, dstIso, nb);
+    });
+    btn.disabled = false;
+    if(!ok) return;
+    const fields = m === 'all' ? ['title','speaker'] : ['speaker'];
+    const FL = { title:'العنوان', speaker:'المتكلم' };
+    const changes = [];
+    [[srcDay, srcIso, a0, na], [dstDay, dstIso, b0, nb]].forEach(([day, iso, before, after])=>fields.forEach(f=>{
+      if((before[f]||'') !== (after[f]||'')) changes.push({ f: `${FL[f]} (${dLabel(day, iso)})`, from: before[f] || '—', to: after[f] || '—' });
+    }));
+    if(changes.length) auditPush({ area:cfg.area, action:'تعديل', target:`${m === 'all' ? 'تبديل ميعادين' : 'تبديل / نقل متكلم'} — سنة ${copticYear(y)}`, changes, rest: true });
+    close(); renderProgramPanel();
+  });
+}
 /* ---------- SPEAKER PHONES + SPEAKERS REPORT ----------
    Phones live once per speaker in PROGRAM.speakers { key: { name, phone } }, not on each
    meeting, so a speaker who serves Friday and Sunday has one number. They are never
    printed with the program or the monthly post; they show only in the speakers report. */
 function speakerKey(n){
-  return String(n||'').replace(/[ً-ْـ]/g,'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي')
-    .replace(/[\/\\.\-–،,:]/g,' ').replace(/\s+/g,' ').trim();
+  // invisible direction marks (copied from WhatsApp) and Persian-keyboard letters used to make the
+  // same name a second key, so the report showed the speaker twice (once with the photo, once without)
+  return String(n||'').replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069\u061C\uFEFF]/g,' ')
+    .replace(/[ً-ْـٰ]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ة/g,'ه').replace(/[ىیئ]/g,'ي').replace(/ک/g,'ك').replace(/ؤ/g,'و')
+    .replace(/[\/\\.\-–—،,:؛;()\[\]"'«»_]/g,' ').replace(/\s+/g,' ').trim();
+}
+// the name without titles (أبونا / القس / د. …), to match "أبونا فلان" with "القمص فلان"
+const SPK_TITLES = ['نيافه','الانبا','انبا','القمص','قمص','القس','قس','ابونا','الاب','اب','الشماس','شماس','الدكتور','دكتور','الدكتوره','دكتوره','د','الاستاذ','استاذ','الاستاذه','استاذه','ا','المهندس','مهندس','م','الاخ','اخ','الاخت','اخت','تاسوني','مدام','الخادم','الخادمه','المتنيح','المتنيحه'];
+function speakerLoose(n){
+  const w = speakerKey(n).split(' ').filter(Boolean);
+  while(w.length > 1 && SPK_TITLES.includes(w[0])) w.shift();
+  return w.join(' ');
+}
+/* Cleanup of the saved speakers (phone + photo): an entry whose name now gives another key moves
+   to it, and an entry with no meetings at all joins the one speaker in the program whose name
+   matches without titles (or is the same name with more/less words). Returns [{from, to, name}]. */
+function speakerTidyPlan(obj){
+  const sp = obj.speakers || {}, talks = {};
+  Object.values(obj.years||{}).forEach(yr=>['friday','sunday'].forEach(day=>{
+    const items = (yr && yr[day] && yr[day].items) || {};
+    Object.values(items).forEach(it=>{ const k = speakerKey(it && it.speaker); if(k && !talks[k]) talks[k] = String(it.speaker).trim(); });
+  }));
+  const tk = Object.keys(talks), looseOf = {};
+  tk.forEach(k=>looseOf[k] = speakerLoose(k));
+  const prefix = (a,b)=>{ const x = a.split(' '), y = b.split(' '); const sh = x.length <= y.length ? x : y, lo = sh === x ? y : x; return sh.length >= 2 && sh.every((w,i)=>w === lo[i]); };
+  const target = {};
+  Object.keys(sp).forEach(k=>{
+    if(talks[k]) return;
+    let to = speakerKey((sp[k] && sp[k].name) || k) || k;
+    if(!talks[to]){
+      const l = speakerLoose(to);
+      const c = l ? tk.filter(t=>looseOf[t] === l || prefix(looseOf[t], l)) : [];
+      if(c.length === 1) to = c[0];
+    }
+    if(to !== k) target[k] = to;
+  });
+  const moves = [];
+  Object.keys(target).forEach(k=>{
+    let to = target[k], hops = 0;
+    while(target[to] && target[to] !== k && hops++ < 10) to = target[to];
+    if(to !== k) moves.push({ from:k, to, name: talks[to] || (sp[to] && sp[to].name) || sp[k].name });
+  });
+  return moves;
+}
+function speakerTidyApply(obj, moves){
+  const sp = obj.speakers || {};
+  moves.forEach(m=>{
+    const f = sp[m.from]; if(!f) return;
+    const t = sp[m.to];
+    if(!t) sp[m.to] = Object.assign({}, f, { name: m.name || f.name });
+    else {
+      if(!t.phone && f.phone) t.phone = f.phone;
+      if(!(t.photoVer || t.photo) && (f.photoVer || f.photo)){ if(f.photoVer) t.photoVer = f.photoVer; if(f.photo) t.photo = f.photo; }
+    }
+    delete sp[m.from];
+  });
 }
 function speakerPhone(name){ const e = (PROGRAM.speakers||{})[speakerKey(name)]; return e ? (e.phone||'') : ''; }
 function putSpeaker(obj, k, name, change){
@@ -7223,6 +7394,32 @@ async function speakerPhotoUrl(key){
     if(r && r.v){ const rec = { ver: r.ver, v: r.v }; PHOTO_MEM.set(id, rec); photoCache.put(id, rec); return r.v; }
   }catch(err){}
   return '';
+}
+let speakerTidyBusy = false;
+async function tidySpeakers(){
+  if(speakerTidyBusy || !can(cfg.editPerm)) return;
+  const moves = speakerTidyPlan(PROGRAM); if(!moves.length) return;
+  speakerTidyBusy = true;
+  try{
+    const sp = PROGRAM.speakers || {}, copied = [];
+    // a photo that moves to a new key is copied to its new id first, so it never disappears
+    for(const m of moves){
+      const f = sp[m.from], t = sp[m.to];
+      if(!f || !f.photoVer || (t && (t.photoVer || t.photo)) || !window.storage.photoGet) continue;
+      try{
+        const r = await window.storage.photoGet(spkPhotoId(m.from));
+        if(r && r.v){ await window.storage.photoSet(spkPhotoId(m.to), r.v, f.photoVer); copied.push(m.from); }
+      }catch(err){ console.error('speaker photo copy failed', err); }
+    }
+    const ok = moves.filter(m=>{ const f = sp[m.from], t = sp[m.to]; return !(f && f.photoVer && !(t && (t.photoVer || t.photo))) || copied.includes(m.from); });
+    if(!ok.length) return;
+    const allowed = new Set(ok.map(m=>m.from + '>' + m.to));
+    if(await saveProgramChange(obj=>speakerTidyApply(obj, speakerTidyPlan(obj).filter(m=>allowed.has(m.from + '>' + m.to))))){
+      const left = PROGRAM.speakers || {};
+      ok.forEach(m=>{ if(!left[m.from] && sp[m.from] && sp[m.from].photoVer && window.storage.photoDelete){ window.storage.photoDelete(spkPhotoId(m.from)).catch(()=>{}); PHOTO_MEM.delete(spkPhotoId(m.from)); photoCache.del(spkPhotoId(m.from)); } });
+      auditPush({ area:cfg.area, action:'تعديل', target:'دمج متكلمين متكررين', changes: ok.map(m=>({ f:'المتكلم', from: sp[m.from].name || m.from, to: m.name })), rest: true });
+    }
+  }finally{ speakerTidyBusy = false; }
 }
 function speakersReportData(scope){
   const map = {};
@@ -7424,8 +7621,12 @@ function openSpeakersReport(){
   });
   render();
 }
-$p('SpeakersBtn').addEventListener('click', ()=>{
+$p('SpeakersBtn').addEventListener('click', async ()=>{
   if(!programLoaded){ alert(cfg.area + ' لسه بيتحمّل، استنى ثانية وجرّب تاني.'); return; }
+  const btn = $p('SpeakersBtn'), txt = btn.textContent;
+  btn.disabled = true; btn.textContent = '⏳ لحظة…';
+  try{ await tidySpeakers(); }catch(e){ console.error(e); }
+  btn.disabled = false; btn.textContent = txt;
   openSpeakersReport();
 });
 
@@ -8759,7 +8960,7 @@ function openChat(){
 // admins: every problem alert and lock request in one place, the 🔔 in the top bar
 // (they're kept in the chat collection but not shown in the chat itself)
 let alertsCache = [], alertBellLastNew = 0;
-function isAlertMsg(m){ return m.kind === 'alert' || m.kind === 'lock'; }
+function isAlertMsg(m){ return m.kind === 'alert' || m.kind === 'lock' || m.kind === 'read'; }
 function alertSeenKey(){ return 'khodam_alert_seen_' + (currentUser ? currentUser.name : ''); }
 function alertSeenAt(){
   let seen = 0; try{ seen = +localStorage.getItem(alertSeenKey()) || 0; }catch(e){}
@@ -8785,7 +8986,7 @@ function renderAlertsList(){
   const ov = document.getElementById('alertsOverlay'); if(!ov) return;
   const seen = +ov.dataset.seen || 0;
   const list = alertsCache.slice().sort((a,b)=>(b.at||0)-(a.at||0));
-  ov.querySelector('.al-list').innerHTML = list.length ? list.map(m=>`<div class="al-item${(m.at||0) > seen ? ' new' : ''}">
+  ov.querySelector('.al-list').innerHTML = list.length ? list.map(m=>`<div class="al-item${m.kind === 'read' ? ' read' : ''}${(m.at||0) > seen ? ' new' : ''}">
       <div class="al-txt">${escHtml(alertText(m))}</div>
       <div class="al-meta"><span>${escHtml(chatDay(m.at||Date.now()))} ${chatTime(m.at||Date.now())}</span><button type="button" class="al-del" data-id="${escHtml(m.id)}">مسح</button></div>
     </div>`).join('') : '<div class="empty-note" style="text-align:center;padding:24px 0;">مفيش تنبيهات. كل المستخدمين تمام ✓</div>';
@@ -8797,16 +8998,17 @@ function openAlerts(){
   ov.id = 'alertsOverlay';
   ov.dataset.seen = String(alertSeenAt());
   ov.innerHTML = `<div class="al-card" role="dialog" aria-label="التنبيهات">
-    <div class="al-head"><h3>🔔 التنبيهات — مشاكل المستخدمين</h3><button type="button" class="ghost al-x" aria-label="قفل">✕</button></div>
-    <div style="font-size:.76rem;color:var(--muted);padding:6px 14px 0;">مشاكل الدخول والحفظ وكلمة السر اللي حصلت للمستخدمين، والجديد باللون الأحمر.</div>
+    <div class="al-head"><h3>🔔 التنبيهات</h3><button type="button" class="ghost al-x" aria-label="قفل">✕</button></div>
+    <div style="font-size:.76rem;color:var(--muted);padding:6px 14px 0;">مشاكل الدخول والحفظ وكلمة السر اللي حصلت للمستخدمين (بالأحمر)، و✅ مين قرا شاشة الجديد في البرنامج (بالأخضر). الجديد ملوّن.</div>
     <div class="al-list"></div>
-    <div class="al-foot"><button type="button" class="ghost al-clear">🗑️ مسح الكل</button><button type="button" class="primary al-ok">تمام</button></div>
+    <div class="al-foot"><button type="button" class="ghost al-news">📣 مراجعة الجديد</button><button type="button" class="ghost al-clear">🗑️ مسح الكل</button><button type="button" class="primary al-ok">تمام</button></div>
   </div>`;
   document.body.appendChild(ov);
   const newest = alertsCache.reduce((x,m)=>Math.max(x, m.at||0), 0);
   if(newest){ try{ localStorage.setItem(alertSeenKey(), String(Math.max(newest, alertSeenAt()))); }catch(e){} }
   ov.addEventListener('click', async e=>{
     if(e.target === ov || e.target.closest('.al-x') || e.target.closest('.al-ok')){ closeAlerts(); return; }
+    if(e.target.closest('.al-news')){ openNewsReview(false); return; }
     const del = e.target.closest('.al-del');
     if(del){ try{ await window.storage.chatDelete(del.dataset.id); }catch(err){ alert('معرفناش نمسح التنبيه، جرّب تاني.'); } return; }
     if(e.target.closest('.al-clear')){
@@ -8819,6 +9021,151 @@ function openAlerts(){
 }
 function closeAlerts(){ const ov = document.getElementById('alertsOverlay'); if(ov) ov.remove(); }
 document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
+
+// "الجديد في البرنامج": once a day, the first time the app opens, every user sees what's new
+// and presses "قريت"; admins get a ✅ in the 🔔 (one doc per user, overwritten each day, so it
+// never fills the chat). Servants only see items the admin kept: the admin's screen lists the
+// items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
+// Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
+const WHATS_NEW = [
+  { id: 'n2', d: '24-Oct-2026', text: 'برنامج الخدمة وفقرة العشر دقايق: زرار "🔁 تبديل / نقل" جنب كل ميعاد، تبدّل بيه متكلمين يومين، أو تنقل متكلم لميعاد فاضي، أو تبدّل الميعادين بالموضوعات.' },
+  { id: 'n3', d: '24-Oct-2026', text: 'تقرير المتكلمين مبقاش بيكرر نفس المتكلم (مرة بصورة ومرة من غير)، والمتكرر القديم بيتدمج لوحده أول ما يتفتح التقرير.' },
+  { id: 'n1', d: '24-Oct-2026', text: 'الشاشة دي 🙂 كل يوم أول ما تفتح البرنامج هتلاقي فيها الجديد، ولما تدوس "قريت" الأدمن بيعرف إنك شفتها.' },
+];
+const NEWS_REVIEW_KEY = 'khodam_news_review', NEWS_SHOW_DAYS = 30;
+const NEWS_MONTHS = { Jan:'يناير', Feb:'فبراير', Mar:'مارس', Apr:'أبريل', May:'مايو', Jun:'يونيو', Jul:'يوليو', Aug:'أغسطس', Sep:'سبتمبر', Oct:'أكتوبر', Nov:'نوفمبر', Dec:'ديسمبر' };
+const NEWS_MI = { Jan:0, Feb:1, Mar:2, Apr:3, May:4, Jun:5, Jul:6, Aug:7, Sep:8, Oct:9, Nov:10, Dec:11 };
+function newsDate(d){ const m = /^(\d+)-(\w+)-(\d+)/.exec(d); return m ? new Date(+m[3], NEWS_MI[m[2]] || 0, +m[1]) : new Date(0); }
+function newsDateLabel(d){ const m = /^(\d+)-(\w+)-(\d+)/.exec(d); return m ? `${+m[1]} ${NEWS_MONTHS[m[2]] || m[2]} ${m[3]}` : d; }
+function newsToday(){ const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+function newsKey(k){ return 'khodam_news_' + k + '_' + (currentUser ? currentUser.name : ''); }
+function newsGet(k){ try{ return localStorage.getItem(newsKey(k)) || ''; }catch(e){ return ''; } }
+let newsReview = null;
+async function newsLoadReview(){
+  const r = await storageGetWithRetry(NEWS_REVIEW_KEY, true);
+  if(!r.confirmed) throw new Error('news review not confirmed');
+  try{ newsReview = r.value ? JSON.parse(r.value) : {}; }catch(e){ newsReview = {}; }
+  return newsReview;
+}
+// items this user should see now: started, not older than NEWS_SHOW_DAYS, and (for servants) kept by the admin
+function newsItemsFor(review, all){
+  const now = new Date(), from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - NEWS_SHOW_DAYS);
+  return WHATS_NEW.filter(it=>{
+    const d = newsDate(it.d);
+    if(!all && (d > now || d < from)) return false;
+    if(it.admin) return isAdmin();
+    return all || review[it.id] === 'show';
+  });
+}
+function newsGroups(items, isNew){
+  const days = [];
+  items.forEach(it=>{
+    const label = newsDateLabel(it.d), n = isNew(it), last = days[days.length - 1];
+    if(last && last.label === label && last.isNew === n) last.items.push(it);
+    else days.push({ label, isNew: n, items: [it] });
+  });
+  return days;
+}
+async function maybeShowNews(){
+  if(!currentUser || document.getElementById('newsOverlay')) return;
+  if(newsGet('day') === newsToday()) return;
+  const pg = document.getElementById('photoGateOverlay'), lo = document.getElementById('loginOverlay');
+  if((pg && pg.style.display === 'flex') || (lo && getComputedStyle(lo).display !== 'none')){ setTimeout(maybeShowNews, 3000); return; }
+  let review;
+  try{ review = await newsLoadReview(); }catch(e){ return; }   // try again next time the app opens
+  if(!currentUser || document.getElementById('newsOverlay')) return;
+  if(isAdmin()){
+    // admins: review the items that haven't been decided yet
+    if(WHATS_NEW.some(it=>!it.admin && !review[it.id])) openNewsReview(true);
+    else if(newsItemsFor(review).some(it=>it.admin && !newsSeen().includes(it.id))) showNewsScreen(review);
+    return;
+  }
+  if(newsItemsFor(review).length) showNewsScreen(review);
+}
+function newsSeen(){ try{ return JSON.parse(newsGet('seen') || '[]'); }catch(e){ return []; } }
+function showNewsScreen(review){
+  const items = newsItemsFor(review); if(!items.length) return;
+  const seen = newsSeen();
+  const days = newsGroups(items, it=>!seen.includes(it.id));
+  const ov = document.createElement('div');
+  ov.id = 'newsOverlay';
+  ov.innerHTML = `<div class="nw-card" role="dialog" aria-label="الجديد في البرنامج">
+    <div class="nw-head"><h3>✨ الجديد في البرنامج</h3><div>${escHtml(greetingByTime())} يا ${escHtml(currentUser.name)} — اقرا الجديد ودوس "قريت" تحت</div></div>
+    <div class="nw-list">${days.map(d=>`<div class="nw-group${d.isNew ? '' : ' old'}">
+      <div class="nw-date">📅 ${escHtml(d.label)}${d.isNew ? '<span class="nw-tag">جديد</span>' : ''}</div>
+      ${d.items.map(it=>`<div class="nw-item">${escHtml(it.text)}</div>`).join('')}
+    </div>`).join('')}</div>
+    <div class="nw-foot"><button type="button" class="primary nw-ok">✅ قريت</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('.nw-ok').addEventListener('click', ()=>newsConfirm(items));
+}
+function newsConfirm(items){
+  const ov = document.getElementById('newsOverlay'); if(ov) ov.remove();
+  if(!currentUser) return;
+  try{
+    localStorage.setItem(newsKey('day'), newsToday());
+    localStorage.setItem(newsKey('seen'), JSON.stringify([...new Set(newsSeen().concat(items.map(it=>it.id)))].slice(-200)));
+  }catch(e){}
+  if(isAdmin()) return;   // admins don't need to be told about themselves
+  try{
+    const now = Date.now(), who = currentUser.name;
+    const id = 'rd_' + encodeURIComponent(who).slice(0, 400);   // one per user: today's read replaces yesterday's
+    const q = alertLsGet(ALERT_Q_KEY, []).filter(x=>x.id !== id);
+    q.push({ id, kind: 'newsRead', msgKind: 'read', who, at: now,
+      text: '✅ ' + who + ': قريت الجديد في البرنامج (' + items.length + (items.length === 1 ? ' حاجة' : ' حاجات') + '، آخرها ' + newsDateLabel(items[0].d) + ')' });
+    alertLsSet(ALERT_Q_KEY, q.slice(-30));
+    flushAlerts();
+  }catch(e){ console.error('news read alert failed', e); }
+}
+// admin: keep (يتعرض) or cancel (يتلغي) each item before servants see it; can be reopened from the 🔔
+async function openNewsReview(daily){
+  if(!isAdmin()) return;
+  closeAlerts();
+  const old = document.getElementById('newsOverlay'); if(old) old.remove();
+  let review;
+  try{ review = await newsLoadReview(); }catch(e){ alert('معرفناش نجيب مراجعة الجديد. اتأكد من النت وجرّب تاني.'); return; }
+  const items = newsItemsFor(review, true);
+  const choice = {};
+  items.forEach(it=>{ if(!it.admin) choice[it.id] = review[it.id] || ''; });
+  const ov = document.createElement('div');
+  ov.id = 'newsOverlay';
+  ov.innerHTML = `<div class="nw-card" role="dialog" aria-label="مراجعة الجديد">
+    <div class="nw-head"><h3>📣 مراجعة الجديد قبل ما الخدام يشوفوه</h3><div>اختار اللي يتعرض على الخدام واللي يتلغي، وبعدين دوس "حفظ"</div></div>
+    <div class="nw-list">${items.length ? newsGroups(items, it=>!it.admin && !review[it.id]).map(d=>`<div class="nw-group">
+      <div class="nw-date">📅 ${escHtml(d.label)}${d.isNew ? '<span class="nw-tag">محتاج قرارك</span>' : ''}</div>
+      ${d.items.map(it=>`<div class="nw-item">${escHtml(it.text)}${it.admin
+        ? '<div class="nw-note">للأدمن بس، مش بيتعرض على الخدام</div>'
+        : `<div class="nw-choice" data-id="${escHtml(it.id)}"><button type="button" data-v="show">✓ يتعرض</button><button type="button" data-v="hide">✕ يتلغي</button></div>`}</div>`).join('')}
+    </div>`).join('') : '<div class="empty-note" style="text-align:center;padding:24px 0;">مفيش جديد لسه.</div>'}</div>
+    <div class="nw-foot nw-two"><button type="button" class="ghost nw-later">بعدين</button><button type="button" class="primary nw-save">💾 حفظ</button></div>
+    <div class="nw-msg"></div>
+  </div>`;
+  document.body.appendChild(ov);
+  const paint = ()=>ov.querySelectorAll('.nw-choice').forEach(c=>c.querySelectorAll('button').forEach(b=>b.classList.toggle('on', choice[c.dataset.id] === b.dataset.v)));
+  paint();
+  ov.addEventListener('click', async e=>{
+    const b = e.target.closest('.nw-choice button');
+    if(b){ choice[b.closest('.nw-choice').dataset.id] = b.dataset.v; paint(); ov.querySelector('.nw-msg').textContent = ''; return; }
+    if(e.target.closest('.nw-later')){ ov.remove(); return; }
+    if(!e.target.closest('.nw-save')) return;
+    const msg = ov.querySelector('.nw-msg');
+    const missing = Object.keys(choice).filter(id=>!choice[id]);
+    if(missing.length){ msg.textContent = 'لسه في ' + missing.length + ' محتاجين تختار لهم يتعرض ولا يتلغي.'; return; }
+    const save = ov.querySelector('.nw-save'); save.disabled = true; msg.textContent = 'جاري الحفظ…';
+    try{
+      const latest = await newsLoadReview();
+      const next = Object.assign({}, latest, choice);
+      await window.storage.set(NEWS_REVIEW_KEY, JSON.stringify(next), true);
+      newsReview = next;
+      ov.remove();
+      if(daily){
+        const mine = newsItemsFor(next).filter(it=>it.admin && !newsSeen().includes(it.id));
+        if(mine.length) showNewsScreen(next); else newsConfirm(newsItemsFor(next));
+      }
+    }catch(err){ save.disabled = false; msg.textContent = 'محصلش حفظ، جرّب تاني.'; }
+  });
+}
 function closeChat(){ document.getElementById('chatPanel').style.display = 'none'; chatTypingStop(); renderChatBadge(); }
 document.getElementById('chatFab').addEventListener('click', ()=>{ chatIsOpen() ? closeChat() : openChat(); });
 document.getElementById('chatCloseBtn').addEventListener('click', closeChat);
