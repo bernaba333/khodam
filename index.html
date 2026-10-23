@@ -228,6 +228,9 @@ input[type=text], input[type=date], input[type=password]{
   color:var(--ink);
 }
 input[type=text]:focus, input[type=date]:focus, input[type=password]:focus{outline:2px solid var(--gold);outline-offset:1px;}
+.birth-field{display:flex;gap:6px;direction:rtl;}
+.birth-field select{flex:1;min-width:0;padding:10px 6px;border:1px solid var(--line);border-radius:10px;font-family:'Cairo',sans-serif;font-size:16px;}
+.birth-field select.bf-y{flex:1.3;}
 
 .group-grid{
   display:grid;
@@ -612,6 +615,14 @@ html[data-theme="dark"] .chat-msg .by{color:var(--gold);}
 .chat-msg .by small{font-weight:600;color:var(--muted);margin-inline-start:4px;}
 .chat-msg .txt{font-size:.86rem;white-space:pre-wrap;word-break:break-word;line-height:1.5;}
 .chat-msg .tm{font-size:.6rem;opacity:.65;margin-top:2px;display:flex;gap:8px;align-items:center;}
+.chat-msg.alert .bub{background:#fde8e8;border-color:#b3261e;color:#5a1a14;}
+html[data-theme="dark"] .chat-msg.alert .bub{background:#4a1f1c;border-color:#e0675e;color:#fde8e8;}
+#adminAlertPop{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:100002;width:min(440px,calc(100% - 24px));background:var(--card);border:2px solid #b3261e;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.3);padding:12px 14px;direction:rtl;font-family:'Cairo',sans-serif;}
+#adminAlertPop h3{margin:0 0 6px;font-size:1rem;color:#b3261e;}
+#adminAlertPop ul{margin:0 0 10px;padding:0 18px 0 0;max-height:40vh;overflow:auto;font-size:.85rem;color:var(--ink);}
+#adminAlertPop li{margin-bottom:6px;white-space:pre-wrap;}
+#adminAlertPop .row{display:flex;gap:8px;}
+#adminAlertPop .row button{flex:1;}
 .chat-msg .del{background:none;border:none;color:inherit;opacity:.6;cursor:pointer;font-size:.62rem;padding:0;text-decoration:underline;}
 #chatPanel .avatar{background:linear-gradient(135deg,#e9cf7a,var(--gold)) !important;color:#1b2440 !important;}
 html[data-theme="dark"] .chat-msg.mine .bub{background:#34508a;}
@@ -1275,7 +1286,7 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
       <label>العنوان بالتفصيل</label>
       <div style="margin:6px 0 12px;"><input type="text" id="newServantAddress" placeholder="الشارع، رقم العمارة، الدور..."></div>
       <label>تاريخ الميلاد</label>
-      <div style="margin:6px 0 12px;"><input type="date" id="newServantBirth"></div>
+      <div style="margin:6px 0 12px;" id="newServantBirthBox"></div>
       <label>أب الاعتراف</label>
       <div style="margin:6px 0 12px;"><input type="text" id="newServantConfession" placeholder="اسم أب الاعتراف"></div>
       <label>كنيسته</label>
@@ -1776,6 +1787,78 @@ window.addEventListener('error', function(e){
   }
 });
 
+/* ---------- PROBLEM ALERTS TO THE ADMIN ----------
+   When someone can't sign in, can't save, or keeps typing a wrong password,
+   the admins get a message in the team chat (only admins see it) plus a popup.
+   An alert waits on this device until it can be sent (no internet, or the
+   device isn't signed in to Firebase yet); each one has a fixed id, so sending
+   it again never makes a duplicate. The same problem from the same person is
+   sent at most once every 15 minutes. */
+var ALERT_Q_KEY = 'khodam_alert_queue', ALERT_SENT_KEY = 'khodam_alert_sent', ALERT_BY = '⚠️ تنبيه من البرنامج';
+var ALERT_REPEAT_MS = 15 * 60000, alertFlushing = false;
+function alertLsGet(k, d){ try{ return JSON.parse(localStorage.getItem(k)) || d; }catch(e){ return d; } }
+function alertLsSet(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+function alertWho(){
+  try{ if(currentUser) return currentUser.name; }catch(e){}
+  try{ const t = document.getElementById('loginNameInput').value.trim(); if(t) return t; }catch(e){}
+  return '';
+}
+function alertDevice(){
+  const ua = navigator.userAgent || '';
+  const os = /iPhone|iPad|iPod/.test(ua) ? 'آيفون' : /Android/.test(ua) ? 'أندرويد' : /Windows/.test(ua) ? 'ويندوز' : /Mac/.test(ua) ? 'ماك' : 'جهاز';
+  const br = /SamsungBrowser/.test(ua) ? 'Samsung' : /Edg\//.test(ua) ? 'Edge' : /CriOS|Chrome/.test(ua) ? 'Chrome' : /Firefox|FxiOS/.test(ua) ? 'Firefox' : /Safari/.test(ua) ? 'Safari' : '';
+  let ver = ''; try{ ver = APP_VERSION; }catch(e){}
+  return os + (br ? ' · ' + br : '') + (navigator.onLine === false ? ' · من غير نت' : '') + (ver ? ' · ' + ver : '');
+}
+function alertErrText(e){
+  const c = e && e.code ? String(e.code) : '';
+  const m = e && e.message ? String(e.message) : String(e || '');
+  return (c ? c + ' — ' : '') + m.slice(0, 160);
+}
+function alertKeyLabel(k){
+  k = String(k || '');
+  if(k === 'khodam_attendance_data') return 'الخدام والحضور والافتقاد';
+  if(k === 'khodam_users_list') return 'المستخدمين وكلمات السر';
+  if(/strack|snote/.test(k)) return 'المتابعة الروحية';
+  return 'إعدادات أو بيانات تانية: ' + k;
+}
+// kind: one word per type of problem (used to skip repeats); who: the account it's about
+function reportProblem(kind, text, who){
+  try{
+    who = who || alertWho();
+    const now = Date.now(), key = kind + '|' + who;
+    const sent = alertLsGet(ALERT_SENT_KEY, {});
+    if(now - (sent[key] || 0) < ALERT_REPEAT_MS) return;
+    Object.keys(sent).forEach(k=>{ if(now - sent[k] > ALERT_REPEAT_MS) delete sent[k]; });
+    sent[key] = now; alertLsSet(ALERT_SENT_KEY, sent);
+    const q = alertLsGet(ALERT_Q_KEY, []);
+    q.push({ id: 'al_' + now + '_' + Math.random().toString(36).slice(2, 8), kind, who,
+      text: (who ? who + ': ' : 'جهاز مش داخل بحساب: ') + text + '\n📱 ' + alertDevice(), at: now });
+    alertLsSet(ALERT_Q_KEY, q.slice(-30));
+    flushAlerts();
+  }catch(e){ console.error('reportProblem failed', e); }
+}
+async function flushAlerts(){
+  if(alertFlushing || !window.storage || !window.storage.alertSend) return;
+  alertFlushing = true;
+  try{
+    let q = alertLsGet(ALERT_Q_KEY, []);
+    while(q.length){
+      const a = q[0];
+      try{
+        await Promise.race([
+          window.storage.alertSend(a.id, { by: ALERT_BY, role: '', to: 'admin', kind: 'alert', problem: a.kind, user: a.who || '', text: a.text, at: a.at }),
+          new Promise((_, rej)=>setTimeout(()=>rej(new Error('timeout')), 20000))
+        ]);
+      }catch(e){ break; }   // keep it for later (no internet / not signed in yet)
+      q = alertLsGet(ALERT_Q_KEY, []).filter(x=>x.id !== a.id);
+      alertLsSet(ALERT_Q_KEY, q);
+    }
+  }finally{ alertFlushing = false; }
+}
+window.addEventListener('online', ()=>flushAlerts());
+setInterval(()=>{ if(alertLsGet(ALERT_Q_KEY, []).length) flushAlerts(); }, 60000);
+
 /* ---------- STORAGE LAYER (Firebase) ----------
    All shared data lives in Firestore (project khodam-anba-bola), protected by
    security rules that only allow the single service account. Every servant
@@ -1958,6 +2041,17 @@ window.addEventListener('error', function(e){
     cb(snap.exists ? (snap.data().rev || 0) : 0);
   }, err=>console.error('watch failed', err));
 
+  // fixed id: sending the same alert twice keeps one copy
+  fbStore.alertSend = (id, m)=> db.collection('chat').doc(id).set(m);
+  // any shared save that fails is reported to the admin
+  ['set', 'setIfRev', 'photoSet'].forEach(fn=>{
+    const orig = fbStore[fn];
+    fbStore[fn] = async function(...args){
+      try{ return await orig.apply(fbStore, args); }
+      catch(e){ if(fn === 'photoSet' || args[2] !== false) reportProblem('save', 'حاول يحفظ ومعرفش (' + (fn === 'photoSet' ? 'صورة' : alertKeyLabel(args[0])) + '): ' + alertErrText(e)); throw e; }
+    };
+  });
+
   window.storage = fbStore;
   window.__usingLocalStorageFallback = false;
 
@@ -2018,6 +2112,7 @@ window.addEventListener('error', function(e){
         done = true;
         gate.style.display = 'none';
         resolve();
+        setTimeout(flushAlerts, 3000);
       } else if(!user){
         const saved = getSavedPw();
         if(saved && !triedSaved){
@@ -2027,6 +2122,7 @@ window.addEventListener('error', function(e){
             const c = err && err.code || '';
             if(c.includes('wrong-password') || c.includes('invalid-credential') || c.includes('invalid-login') || c.includes('user-disabled')){
               setSavedPw(null);
+              reportProblem('gate', 'الجهاز ده كان داخل بباسورد الخدمة القديم وطلع برا. محتاج كود تفعيل جديد.');
               msg.textContent = 'باسورد الخدمة اتغيّر. اطلب من المدير كود تفعيل جديد.';
             } else if(c.includes('network')){
               msg.textContent = 'مفيش إنترنت، اتأكد من الاتصال';
@@ -2048,7 +2144,7 @@ window.addEventListener('error', function(e){
         setSavedPw(val);
       }catch(err){
         const c = err && err.code || '';
-        if(c.includes('wrong-password') || c.includes('invalid-credential') || c.includes('invalid-login')) msg.textContent = 'الباسورد غلط، جرّب تاني';
+        if(c.includes('wrong-password') || c.includes('invalid-credential') || c.includes('invalid-login')){ msg.textContent = 'الباسورد غلط، جرّب تاني'; reportProblem('gate', 'كتب باسورد الخدمة غلط وهو بيفتح البرنامج على جهاز جديد.'); }
         else if(c.includes('too-many-requests')) msg.textContent = 'محاولات كتير ورا بعض، استنى شوية وجرّب تاني';
         else if(c.includes('network')) msg.textContent = 'مفيش إنترنت، اتأكد من الاتصال';
         else msg.textContent = 'حصلت مشكلة: ' + (err && err.message ? err.message : err);
@@ -2068,7 +2164,7 @@ window.addEventListener('error', function(e){
         let snap = null;
         try{ snap = await db.collection('pair').doc(id).get(); }
         catch(e){ if(!(e && e.code === 'permission-denied')) throw e; }   // a wrong or expired code isn't readable at all
-        if(!snap || !snap.exists){ msg.textContent = 'الكود ده غلط أو وقته خلص (بيشتغل ١٠ دقايق ومرة واحدة بس). اطلب من المدير كود جديد.'; return; }
+        if(!snap || !snap.exists){ msg.textContent = 'الكود ده غلط أو وقته خلص (بيشتغل ١٠ دقايق ومرة واحدة بس). اطلب من المدير كود جديد.'; reportProblem('gate', 'كتب كود تفعيل غلط أو وقته خلص.'); return; }
         const svcPw = await pairDecrypt(code, snap.data());
         await auth.signInWithEmailAndPassword(SERVICE_EMAIL, svcPw);
         setSavedPw(svcPw);
@@ -2078,6 +2174,7 @@ window.addEventListener('error', function(e){
         if(c.includes('network') || c === 'unavailable') msg.textContent = 'مفيش إنترنت، اتأكد من الاتصال';
         else if(c.includes('wrong-password') || c.includes('invalid-credential') || c.includes('invalid-login')) msg.textContent = 'باسورد الخدمة اتغيّر بعد ما الكود اتعمل. اطلب من المدير كود جديد.';
         else msg.textContent = 'الكود ده غلط أو وقته خلص. اطلب من المدير كود جديد.';
+        if(!(c.includes('network') || c === 'unavailable')) reportProblem('gate', 'كود تفعيل الجهاز ما اشتغلش معاه (' + (c || 'غلط أو خلص') + ').');
       }finally{
         actBtn.disabled = false; actBtn.textContent = 'تفعيل الجهاز';
       }
@@ -2323,25 +2420,62 @@ function renderLineChartSVG(container, labels, series, opts={}){
 }
 
 function todayStr(){ return dateStr(new Date()); }
-// Birthdates are stored as "day/month" (year usually unknown/irrelevant for a
-// recurring birthday). The calendar <input type="date"> needs a full date, so
-// we use a fixed placeholder leap year (2000) purely for display/picking —
-// the year is discarded again when saving.
-function dmToDateInputValue(dm){
-  if(!dm) return '';
-  const parts = dm.split('/').map(p=>parseInt(p,10));
-  const day = parts[0], month = parts[1];
-  if(!day || !month) return '';
-  return `2000-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+// Birthdates are stored as "day/month/year" ("12/5/1998"), or "day/month" when the
+// year isn't known (older entries). They're picked with three lists (day, month,
+// optional year) instead of a calendar, so the year is never lost or replaced by a
+// placeholder, and a date typed any other way (Excel, Arabic digits, 1998-05-12)
+// is still understood.
+const toLatinDigits = v => String(v==null?'':v).replace(/[٠-٩]/g, d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[۰-۹]/g, d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
+const daysInMonth = (m, y) => new Date(y || 2000, m, 0).getDate();
+function parseBirth(v){
+  if(v == null) return null;
+  let t = toLatinDigits(v).trim();
+  if(!t) return null;
+  let d, m, y = 0;
+  if(/^\d+(\.\d+)?$/.test(t) && +t > 600 && +t < 80000){ // Excel date number
+    const dt = new Date(Date.UTC(1899, 11, 30) + Math.floor(+t) * 86400000);
+    d = dt.getUTCDate(); m = dt.getUTCMonth()+1; y = dt.getUTCFullYear();
+  } else {
+    const p = t.replace(/[\s.\-\\]+/g, '/').split('/').filter(Boolean).map(x=>parseInt(x,10));
+    if(p.length < 2 || p.length > 3 || p.some(isNaN)) return null;
+    if(p.length === 3 && p[0] > 31){ y = p[0]; m = p[1]; d = p[2]; }
+    else { d = p[0]; m = p[1]; y = p[2] || 0; }
+  }
+  const nowY = new Date().getFullYear();
+  if(y && y < 100) y += (y > nowY % 100) ? 1900 : 2000;
+  if(y && (y < 1900 || y > nowY)) y = 0;
+  if(!(m >= 1 && m <= 12) || !(d >= 1 && d <= daysInMonth(m, y))) return null;
+  return { day: d, month: m, year: y };
 }
-function dateInputValueToDM(val){
-  if(!val) return '';
-  const parts = val.split('-'); // YYYY-MM-DD
-  if(parts.length !== 3) return '';
-  const month = parseInt(parts[1],10), day = parseInt(parts[2],10);
-  if(!month || !day) return '';
-  return `${day}/${month}`;
+const birthStr = b => b ? `${b.day}/${b.month}` + (b.year ? `/${b.year}` : '') : '';
+// a stored or imported birthdate in the standard form (or as-is if it can't be read)
+const normalizeBirth = v => { const b = parseBirth(v); return b ? birthStr(b) : String(v==null?'':v).trim(); };
+const BF_MONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+function birthFieldHtml(cls, value){
+  const b = parseBirth(value) || { day:0, month:0, year:0 };
+  const nowY = new Date().getFullYear();
+  const opt = (v, label, sel) => `<option value="${v}"${sel ? ' selected' : ''}>${label}</option>`;
+  let days = opt('', 'اليوم', !b.day), months = opt('', 'الشهر', !b.month), years = opt('', 'السنة (مش معروفة)', !b.year);
+  for(let i=1;i<=31;i++) days += opt(i, i, i===b.day);
+  BF_MONTHS.forEach((n,i)=>{ months += opt(i+1, `${i+1} - ${n}`, i+1===b.month); });
+  for(let y=nowY;y>=1920;y--) years += opt(y, y, y===b.year);
+  return `<div class="birth-field ${cls||''}" data-orig="${escHtml(value||'')}">
+    <select class="bf-d" aria-label="اليوم">${days}</select>
+    <select class="bf-m" aria-label="الشهر">${months}</select>
+    <select class="bf-y" aria-label="السنة">${years}</select></div>`;
 }
+// { value } to save, or { error } to show; a stored date the app couldn't read is kept
+// unless the lists were changed
+function readBirthField(el){
+  if(!el) return { value: '' };
+  const d = +el.querySelector('.bf-d').value, m = +el.querySelector('.bf-m').value, y = +el.querySelector('.bf-y').value;
+  const orig = el.dataset.orig || '';
+  if(!d && !m && !y) return { value: parseBirth(orig) ? '' : orig };
+  if(!d || !m) return { error: 'تاريخ الميلاد: اختار اليوم والشهر (السنة لو مش معروفة سيبها).' };
+  if(d > daysInMonth(m, y)) return { error: `تاريخ الميلاد: شهر ${BF_MONTHS[m-1]} مفيهوش يوم ${d}.` };
+  return { value: birthStr({ day:d, month:m, year:y }) };
+}
+function resetBirthField(el){ if(el){ el.dataset.orig = ''; el.querySelectorAll('select').forEach(x=>x.value=''); } }
 // the device's own calendar day (toISOString() is the UTC day, a day early in Egypt after midnight)
 function dateStr(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
 // which weekdays each meeting is held on (Friday=5, Sunday=0)
@@ -2687,7 +2821,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '20-Oct-2026 N';
+const APP_VERSION = '23-Oct-2026 B';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -2700,7 +2834,7 @@ function setSaveStatus(state){
   clearTimeout(el._t);
   if(state === 'saving'){ el.textContent = '⏳ جاري الحفظ…'; el.style.background = '#1B2A4A'; el.style.color = '#fdf8ec'; el.style.opacity = '1'; }
   else if(state === 'saved'){ el.textContent = '✓ اتحفظ'; el.style.background = '#2f6b3a'; el.style.color = '#fff'; el.style.opacity = '1'; el._t = setTimeout(()=>{ el.style.opacity = '0'; }, 1500); }
-  else if(state === 'error'){ el.textContent = '⚠️ لسه ما اتحفظش — هنحاول تاني لوحدنا'; el.style.background = '#7A2E2E'; el.style.color = '#fff'; el.style.opacity = '1'; }
+  else if(state === 'error'){ reportProblem('save', 'البيانات (الخدام/الحضور/الافتقاد) ما اتحفظتش من أول مرة، والبرنامج بيحاول تاني لوحده.'); el.textContent = '⚠️ لسه ما اتحفظش — هنحاول تاني لوحدنا'; el.style.background = '#7A2E2E'; el.style.color = '#fff'; el.style.opacity = '1'; }
 }
 
 // Screens update right away; the save runs in the background. Several quick
@@ -3113,6 +3247,7 @@ function syncServDaysBox(grid, box){
 document.getElementById('newServantGroups').addEventListener('change', ()=>
   syncServDaysBox(document.getElementById('newServantGroups'), document.getElementById('newServantDaysBox')));
 
+document.getElementById('newServantBirthBox').innerHTML = birthFieldHtml('', '');
 document.getElementById('newServantMoreToggle').addEventListener('click', ()=>{
   const box = document.getElementById('newServantMore');
   box.style.display = box.style.display === 'none' ? 'block' : 'none';
@@ -3172,7 +3307,9 @@ document.getElementById('addServantBtn').addEventListener('click', async ()=>{
   const phone = phoneInput.value.trim();
   const address = document.getElementById('newServantAddress').value.trim();
   const area = document.getElementById('newServantArea').value.trim();
-  const birthDate = dateInputValueToDM(document.getElementById('newServantBirth').value);
+  const birthRes = readBirthField(document.querySelector('#newServantBirthBox .birth-field'));
+  if(birthRes.error){ alert(birthRes.error); return; }
+  const birthDate = birthRes.value;
   const confessionFather = document.getElementById('newServantConfession').value.trim();
   const church = document.getElementById('newServantChurch').value.trim();
   const spouseName = document.getElementById('newServantSpouse').value.trim();
@@ -3194,7 +3331,7 @@ document.getElementById('addServantBtn').addEventListener('click', async ()=>{
   phoneInput.value = '';
   document.getElementById('newServantArea').value = '';
   document.getElementById('newServantAddress').value = '';
-  document.getElementById('newServantBirth').value = '';
+  resetBirthField(document.querySelector('#newServantBirthBox .birth-field'));
   document.getElementById('newServantConfession').value = '';
   document.getElementById('newServantChurch').value = '';
   document.getElementById('newServantSpouse').value = '';
@@ -3647,7 +3784,7 @@ function renderServantList(){
           <label style="display:block;margin-bottom:4px;">العنوان بالتفصيل</label>
           <input type="text" class="edit-address" value="${escHtml(s.address)}" style="margin-bottom:10px;">
           <label style="display:block;margin-bottom:4px;">تاريخ الميلاد</label>
-          <input type="date" class="edit-birth" value="${dmToDateInputValue(s.birthDate)}" style="margin-bottom:10px;">
+          <div style="margin-bottom:10px;">${birthFieldHtml('edit-birth', s.birthDate)}</div>
           <label style="display:block;margin-bottom:4px;">أب الاعتراف</label>
           <input type="text" class="edit-confession" value="${escHtml(s.confessionFather)}" style="margin-bottom:10px;">
           <label style="display:block;margin-bottom:4px;">كنيسته</label>
@@ -3706,6 +3843,8 @@ function renderServantList(){
         editPanel.querySelector('[data-save]').addEventListener('click', async ()=>{
           const newName = editPanel.querySelector('.edit-name').value.trim();
           if(!newName){ alert('الاسم متقدرش يبقى فاضي.'); return; }
+          const birthRes = readBirthField(editPanel.querySelector('.edit-birth'));
+          if(birthRes.error){ alert(birthRes.error); return; }
           if(newName !== s.name && DATA.servants.some(o=>o.id !== s.id && o.name === newName)){
             if(!confirm(`في شخص تاني اسمه "${newName}" بالظبط بالفعل. متأكد إنك عايز تكمل؟`)) return;
           }
@@ -3725,7 +3864,7 @@ function renderServantList(){
           s.phone = editPanel.querySelector('.edit-phone').value.trim();
           s.area = editPanel.querySelector('.edit-area').value.trim();
           s.address = editPanel.querySelector('.edit-address').value.trim();
-          s.birthDate = dateInputValueToDM(editPanel.querySelector('.edit-birth').value);
+          s.birthDate = birthRes.value;
           s.confessionFather = editPanel.querySelector('.edit-confession').value.trim();
           s.church = editPanel.querySelector('.edit-church').value.trim();
           s.spouseName = editPanel.querySelector('.edit-spouse').value.trim();
@@ -4147,7 +4286,6 @@ function wireDcGroup(el, allPeople){
 // so the save always goes to that exact person and you stay on the list to do the next one.
 const DC_INPUTS = {
   phone:            { type:'tel' },
-  birthDate:        { type:'date' },
   area:             { list:'areaOptionsList' },
   address:          {},
   confessionFather: {},
@@ -4171,6 +4309,8 @@ function openMissingDataEdit(id){
         <img class="dcm-photo-preview" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:1px solid var(--line);background:#fff;display:none;">
         <label class="ghost" style="cursor:pointer;display:inline-block;">⬆️ رفع صورة<input type="file" class="dcm-photo" accept="image/*" style="display:none;"></label>
       </div>`;
+    if(f.key === 'birthDate') return `<label style="display:block;margin-bottom:4px;font-weight:700;">${f.label}</label>
+      <div style="margin-bottom:12px;">${birthFieldHtml('dcm-birth', '')}</div>`;
     const c = DC_INPUTS[f.key] || {};
     return `<label style="display:block;margin-bottom:4px;font-weight:700;">${f.label}</label>
       <input type="${c.type||'text'}" data-k="${f.key}" ${c.list?`list="${c.list}"`:''} style="margin-bottom:12px;">`;
@@ -4208,10 +4348,13 @@ function openMissingDataEdit(id){
     const target = DATA.servants.find(x=>x.id===id);
     if(!target){ alert('الشخص ده مبقاش موجود في البيانات.'); close(); return; }
     let changed = false;
+    const birthRes = readBirthField(wrap.querySelector('.dcm-birth'));
+    if(birthRes.error){ alert(birthRes.error); return; }
+    if(birthRes.value){ target.birthDate = birthRes.value; changed = true; }
     wrap.querySelectorAll('input[data-k]').forEach(inp=>{
       const v = inp.value.trim();
       if(!v) return;
-      target[inp.dataset.k] = inp.dataset.k === 'birthDate' ? dateInputValueToDM(v) : v;
+      target[inp.dataset.k] = v;
       changed = true;
     });
     if(pendingPhoto){ target.photo = pendingPhoto; changed = true; }
@@ -4496,7 +4639,7 @@ async function saveUsers(){
     changes.forEach(auditPush);
     return true;
   }
-  catch(e){ console.error('users save error', e); alert('⚠️ التعديل على المستخدمين ما اتحفظش. اتأكد من النت وجرّب تاني.'); return false; }
+  catch(e){ console.error('users save error', e); reportProblem('users-save', 'تعديل على المستخدمين (كلمة سر، صلاحيات، صورة، أو قفل الحساب) ما اتحفظش: ' + alertErrText(e)); alert('⚠️ التعديل على المستخدمين ما اتحفظش. اتأكد من النت وجرّب تاني.'); return false; }
 }
 async function loadPermissions(){
   try{
@@ -4964,6 +5107,7 @@ async function registerWrongPassword(user){
   const note = document.getElementById('loginNote');
   user.failedAttempts = (user.failedAttempts||0) + 1;
   if(user.failedAttempts < MAX_WRONG_TRIES){
+    if(user.failedAttempts === MAX_WRONG_TRIES - 1) reportProblem('wrong-pw', 'كتب كلمة السر غلط مرتين ورا بعض وهو بيدخل. لو غلط تاني الحساب هيتقفل.', user.name);
     await saveUsers();
     const left = MAX_WRONG_TRIES - user.failedAttempts;
     note.textContent = 'كلمة السر غلط. ' + (left === 1 ? 'فاضلك محاولة واحدة وبعدها الحساب هيتقفل.' : 'فاضلك محاولتين.');
@@ -4973,6 +5117,7 @@ async function registerWrongPassword(user){
   user.failedAttempts = 0;
   if(user.role === 'admin'){
     user.lockUntil = Date.now() + ADMIN_LOCK_MS;
+    reportProblem('wrong-pw', 'كلمة سر حساب المدير اتكتبت غلط ٣ مرات، والدخول وقف ٣ دقايق.', user.name);
     await saveUsers();
     startAdminLockCountdown(user.lockUntil);
     return;
@@ -5057,18 +5202,18 @@ async function doLogin(name, password){
       currentUser = user; auditLastUser = user.name;
       await setPersonalLogin(name);
       hideLoginOverlay();
-      try{ applyUserUI(); }catch(uiErr){ console.error('applyUserUI failed after signup', uiErr); note.textContent = 'دخلت، لكن حصلت مشكلة في عرض الصفحة: ' + uiErr.message; }
+      try{ applyUserUI(); }catch(uiErr){ console.error('applyUserUI failed after signup', uiErr); reportProblem('login', 'دخل بس الصفحة ما ظهرتش صح: ' + alertErrText(uiErr)); note.textContent = 'دخلت، لكن حصلت مشكلة في عرض الصفحة: ' + uiErr.message; }
       return;
     }
 
     // fresh copy first, so a lock/unlock done on another device counts here too
     try{ await loadUsers(); }catch(e){}
     const user = USERS.find(u=>u.name.trim() === name);
-    if(!user){ note.textContent = 'مفيش مستخدم بالاسم ده. اطلب من المدير يضيفك.'; return; }
+    if(!user){ note.textContent = 'مفيش مستخدم بالاسم ده. اطلب من المدير يضيفك.'; reportProblem('no-user', `حد حاول يدخل باسم "${name}" ومفيش مستخدم بالاسم ده (يمكن الاسم مكتوب بشكل مختلف).`, name); return; }
     if(user.role !== 'admin' && user.locked){ note.textContent = LOCKED_MSG; return; }
     if(user.role === 'admin' && (user.lockUntil||0) > Date.now()){ startAdminLockCountdown(user.lockUntil); return; }
     const match = await passwordMatches(user, password);
-    if(match === null){ note.textContent = 'المتصفح ده مش قادر يتأكد من كلمة السر. افتح البرنامج من اللينك الأصلي (https) أو من متصفح أحدث.'; return; }
+    if(match === null){ note.textContent = 'المتصفح ده مش قادر يتأكد من كلمة السر. افتح البرنامج من اللينك الأصلي (https) أو من متصفح أحدث.'; reportProblem('login', 'مش عارف يدخل لأن المتصفح بتاعه مش قادر يتأكد من كلمة السر (متصفح قديم أو مش فاتح من اللينك الأصلي).', user.name); return; }
     if(!match){ await registerWrongPassword(user); return; }
     const upgrade = !user.pwHash && canHash();
     if(upgrade) await setUserPassword(user, password, false);
@@ -5078,6 +5223,7 @@ async function doLogin(name, password){
     maybeOfferFaceLogin();
   }catch(err){
     console.error('doLogin failed', err);
+    reportProblem('login', 'حصل خطأ وهو بيدخل: ' + alertErrText(err), name);
     note.textContent = 'حصل خطأ غير متوقع: ' + (err && err.message ? err.message : err);
   }
 }
@@ -5087,7 +5233,7 @@ async function finishLogin(user){
   currentUser = user; auditLastUser = user.name;
   await setPersonalLogin(user.name);
   hideLoginOverlay();
-  try{ applyUserUI(); }catch(uiErr){ console.error('applyUserUI failed after login', uiErr); note.textContent = 'دخلت، لكن حصلت مشكلة في عرض الصفحة: ' + uiErr.message; }
+  try{ applyUserUI(); }catch(uiErr){ console.error('applyUserUI failed after login', uiErr); reportProblem('login', 'دخل بس الصفحة ما ظهرتش صح: ' + alertErrText(uiErr)); note.textContent = 'دخلت، لكن حصلت مشكلة في عرض الصفحة: ' + uiErr.message; }
 }
 
 /* ---------- FACE / FINGERPRINT LOGIN ----------
@@ -5195,6 +5341,7 @@ async function doFaceLogin(){
     await finishLogin(user);
   }catch(err){
     console.error('face login failed', err);
+    if(!(err && (err.name === 'NotAllowedError' || err.name === 'AbortError'))) reportProblem('login', 'الدخول بالوش/البصمة ما اشتغلش: ' + alertErrText(err));
     note.textContent = faceErrorText(err) + ' أو ادخل بكلمة السر.';
   }finally{
     btn.disabled = false;
@@ -6142,7 +6289,7 @@ document.getElementById('importAllDataFile').addEventListener('change', (e)=>{
         const fields = {
           name,
           phone: String(row['التليفون']||'').trim(),
-          birthDate: String(row['تاريخ الميلاد']||'').trim(),
+          birthDate: normalizeBirth(row['تاريخ الميلاد']),
           area: String(row['المنطقة']||'').trim(),
           address: String(row['العنوان']||'').trim(),
           confessionFather: String(row['أب الاعتراف']||'').trim(),
@@ -6319,9 +6466,9 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
     selectedGroups.filter(gid=>isAdmin() || gid !== SERVANTS_GID).forEach(gid=>{
       const members = activeServants().filter(s=>s.groups.includes(gid) && s.birthDate);
       const withDay = members.map(s=>{
-        const parts = s.birthDate.split('/').map(p=>parseInt(p,10));
-        return { s, day: parts[0], month: parts[1] };
-      }).filter(x=>x.month === month && !isNaN(x.day));
+        const b = parseBirth(s.birthDate) || {};
+        return { s, day: b.day, month: b.month };
+      }).filter(x=>x.month === month && x.day);
       withDay.sort((a,b)=>a.day-b.day);
       const rows = withDay.map(x=>[x.day, x.s.name, ph(x.s)]);
       sections.push({ heading: groupName(gid), columns, rows });
@@ -6555,10 +6702,7 @@ document.getElementById('moveConfirmBtn').addEventListener('click', async ()=>{
 
 /* ---------- BIRTHDAYS: reminders and WhatsApp ---------- */
 const AR_MONTHS = ['','يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
-function parseDM(dm){
-  const parts = String(dm||'').split('/').map(p=>parseInt(p,10));
-  return (parts[0] && parts[1]) ? { day: parts[0], month: parts[1] } : null;
-}
+function parseDM(dm){ return parseBirth(dm); }
 // servantsOnly: the servants' meeting only (admin screen); otherwise everyone else
 function upcomingBirthdays(days, servantsOnly){
   const today = new Date(); today.setHours(0,0,0,0);
@@ -8313,6 +8457,7 @@ function renderAll(){
 }
 
 function showLoadErrorScreen(){
+  reportProblem('load', 'البرنامج ما فتحش عنده' + (window.__lastErrorMessage ? ': ' + window.__lastErrorMessage : '.'));
   document.getElementById('loginOverlay').style.display = 'flex';
   document.getElementById('userBox').style.display = 'none';
   document.getElementById('loginFormCard').style.display = 'none';
@@ -8338,6 +8483,7 @@ async function init(){
   setTimeout(()=>{
     if(!APP_READY && document.getElementById('loginFormCard').style.display !== 'none'){
       document.getElementById('loginNote').textContent = 'التحميل واخد وقت أطول من العادي. اتأكد إن النت شغال واعمل تحديث للصفحة.';
+      reportProblem('load', 'البرنامج فضل يحمّل أكتر من ٢٠ ثانية ومفتحش (غالبًا النت ضعيف).');
     }
   }, 20000);
   const modeNotice = document.getElementById('storageModeNotice');
@@ -8394,7 +8540,7 @@ async function init(){
     if(user && !(user.role !== 'admin' && user.locked)){
       currentUser = user; auditLastUser = user.name;
       hideLoginOverlay();
-      try{ applyUserUI(); }catch(uiErr){ console.error('applyUserUI failed on auto-login', uiErr); showLoginOverlay(); document.getElementById('loginNote').textContent = 'حصلت مشكلة في تحميل بياناتك، سجّل دخول تاني: ' + uiErr.message; }
+      try{ applyUserUI(); }catch(uiErr){ console.error('applyUserUI failed on auto-login', uiErr); reportProblem('login', 'الدخول التلقائي فشل والصفحة ما ظهرتش صح: ' + alertErrText(uiErr)); showLoginOverlay(); document.getElementById('loginNote').textContent = 'حصلت مشكلة في تحميل بياناتك، سجّل دخول تاني: ' + uiErr.message; }
       return;
     }
   }
@@ -8432,7 +8578,7 @@ function startTeamChat(){
   stopTeamChat();
   chatStartedFor = currentUser.name;
   document.getElementById('chatFab').style.display = 'flex';
-  chatUnsub = window.storage.chatWatch(list=>{ chatMsgsCache = list.filter(m=>!m.to || isAdmin() || (currentUser && m.by === currentUser.name)); renderChatMsgs(); renderChatBadge(); },
+  chatUnsub = window.storage.chatWatch(list=>{ chatMsgsCache = list.filter(m=>!m.to || isAdmin() || (currentUser && m.by === currentUser.name)); renderChatMsgs(); renderChatBadge(); showAdminAlerts(); },
     ()=>{ document.getElementById('chatMsgs').innerHTML = '<div class="chat-empty">الشات مش شغال دلوقتي. جرّب تفتح البرنامج تاني.</div>'; });
   presenceUnsub = window.storage.presenceWatch(list=>{ chatOnlineCache = list; renderChatOnline(); });
   sendPresence();
@@ -8495,7 +8641,7 @@ function renderChatMsgs(){
     const per = chatPerson(m.by);
     const tag = chatRoleTag(per.role || m.role);
     const canDel = mine || isAdmin();
-    html += `<div class="chat-msg${mine ? ' mine' : ''}">
+    html += `<div class="chat-msg${mine ? ' mine' : ''}${m.kind === 'alert' ? ' alert' : ''}">
       ${mine ? '' : avatarHtml(per, 30)}
       <div class="bub">
         ${mine ? '' : `<div class="by">${escHtml(m.by)}${tag ? `<small>${tag}</small>` : ''}</div>`}
@@ -8514,6 +8660,27 @@ function openChat(){
   document.getElementById('chatMsgs').dataset.first = '';
   renderChatOnline(); renderChatMsgs(); chatMarkSeen();
   if(window.matchMedia('(min-width:761px)').matches) setTimeout(()=>document.getElementById('chatInput').focus(), 50);
+}
+// admins: a popup for problem alerts (and lock requests) they haven't seen on this device
+function alertSeenKey(){ return 'khodam_alert_seen_' + (currentUser ? currentUser.name : ''); }
+function showAdminAlerts(){
+  if(!isAdmin()) return;
+  let seen = 0; try{ seen = +localStorage.getItem(alertSeenKey()) || 0; }catch(e){}
+  if(!seen){ seen = Date.now() - 3 * 86400000; try{ localStorage.setItem(alertSeenKey(), String(seen)); }catch(e){} }
+  const fresh = chatMsgsCache.filter(m=>(m.kind === 'alert' || m.kind === 'lock') && (m.at||0) > seen);
+  const old = document.getElementById('adminAlertPop');
+  if(!fresh.length){ if(old) old.remove(); return; }
+  const pop = old || document.createElement('div');
+  pop.id = 'adminAlertPop';
+  const shown = fresh.slice(-5).reverse();
+  pop.innerHTML = `<h3>⚠️ ${fresh.length === 1 ? 'تنبيه جديد' : fresh.length + ' تنبيهات جديدة'} — مستخدمين عندهم مشكلة</h3>
+    <ul>${shown.map(m=>`<li>${escHtml(m.kind === 'lock' ? '🔒 ' + m.by + ': ' + m.text : m.text)} <small style="color:var(--muted);">(${escHtml(chatDay(m.at||Date.now()))} ${chatTime(m.at||Date.now())})</small></li>`).join('')}</ul>
+    ${fresh.length > 5 ? `<div style="font-size:.78rem;color:var(--muted);margin-bottom:8px;">والباقي في الشات</div>` : ''}
+    <div class="row"><button type="button" class="primary aap-chat">💬 افتح الشات</button><button type="button" class="ghost aap-ok">تمام، شفتها</button></div>`;
+  const markSeen = ()=>{ try{ localStorage.setItem(alertSeenKey(), String(Math.max(...fresh.map(m=>m.at||0)))); }catch(e){} pop.remove(); };
+  pop.querySelector('.aap-ok').onclick = markSeen;
+  pop.querySelector('.aap-chat').onclick = ()=>{ markSeen(); openChat(); };
+  if(!old) document.body.appendChild(pop);
 }
 function closeChat(){ document.getElementById('chatPanel').style.display = 'none'; renderChatBadge(); }
 document.getElementById('chatFab').addEventListener('click', ()=>{ chatIsOpen() ? closeChat() : openChat(); });
