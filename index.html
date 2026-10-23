@@ -2877,7 +2877,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '23-Oct-2026 G';
+const APP_VERSION = '23-Oct-2026 H';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -7345,6 +7345,11 @@ function speakerTidyPlan(obj){
       const c = l ? tk.filter(t=>looseOf[t] === l || prefix(looseOf[t], l)) : [];
       if(c.length === 1) to = c[0];
     }
+    const pid = speakerPhoneId(sp[k] && sp[k].phone);
+    if(!talks[to] && pid){
+      const c = tk.filter(t=>sp[t] && speakerPhoneId(sp[t].phone) === pid);
+      if(c.length === 1) to = c[0];
+    }
     if(to !== k) target[k] = to;
   });
   const moves = [];
@@ -7355,6 +7360,8 @@ function speakerTidyPlan(obj){
   });
   return moves;
 }
+// the same phone number = the same speaker, however the name was written (last 10 digits)
+function speakerPhoneId(ph){ const d = toLatinDigits(ph).replace(/\D/g,''); return d.length >= 8 ? d.slice(-10) : ''; }
 function speakerTidyApply(obj, moves){
   const sp = obj.speakers || {};
   moves.forEach(m=>{
@@ -7382,7 +7389,14 @@ function setSpeakerPhone(obj, name, phone){ putSpeaker(obj, speakerKey(name), na
 // photos go to the same small-document store as people's photos; without it (offline copy) they stay inline
 function setSpeakerPhoto(obj, key, name, ver, inline){ putSpeaker(obj, key, name, e=>{ e.photoVer = ver; e.photo = inline; }); }
 const spkPhotoId = key => cfg.photoPre + key;
+function speakerPhotoKey(key){
+  const sp = PROGRAM.speakers || {}, e = sp[key];
+  if(!e || e.photoVer || e.photo) return key;
+  const pid = speakerPhoneId(e.phone); if(!pid) return key;
+  return Object.keys(sp).find(k=>(sp[k].photoVer || sp[k].photo) && speakerPhoneId(sp[k].phone) === pid) || key;
+}
 async function speakerPhotoUrl(key){
+  key = speakerPhotoKey(key);
   const e = (PROGRAM.speakers||{})[key]; if(!e) return '';
   if(e.photo) return e.photo;
   if(!e.photoVer || !window.storage.photoGet) return '';
@@ -7436,8 +7450,26 @@ function speakersReportData(scope){
   Object.keys(PROGRAM.speakers||{}).forEach(k=>{
     if(!map[k]) map[k] = { key:k, name: PROGRAM.speakers[k].name, church:'', days:{ friday:0, sunday:0 }, talks:[] };
   });
-  return Object.values(map).map(e=>{ const d = (PROGRAM.speakers||{})[e.key] || {}; return Object.assign(e, { phone: speakerPhone(e.name) || d.phone || '', hasPhoto: !!(d.photoVer || d.photo) }); })
-    .sort((a,b)=>a.name.localeCompare(b.name, 'ar'));
+  const list = Object.values(map).map(e=>{ const d = (PROGRAM.speakers||{})[e.key] || {}; return Object.assign(e, { phone: speakerPhone(e.name) || d.phone || '', hasPhoto: !!(d.photoVer || d.photo), keys:[e.key], names:[e.name] }); });
+  // one row per phone number: the name used most stays, the photo comes from whichever has it
+  const byPhone = {}, out = [];
+  list.forEach(e=>{
+    const pid = speakerPhoneId(e.phone);
+    if(!pid){ out.push(e); return; }
+    const g = byPhone[pid];
+    if(!g){ byPhone[pid] = e; out.push(e); return; }
+    const main = (e.talks.length > g.talks.length) ? e : g, other = main === e ? g : e;
+    const photoKey = g.hasPhoto ? (g.photoKey || g.key) : e.hasPhoto ? (e.photoKey || e.key) : '';
+    const m = Object.assign({}, main, {
+      church: main.church || other.church,
+      days: { friday: g.days.friday + e.days.friday, sunday: g.days.sunday + e.days.sunday },
+      talks: g.talks.concat(e.talks).sort((a,b)=>a.iso.localeCompare(b.iso)),
+      keys: g.keys.concat(e.keys), names: g.names.concat(e.names),
+      hasPhoto: g.hasPhoto || e.hasPhoto, photoKey
+    });
+    byPhone[pid] = m; out[out.indexOf(g)] = m;
+  });
+  return out.sort((a,b)=>a.name.localeCompare(b.name, 'ar'));
 }
 function speakerDaysLabel(e){
   if(e.days.friday && e.days.sunday) return 'الجمعة والأحد';
@@ -7506,12 +7538,13 @@ function openSpeakersReport(){
     document.getElementById('spkList').innerHTML = rows.length ? rows.map(e=>{
       const wa = waNumber(e.phone);
       const badge = (day, n)=> n ? `<span class="chip" style="font-size:.72rem;">${PROG_DAYS[day].label} × ${n}</span>` : '';
-      return `<div class="spk-row" data-key="${escHtml(e.key)}" data-name="${escHtml(e.name)}" style="padding:10px 0;border-bottom:1px solid var(--line-soft);">
+      return `<div class="spk-row" data-key="${escHtml(e.key)}" data-pkey="${escHtml(e.photoKey || e.key)}" data-name="${escHtml(e.name)}" style="padding:10px 0;border-bottom:1px solid var(--line-soft);">
         <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap;">
           <div style="display:flex;gap:10px;align-items:center;min-width:0;">
           <div class="spk-ava" style="width:56px;height:56px;flex:none;border-radius:50%;border:2px solid #C9A227;background:var(--cream-dark, #efe6d0);display:flex;align-items:center;justify-content:center;font-size:1.4rem;overflow:hidden;">🎤</div>
           <div style="min-width:0;">
             <div style="font-weight:700;">${escHtml(e.name)}</div>
+            ${e.names.length > 1 ? `<div style="font-size:.74rem;color:var(--muted);">مكتوب كمان: ${escHtml(Array.from(new Set(e.names.filter(n=>n !== e.name))).join('، '))}</div>` : ''}
             ${e.church ? `<div style="font-size:.82rem;color:var(--sage, #3f6152);">⛪ ${escHtml(e.church)}</div>` : ''}
           </div>
           </div>
@@ -7532,7 +7565,7 @@ function openSpeakersReport(){
       const v = prompt('رقم تليفون ' + e.name, e.phone || ''); if(v === null) return;
       const phone = v.trim();
       if(phone === (e.phone||'')) return;
-      if(await saveProgramChange(obj=>setSpeakerPhone(obj, e.name, phone))){
+      if(await saveProgramChange(obj=>{ setSpeakerPhone(obj, e.name, phone); e.keys.forEach(k=>{ if(k !== speakerKey(e.name) && obj.speakers && obj.speakers[k]) putSpeaker(obj, k, obj.speakers[k].name, x=>{ x.phone = phone; }); }); })){
         auditPush({ area:cfg.area, action:'تعديل', target:'تليفون المتكلم — ' + e.name, changes:[{ f:'تليفون المتكلم', from: e.phone || '—', to: phone || '—' }], rest: true });
         render();
       }
@@ -7548,11 +7581,11 @@ function openSpeakersReport(){
           let ok = false;
           try{
             if(window.storage.photoSet){
-              const ver = Date.now().toString(36) + Math.random().toString(36).slice(2,7), id = spkPhotoId(e.key);
+              const ver = Date.now().toString(36) + Math.random().toString(36).slice(2,7), id = spkPhotoId(e.photoKey || e.key);
               await window.storage.photoSet(id, dataUrl, ver);
               PHOTO_MEM.set(id, { ver, v: dataUrl }); photoCache.put(id, { ver, v: dataUrl });
-              ok = await saveProgramChange(obj=>setSpeakerPhoto(obj, e.key, e.name, ver, ''));
-            } else ok = await saveProgramChange(obj=>setSpeakerPhoto(obj, e.key, e.name, '', dataUrl));
+              ok = await saveProgramChange(obj=>setSpeakerPhoto(obj, e.photoKey || e.key, e.name, ver, ''));
+            } else ok = await saveProgramChange(obj=>setSpeakerPhoto(obj, e.photoKey || e.key, e.name, '', dataUrl));
           }catch(err){ console.error(err); alert('مقدرناش نرفع الصورة. اتأكد إن النت شغال وجرّب تاني.'); }
           if(ok) auditPush({ area:cfg.area, action:'تعديل', target:'صورة المتكلم — ' + e.name, changes:[{ f:'الصورة', to: e.hasPhoto ? 'اتغيرت' : 'اتضافت' }], rest: true });
           render();
@@ -7563,8 +7596,8 @@ function openSpeakersReport(){
     document.querySelectorAll('.spk-photo-del').forEach(b=>b.addEventListener('click', async ()=>{
       const e = all.find(x=>x.key === b.closest('.spk-row').dataset.key); if(!e) return;
       if(!confirm('تشيل صورة ' + e.name + '؟')) return;
-      if(await saveProgramChange(obj=>setSpeakerPhoto(obj, e.key, e.name, '', ''))){
-        const id = spkPhotoId(e.key);
+      if(await saveProgramChange(obj=>setSpeakerPhoto(obj, e.photoKey || e.key, e.name, '', ''))){
+        const id = spkPhotoId(e.photoKey || e.key);
         if(window.storage.photoDelete) window.storage.photoDelete(id).catch(()=>{});
         PHOTO_MEM.delete(id); photoCache.del(id);
         auditPush({ area:cfg.area, action:'حذف', target:'صورة المتكلم — ' + e.name, changes:[{ f:'الصورة', from:'موجودة', to:'—' }], rest: true });
@@ -7572,7 +7605,7 @@ function openSpeakersReport(){
       }
     }));
     document.querySelectorAll('.spk-row').forEach(row=>{
-      speakerPhotoUrl(row.dataset.key).then(url=>{
+      speakerPhotoUrl(row.dataset.pkey || row.dataset.key).then(url=>{
         if(!url) return;
         const ava = row.querySelector('.spk-ava');
         if(ava) ava.innerHTML = `<img class="zoomable" src="${url}" alt="${escHtml(row.dataset.name||'')}" style="display:block;width:100%;height:100%;max-width:none;object-fit:cover;object-position:50% 25%;border-radius:50%;">`;
@@ -7602,7 +7635,7 @@ function openSpeakersReport(){
     const w = openPrintPreview();
     if(!w){ alert('المتصفح منع فتح صفحة الطباعة. اسمح بالنوافذ المنبثقة وجرّب تاني.'); return; }
     w.document.write('<p style="font-family:Cairo,Arial;text-align:center;margin-top:40px;">جاري تجهيز التقرير…</p>');
-    const photos = await Promise.all(rows.map(e=>speakerPhotoUrl(e.key)));
+    const photos = await Promise.all(rows.map(e=>speakerPhotoUrl(e.photoKey || e.key)));
     w.document.open();
     const title = `${cfg.spkTitle} — ${scopeLabel()}`;
     w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${escHtml(title)}</title>
@@ -9028,6 +9061,7 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
+  { id: 'n4', d: '24-Oct-2026', text: 'تقرير المتكلمين: المتكلم اللي اسمه مكتوب بأكتر من شكل وليه نفس رقم التليفون بقى بيظهر مرة واحدة بصورته وكل مواعيده.' },
   { id: 'n2', d: '24-Oct-2026', text: 'برنامج الخدمة وفقرة العشر دقايق: زرار "🔁 تبديل / نقل" جنب كل ميعاد، تبدّل بيه متكلمين يومين، أو تنقل متكلم لميعاد فاضي، أو تبدّل الميعادين بالموضوعات.' },
   { id: 'n3', d: '24-Oct-2026', text: 'تقرير المتكلمين مبقاش بيكرر نفس المتكلم (مرة بصورة ومرة من غير)، والمتكرر القديم بيتدمج لوحده أول ما يتفتح التقرير.' },
   { id: 'n1', d: '24-Oct-2026', text: 'الشاشة دي 🙂 كل يوم أول ما تفتح البرنامج هتلاقي فيها الجديد، ولما تدوس "قريت" الأدمن بيعرف إنك شفتها.' },
