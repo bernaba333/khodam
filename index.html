@@ -617,12 +617,23 @@ html[data-theme="dark"] .chat-msg .by{color:var(--gold);}
 .chat-msg .tm{font-size:.6rem;opacity:.65;margin-top:2px;display:flex;gap:8px;align-items:center;}
 .chat-msg.alert .bub{background:#fde8e8;border-color:#b3261e;color:#5a1a14;}
 html[data-theme="dark"] .chat-msg.alert .bub{background:#4a1f1c;border-color:#e0675e;color:#fde8e8;}
-#adminAlertPop{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:100002;width:min(440px,calc(100% - 24px));background:var(--card);border:2px solid #b3261e;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.3);padding:12px 14px;direction:rtl;font-family:'Cairo',sans-serif;}
-#adminAlertPop h3{margin:0 0 6px;font-size:1rem;color:#b3261e;}
-#adminAlertPop ul{margin:0 0 10px;padding:0 18px 0 0;max-height:40vh;overflow:auto;font-size:.85rem;color:var(--ink);}
-#adminAlertPop li{margin-bottom:6px;white-space:pre-wrap;}
-#adminAlertPop .row{display:flex;gap:8px;}
-#adminAlertPop .row button{flex:1;}
+#alertBellBtn{align-items:center;justify-content:center;margin:0;padding:0;width:32px;height:32px;border-radius:50%;flex:none;position:relative;font-size:15px;line-height:1;}
+#alertBellBadge{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:#d64545;color:#fff;font-size:.66rem;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px var(--card);}
+#alertBellBtn.ring{animation:bellRing 1.2s ease-in-out 2;}
+@keyframes bellRing{0%,100%{transform:rotate(0)}15%{transform:rotate(14deg)}30%{transform:rotate(-12deg)}45%{transform:rotate(8deg)}60%{transform:rotate(-5deg)}}
+#alertsOverlay{position:fixed;inset:0;z-index:100002;background:rgba(27,42,74,.55);display:flex;align-items:flex-start;justify-content:center;padding:calc(14px + env(safe-area-inset-top,0px)) 12px 12px;direction:rtl;}
+#alertsOverlay .al-card{background:var(--card);border-radius:16px;width:min(480px,100%);max-height:calc(100vh - 40px);display:flex;flex-direction:column;box-shadow:0 14px 40px rgba(0,0,0,.3);font-family:'Cairo',sans-serif;}
+#alertsOverlay .al-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line-soft);}
+#alertsOverlay .al-head h3{margin:0;font-size:1.05rem;color:var(--ink);}
+#alertsOverlay .al-list{flex:1;overflow:auto;padding:8px 12px;}
+#alertsOverlay .al-item{border:1px solid var(--line-soft);border-inline-start:4px solid #b3261e;border-radius:10px;padding:8px 10px;margin-bottom:8px;background:var(--cream-dark);}
+#alertsOverlay .al-item.new{background:#fde8e8;}
+html[data-theme="dark"] #alertsOverlay .al-item.new{background:#4a1f1c;}
+#alertsOverlay .al-txt{font-size:.86rem;white-space:pre-wrap;word-break:break-word;color:var(--ink);}
+#alertsOverlay .al-meta{display:flex;justify-content:space-between;align-items:center;font-size:.72rem;color:var(--muted);margin-top:4px;}
+#alertsOverlay .al-del{background:none;border:none;color:inherit;cursor:pointer;text-decoration:underline;font-size:.72rem;padding:0;}
+#alertsOverlay .al-foot{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--line-soft);}
+#alertsOverlay .al-foot button{flex:1;}
 .chat-msg .del{background:none;border:none;color:inherit;opacity:.6;cursor:pointer;font-size:.62rem;padding:0;text-decoration:underline;}
 #chatPanel .avatar{background:linear-gradient(135deg,#e9cf7a,var(--gold)) !important;color:#1b2440 !important;}
 html[data-theme="dark"] .chat-msg.mine .bub{background:#34508a;}
@@ -630,6 +641,22 @@ html[data-theme="dark"] .chat-msg .bub{background:#222d42;}
 .chat-day{align-self:center;font-size:.66rem;color:var(--muted);background:var(--cream-dark);padding:2px 10px;border-radius:10px;}
 .chat-empty{margin:auto;color:var(--muted);font-size:.85rem;text-align:center;}
 .chat-form{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line-soft);flex:none;}
+.chat-typing{flex:none;min-height:0;padding:0 14px;font-size:.72rem;color:var(--muted);display:flex;align-items:center;gap:6px;}
+.chat-typing:not(:empty){padding:4px 14px;}
+.chat-typing .dots{display:inline-flex;gap:3px;}
+.chat-typing .dots i{width:5px;height:5px;border-radius:50%;background:currentColor;animation:chatDot 1.2s infinite ease-in-out;}
+.chat-typing .dots i:nth-child(2){animation-delay:.2s;}
+.chat-typing .dots i:nth-child(3){animation-delay:.4s;}
+@keyframes chatDot{0%,80%,100%{opacity:.25;transform:translateY(0);}40%{opacity:1;transform:translateY(-3px);}}
+.chat-to{flex:none;display:flex;align-items:center;gap:8px;padding:8px 10px 0;font-size:.75rem;color:var(--text-2);}
+.chat-to select{flex:1;margin:0;padding:5px 8px;font-size:.8rem;border-radius:10px;}
+.chat-to.dm select{border-color:#7b4fb8;background:rgba(123,79,184,.08);}
+.chat-msg.dm .bub{border:1.5px dashed #7b4fb8;}
+.chat-msg.dm.mine .bub{background:#5b3a8c;}
+html[data-theme="dark"] .chat-msg.dm .bub{background:#2f2448;}
+html[data-theme="dark"] .chat-msg.dm.mine .bub{background:#5b3a8c;}
+.chat-msg .dmtag{font-size:.64rem;font-weight:700;color:#7b4fb8;margin-bottom:2px;cursor:pointer;}
+.chat-msg.mine .dmtag, html[data-theme="dark"] .chat-msg .dmtag{color:#e2d2ff;}
 .chat-form input{flex:1;margin:0;border-radius:999px;padding:9px 14px;}
 .chat-form button{border-radius:50%;width:40px;height:40px;padding:0;display:flex;align-items:center;justify-content:center;flex:none;margin:0;}
 @media (max-width:760px){
@@ -1070,6 +1097,7 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
         <div class="user-name" id="userNameLabel"></div>
         <div class="user-role" id="userRoleLabel"></div>
       </div>
+      <button class="ghost" id="alertBellBtn" title="التنبيهات" aria-label="التنبيهات" style="display:none;">🔔<span id="alertBellBadge" style="display:none;"></span></button>
       <button class="ghost" id="mySettingsBtn" title="إعداداتي" aria-label="إعداداتي" style="display:none;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.2 7.5l2 1.2M17.8 15.3l2 1.2M4.2 16.5l2-1.2M17.8 8.7l2-1.2"/></svg></button>
       <button class="ghost" id="logoutBtn" title="خروج" aria-label="خروج"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v8"/><path d="M6.4 6.6a8 8 0 1 0 11.2 0"/></svg><span>خروج</span></button>
     </div>
@@ -1731,6 +1759,8 @@ document.addEventListener('DOMContentLoaded', function(){
   </div>
   <div class="chat-online" id="chatOnline"></div>
   <div class="chat-msgs" id="chatMsgs"></div>
+  <div class="chat-typing" id="chatTyping" aria-live="polite"></div>
+  <div class="chat-to" id="chatToRow" style="display:none;"><label for="chatTo">ابعت لـ:</label><select id="chatTo"></select></div>
   <form class="chat-form" id="chatForm" autocomplete="off">
     <input type="text" id="chatInput" placeholder="اكتب رسالة…" maxlength="1000">
     <button type="submit" class="primary" id="chatSendBtn" aria-label="إرسال"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="transform:scaleX(-1);"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg></button>
@@ -2821,7 +2851,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '23-Oct-2026 B';
+const APP_VERSION = '23-Oct-2026 D';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -8568,9 +8598,67 @@ function chatPerson(name){
 }
 function chatRoleTag(role){ return role === 'admin' ? 'Admin' : role === 'supervisor' ? 'مشرف' : ''; }
 function chatIsOpen(){ return document.getElementById('chatPanel').style.display !== 'none'; }
+// typing: the heartbeat doc also carries when this user last typed (and to whom, for a private message)
+let chatTypingAt = 0, chatTypingTo = '';
+const CHAT_TYPING_MS = 6000;
 function sendPresence(){
   if(!currentUser || !window.storage.presenceSet) return;
-  window.storage.presenceSet(presenceId(currentUser.name), { name: currentUser.name, role: currentUser.role || '', at: Date.now() }).catch(()=>{});
+  const typing = Date.now() - chatTypingAt < CHAT_TYPING_MS ? chatTypingAt : 0;
+  window.storage.presenceSet(presenceId(currentUser.name), { name: currentUser.name, role: currentUser.role || '', at: Date.now(), typing, typingTo: typing ? chatTypingTo : '' }).catch(()=>{});
+}
+function chatTypingPing(){
+  const to = chatDmTarget();
+  if(Date.now() - chatTypingAt < 3000 && to === chatTypingTo) return;
+  chatTypingAt = Date.now(); chatTypingTo = to; sendPresence();
+}
+function chatTypingStop(){
+  if(!chatTypingAt) return;
+  chatTypingAt = 0; chatTypingTo = ''; sendPresence();
+}
+let chatTypingTimer = null;
+function renderChatTyping(){
+  const box = document.getElementById('chatTyping'); if(!box) return;
+  if(chatTypingTimer){ clearTimeout(chatTypingTimer); chatTypingTimer = null; }
+  const me = currentUser ? currentUser.name : '';
+  const now = Date.now(), seen = new Set();
+  const names = chatOnlineCache.filter(p=>p && p.name && p.name !== me && p.typing && now - p.typing < CHAT_TYPING_MS
+      && (!p.typingTo || p.typingTo === me) && !seen.has(p.name) && seen.add(p.name))
+    .map(p=>({ first: p.name.split(/\s+/)[0], dm: !!p.typingTo }));
+  if(!names.length){ box.innerHTML = ''; return; }
+  const dm = names.some(n=>n.dm);
+  const who = names.length === 1 ? escHtml(names[0].first) + ' بيكتب' + (dm ? ' لك رسالة خاصة' : '')
+    : names.length === 2 ? escHtml(names[0].first) + ' و' + escHtml(names[1].first) + ' بيكتبوا'
+    : escHtml(names[0].first) + ' و' + (names.length - 1) + ' كمان بيكتبوا';
+  box.innerHTML = `<span class="dots"><i></i><i></i><i></i></span><span>${who}…</span>`;
+  chatTypingTimer = setTimeout(renderChatTyping, 1500);
+}
+// private messages: only an admin sends them; only the sender and the recipient see them
+function chatCanSee(m){
+  const me = currentUser ? currentUser.name : '';
+  if(m.kind === 'dm') return m.by === me || m.to === me;
+  return !m.to || isAdmin() || m.by === me;
+}
+function chatDmTarget(){
+  const sel = document.getElementById('chatTo');
+  return isAdmin() && sel && sel.value ? sel.value : '';
+}
+function fillChatTo(){
+  const row = document.getElementById('chatToRow'), sel = document.getElementById('chatTo');
+  if(!isAdmin()){ row.style.display = 'none'; sel.innerHTML = ''; return; }
+  const keep = sel.value;
+  const people = usersByRole().filter(u=>u && u.name && u.name !== currentUser.name);
+  sel.innerHTML = '<option value="">👥 الكل (الشات العام)</option>' + people.map(u=>{
+    const tag = chatRoleTag(u.role);
+    return `<option value="${escHtml(u.name)}">🔒 خاص: ${escHtml(u.name)}${tag ? ' (' + tag + ')' : ''}</option>`;
+  }).join('');
+  sel.value = people.some(u=>u.name === keep) ? keep : '';
+  row.style.display = 'flex';
+  syncChatTo();
+}
+function syncChatTo(){
+  const to = chatDmTarget();
+  document.getElementById('chatToRow').classList.toggle('dm', !!to);
+  document.getElementById('chatInput').placeholder = to ? 'رسالة خاصة لـ ' + to + '…' : 'اكتب رسالة…';
 }
 function startTeamChat(){
   if(!currentUser || !window.storage.chatWatch) return;
@@ -8578,9 +8666,12 @@ function startTeamChat(){
   stopTeamChat();
   chatStartedFor = currentUser.name;
   document.getElementById('chatFab').style.display = 'flex';
-  chatUnsub = window.storage.chatWatch(list=>{ chatMsgsCache = list.filter(m=>!m.to || isAdmin() || (currentUser && m.by === currentUser.name)); renderChatMsgs(); renderChatBadge(); showAdminAlerts(); },
+  chatUnsub = window.storage.chatWatch(list=>{
+    alertsCache = isAdmin() ? list.filter(isAlertMsg) : [];
+    chatMsgsCache = list.filter(m=>chatCanSee(m) && !isAlertMsg(m)); renderChatMsgs(); renderChatBadge(); renderAlertBell();
+  },
     ()=>{ document.getElementById('chatMsgs').innerHTML = '<div class="chat-empty">الشات مش شغال دلوقتي. جرّب تفتح البرنامج تاني.</div>'; });
-  presenceUnsub = window.storage.presenceWatch(list=>{ chatOnlineCache = list; renderChatOnline(); });
+  presenceUnsub = window.storage.presenceWatch(list=>{ chatOnlineCache = list; renderChatOnline(); renderChatTyping(); });
   sendPresence();
   presenceTimer = setInterval(()=>{ if(document.visibilityState !== 'hidden') sendPresence(); renderChatOnline(); }, 30000);
 }
@@ -8589,7 +8680,8 @@ function stopTeamChat(){
   if(presenceUnsub){ try{ presenceUnsub(); }catch(e){} presenceUnsub = null; }
   if(presenceTimer){ clearInterval(presenceTimer); presenceTimer = null; }
   if(chatStartedFor && window.storage.presenceDelete) window.storage.presenceDelete(presenceId(chatStartedFor)).catch(()=>{});
-  chatStartedFor = ''; chatMsgsCache = []; chatOnlineCache = [];
+  chatStartedFor = ''; chatMsgsCache = []; chatOnlineCache = []; alertsCache = []; renderAlertBell(); closeAlerts(); chatTypingAt = 0; chatTypingTo = '';
+  const ty = document.getElementById('chatTyping'); if(ty) ty.innerHTML = '';
   const fab = document.getElementById('chatFab'); if(fab) fab.style.display = 'none';
   const pn = document.getElementById('chatPanel'); if(pn) pn.style.display = 'none';
 }
@@ -8641,10 +8733,13 @@ function renderChatMsgs(){
     const per = chatPerson(m.by);
     const tag = chatRoleTag(per.role || m.role);
     const canDel = mine || isAdmin();
-    html += `<div class="chat-msg${mine ? ' mine' : ''}${m.kind === 'alert' ? ' alert' : ''}">
+    const dm = m.kind === 'dm';
+    const dmTag = !dm ? '' : mine ? `<div class="dmtag" data-to="${escHtml(m.to)}" title="رد عليه برسالة خاصة">🔒 رسالة خاصة لـ ${escHtml(m.to)}</div>` : `<div class="dmtag">🔒 رسالة خاصة ليك</div>`;
+    html += `<div class="chat-msg${mine ? ' mine' : ''}${m.kind === 'alert' ? ' alert' : ''}${dm ? ' dm' : ''}">
       ${mine ? '' : avatarHtml(per, 30)}
       <div class="bub">
         ${mine ? '' : `<div class="by">${escHtml(m.by)}${tag ? `<small>${tag}</small>` : ''}</div>`}
+        ${dmTag}
         <div class="txt">${escHtml(m.text)}</div>
         <div class="tm">${chatTime(m.at||Date.now())}${canDel ? `<button type="button" class="del" data-id="${escHtml(m.id)}">مسح</button>` : ''}</div>
       </div>
@@ -8658,34 +8753,81 @@ function openChat(){
   const pn = document.getElementById('chatPanel');
   pn.style.display = 'flex';
   document.getElementById('chatMsgs').dataset.first = '';
-  renderChatOnline(); renderChatMsgs(); chatMarkSeen();
+  fillChatTo(); renderChatOnline(); renderChatTyping(); renderChatMsgs(); chatMarkSeen();
   if(window.matchMedia('(min-width:761px)').matches) setTimeout(()=>document.getElementById('chatInput').focus(), 50);
 }
-// admins: a popup for problem alerts (and lock requests) they haven't seen on this device
+// admins: every problem alert and lock request in one place, the 🔔 in the top bar
+// (they're kept in the chat collection but not shown in the chat itself)
+let alertsCache = [], alertBellLastNew = 0;
+function isAlertMsg(m){ return m.kind === 'alert' || m.kind === 'lock'; }
 function alertSeenKey(){ return 'khodam_alert_seen_' + (currentUser ? currentUser.name : ''); }
-function showAdminAlerts(){
-  if(!isAdmin()) return;
+function alertSeenAt(){
   let seen = 0; try{ seen = +localStorage.getItem(alertSeenKey()) || 0; }catch(e){}
   if(!seen){ seen = Date.now() - 3 * 86400000; try{ localStorage.setItem(alertSeenKey(), String(seen)); }catch(e){} }
-  const fresh = chatMsgsCache.filter(m=>(m.kind === 'alert' || m.kind === 'lock') && (m.at||0) > seen);
-  const old = document.getElementById('adminAlertPop');
-  if(!fresh.length){ if(old) old.remove(); return; }
-  const pop = old || document.createElement('div');
-  pop.id = 'adminAlertPop';
-  const shown = fresh.slice(-5).reverse();
-  pop.innerHTML = `<h3>⚠️ ${fresh.length === 1 ? 'تنبيه جديد' : fresh.length + ' تنبيهات جديدة'} — مستخدمين عندهم مشكلة</h3>
-    <ul>${shown.map(m=>`<li>${escHtml(m.kind === 'lock' ? '🔒 ' + m.by + ': ' + m.text : m.text)} <small style="color:var(--muted);">(${escHtml(chatDay(m.at||Date.now()))} ${chatTime(m.at||Date.now())})</small></li>`).join('')}</ul>
-    ${fresh.length > 5 ? `<div style="font-size:.78rem;color:var(--muted);margin-bottom:8px;">والباقي في الشات</div>` : ''}
-    <div class="row"><button type="button" class="primary aap-chat">💬 افتح الشات</button><button type="button" class="ghost aap-ok">تمام، شفتها</button></div>`;
-  const markSeen = ()=>{ try{ localStorage.setItem(alertSeenKey(), String(Math.max(...fresh.map(m=>m.at||0)))); }catch(e){} pop.remove(); };
-  pop.querySelector('.aap-ok').onclick = markSeen;
-  pop.querySelector('.aap-chat').onclick = ()=>{ markSeen(); openChat(); };
-  if(!old) document.body.appendChild(pop);
+  return seen;
 }
-function closeChat(){ document.getElementById('chatPanel').style.display = 'none'; renderChatBadge(); }
+function alertText(m){ return m.kind === 'lock' ? '🔒 ' + m.by + ': ' + m.text : m.text; }
+function renderAlertBell(){
+  const btn = document.getElementById('alertBellBtn'), badge = document.getElementById('alertBellBadge');
+  if(!btn) return;
+  if(!isAdmin() || !chatStartedFor){ btn.style.display = 'none'; return; }
+  btn.style.display = 'inline-flex';
+  const seen = alertSeenAt();
+  const fresh = alertsCache.filter(m=>(m.at||0) > seen);
+  badge.textContent = fresh.length > 99 ? '99+' : fresh.length;
+  badge.style.display = fresh.length ? 'flex' : 'none';
+  btn.title = fresh.length ? fresh.length + ' تنبيه جديد' : 'التنبيهات';
+  const newest = fresh.length ? Math.max(...fresh.map(m=>m.at||0)) : 0;
+  if(newest > alertBellLastNew){ alertBellLastNew = newest; btn.classList.remove('ring'); void btn.offsetWidth; btn.classList.add('ring'); }
+  if(document.getElementById('alertsOverlay')) renderAlertsList();
+}
+function renderAlertsList(){
+  const ov = document.getElementById('alertsOverlay'); if(!ov) return;
+  const seen = +ov.dataset.seen || 0;
+  const list = alertsCache.slice().sort((a,b)=>(b.at||0)-(a.at||0));
+  ov.querySelector('.al-list').innerHTML = list.length ? list.map(m=>`<div class="al-item${(m.at||0) > seen ? ' new' : ''}">
+      <div class="al-txt">${escHtml(alertText(m))}</div>
+      <div class="al-meta"><span>${escHtml(chatDay(m.at||Date.now()))} ${chatTime(m.at||Date.now())}</span><button type="button" class="al-del" data-id="${escHtml(m.id)}">مسح</button></div>
+    </div>`).join('') : '<div class="empty-note" style="text-align:center;padding:24px 0;">مفيش تنبيهات. كل المستخدمين تمام ✓</div>';
+  ov.querySelector('.al-clear').style.display = list.length ? '' : 'none';
+}
+function openAlerts(){
+  closeAlerts();
+  const ov = document.createElement('div');
+  ov.id = 'alertsOverlay';
+  ov.dataset.seen = String(alertSeenAt());
+  ov.innerHTML = `<div class="al-card" role="dialog" aria-label="التنبيهات">
+    <div class="al-head"><h3>🔔 التنبيهات — مشاكل المستخدمين</h3><button type="button" class="ghost al-x" aria-label="قفل">✕</button></div>
+    <div style="font-size:.76rem;color:var(--muted);padding:6px 14px 0;">مشاكل الدخول والحفظ وكلمة السر اللي حصلت للمستخدمين، والجديد باللون الأحمر.</div>
+    <div class="al-list"></div>
+    <div class="al-foot"><button type="button" class="ghost al-clear">🗑️ مسح الكل</button><button type="button" class="primary al-ok">تمام</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+  const newest = alertsCache.reduce((x,m)=>Math.max(x, m.at||0), 0);
+  if(newest){ try{ localStorage.setItem(alertSeenKey(), String(Math.max(newest, alertSeenAt()))); }catch(e){} }
+  ov.addEventListener('click', async e=>{
+    if(e.target === ov || e.target.closest('.al-x') || e.target.closest('.al-ok')){ closeAlerts(); return; }
+    const del = e.target.closest('.al-del');
+    if(del){ try{ await window.storage.chatDelete(del.dataset.id); }catch(err){ alert('معرفناش نمسح التنبيه، جرّب تاني.'); } return; }
+    if(e.target.closest('.al-clear')){
+      if(!confirm('تمسح كل التنبيهات؟')) return;
+      for(const m of alertsCache.slice()){ try{ await window.storage.chatDelete(m.id); }catch(err){} }
+    }
+  });
+  renderAlertsList();
+  renderAlertBell();
+}
+function closeAlerts(){ const ov = document.getElementById('alertsOverlay'); if(ov) ov.remove(); }
+document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
+function closeChat(){ document.getElementById('chatPanel').style.display = 'none'; chatTypingStop(); renderChatBadge(); }
 document.getElementById('chatFab').addEventListener('click', ()=>{ chatIsOpen() ? closeChat() : openChat(); });
 document.getElementById('chatCloseBtn').addEventListener('click', closeChat);
+document.getElementById('chatTo').addEventListener('change', ()=>{ syncChatTo(); chatTypingStop(); document.getElementById('chatInput').focus(); });
+document.getElementById('chatInput').addEventListener('input', e=>{ e.target.value.trim() ? chatTypingPing() : chatTypingStop(); });
+document.getElementById('chatInput').addEventListener('blur', ()=>setTimeout(()=>{ if(!document.getElementById('chatInput').value.trim()) chatTypingStop(); }, 200));
 document.getElementById('chatMsgs').addEventListener('click', async e=>{
+  const dt = e.target.closest('.dmtag[data-to]');
+  if(dt && isAdmin()){ const sel = document.getElementById('chatTo'); sel.value = dt.dataset.to; if(sel.value === dt.dataset.to){ syncChatTo(); document.getElementById('chatInput').focus(); } return; }
   const btn = e.target.closest('.del'); if(!btn) return;
   if(!confirm('تمسح الرسالة دي؟')) return;
   try{ await window.storage.chatDelete(btn.dataset.id); }catch(err){ alert('معرفناش نمسح الرسالة، جرّب تاني.'); }
@@ -8696,9 +8838,14 @@ document.getElementById('chatForm').addEventListener('submit', async e=>{
   const inp = document.getElementById('chatInput');
   const text = inp.value.trim();
   if(!text || !currentUser) return;
+  const to = chatDmTarget();
+  if(to && !USERS.some(u=>u.name === to)){ alert('الشخص ده مش موجود في المستخدمين دلوقتي.'); fillChatTo(); return; }
   inp.value = '';
+  chatTypingAt = 0; chatTypingTo = '';
   try{
-    await window.storage.chatSend({ by: currentUser.name, role: currentUser.role || '', text: text.slice(0, 1000), at: Date.now() });
+    const msg = { by: currentUser.name, role: currentUser.role || '', text: text.slice(0, 1000), at: Date.now() };
+    if(to){ msg.to = to; msg.kind = 'dm'; }
+    await window.storage.chatSend(msg);
     sendPresence();
     // keep the room light: drop messages older than 60 days now and then
     if(Date.now() - chatLastPrune > 3600000){ chatLastPrune = Date.now(); window.storage.chatPruneOld(Date.now() - 60*86400000).catch(()=>{}); }
