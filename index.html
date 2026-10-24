@@ -587,6 +587,16 @@ img.zoomable{cursor:zoom-in;}
 #logoutBtn{display:inline-flex;align-items:center;gap:6px;margin:0;padding:7px 12px;border-radius:999px;font-size:.78rem;line-height:1;}
 #mySettingsBtn{align-items:center;justify-content:center;margin:0;padding:0;width:32px;height:32px;border-radius:50%;flex:none;}
 .user-box .ghost:hover{background:rgba(255,255,255,.18);}
+/* bigger header photo: the user card is the photo + name/role with the buttons under them */
+.user-box{border-radius:20px;padding:8px 10px;}
+.user-box-row{gap:12px;}
+.user-main{display:flex;flex-direction:column;gap:7px;min-width:0;}
+.user-actions{display:flex;align-items:center;gap:6px;}
+#userAvatar{box-shadow:0 0 0 2.5px var(--gold),0 0 0 6px rgba(255,255,255,.12),0 6px 16px rgba(0,0,0,.25);}
+#userAvatar .avatar, #userAvatar img{width:64px !important;height:64px !important;font-size:21px !important;}
+.user-box .user-name{font-size:.98rem;}
+.user-box .user-role{font-size:.72rem;}
+#logoutBtn{padding:0 12px;height:32px;}
 
 /* ---- team chat ---- */
 #chatFab{position:fixed;left:18px;bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:900;width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;
@@ -1015,11 +1025,16 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
 @media (max-width:760px){
   header{flex-wrap:nowrap !important;}
   header h1{flex:1;min-width:0;}
-  #userBox{margin-inline-start:auto;flex:none;padding:4px !important;}
-  .user-box-row{gap:6px !important;}
-  #userAvatar .avatar, #userAvatar img{width:32px !important;height:32px !important;font-size:11px !important;}
-  .user-box .user-name{font-size:.7rem !important;max-width:72px;overflow:hidden;text-overflow:ellipsis;}
-  .user-box .user-role{font-size:.6rem !important;margin-top:1px !important;}
+  /* phone: logo + title on the first line, the user card full width under them with a big photo */
+  header{flex-wrap:wrap !important;}
+  header > div:not(.user-box){flex:1;min-width:0;}
+  #userBox{margin:0;flex:1 1 100%;padding:7px 9px !important;border-radius:16px;}
+  .user-box-row{gap:11px !important;}
+  .user-main{flex:1;flex-direction:row;align-items:center;gap:8px;}
+  .user-text{flex:1;min-width:0;}
+  #userAvatar .avatar, #userAvatar img{width:54px !important;height:54px !important;font-size:18px !important;}
+  .user-box .user-name{font-size:.92rem !important;overflow:hidden;text-overflow:ellipsis;}
+  .user-box .user-role{font-size:.68rem !important;margin-top:2px !important;}
   #logoutBtn{padding:0 !important;width:32px;height:32px;justify-content:center;}
   #logoutBtn span{display:none;}
   .row-actions{flex-direction:row !important;flex-wrap:wrap;gap:6px !important;justify-content:flex-start;}
@@ -1119,13 +1134,17 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
   <div class="user-box" id="userBox" style="display:none;">
     <div class="user-box-row">
       <span id="userAvatar"></span>
+      <div class="user-main">
       <div class="user-text">
         <div class="user-name" id="userNameLabel"></div>
         <div class="user-role" id="userRoleLabel"></div>
       </div>
+      <div class="user-actions">
       <button class="ghost" id="alertBellBtn" title="التنبيهات" aria-label="التنبيهات" style="display:none;">🔔<span id="alertBellBadge" style="display:none;"></span></button>
       <button class="ghost" id="mySettingsBtn" title="إعداداتي" aria-label="إعداداتي" style="display:none;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.2 7.5l2 1.2M17.8 15.3l2 1.2M4.2 16.5l2-1.2M17.8 8.7l2-1.2"/></svg></button>
       <button class="ghost" id="logoutBtn" title="خروج" aria-label="خروج"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v8"/><path d="M6.4 6.6a8 8 0 1 0 11.2 0"/></svg><span>خروج</span></button>
+      </div>
+      </div>
     </div>
   </div>
 </header>
@@ -2877,7 +2896,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '23-Oct-2026 H';
+const APP_VERSION = '24-Oct-2026 A';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -8641,7 +8660,7 @@ function updateUserAvatar(){
   const norm = n=>String(n||'').trim().replace(/\s+/g,' ').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي');
   const me = norm(currentUser.name);
   const s = (DATA.servants||[]).find(x=>norm(x.name) === me && x.photo) || (DATA.servants||[]).find(x=>norm(x.name) === me);
-  box.innerHTML = avatarHtml(currentUser.photo ? { name: currentUser.name, photo: currentUser.photo } : (s || { name: currentUser.name }), 40);
+  box.innerHTML = avatarHtml(currentUser.photo ? { name: currentUser.name, photo: currentUser.photo } : (s || { name: currentUser.name }), 64);
   renderMyPhotoCard();
 }
 // the signed-in user's own account photo (always their own record, never someone else's)
@@ -9061,6 +9080,7 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
+  { id: 'n5', d: '24-Oct-2026', text: 'صورتك في أعلى البرنامج بقت أكبر، واسمك وزراير التنبيهات والخروج اتنظموا جنبها. على الموبايل بقت في سطر لوحدها تحت اسم الاجتماع.' },
   { id: 'n4', d: '24-Oct-2026', text: 'تقرير المتكلمين: المتكلم اللي اسمه مكتوب بأكتر من شكل وليه نفس رقم التليفون بقى بيظهر مرة واحدة بصورته وكل مواعيده.' },
   { id: 'n2', d: '24-Oct-2026', text: 'برنامج الخدمة وفقرة العشر دقايق: زرار "🔁 تبديل / نقل" جنب كل ميعاد، تبدّل بيه متكلمين يومين، أو تنقل متكلم لميعاد فاضي، أو تبدّل الميعادين بالموضوعات.' },
   { id: 'n3', d: '24-Oct-2026', text: 'تقرير المتكلمين مبقاش بيكرر نفس المتكلم (مرة بصورة ومرة من غير)، والمتكرر القديم بيتدمج لوحده أول ما يتفتح التقرير.' },
