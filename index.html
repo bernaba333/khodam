@@ -1090,6 +1090,9 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
 .sp-note .txt{white-space:pre-wrap;}
 .sp-story-title{font-family:'Noto Naskh Arabic','Amiri',serif;font-size:calc(1.35rem * var(--sp-scale,1));font-weight:700;color:var(--wine);margin:6px 0 10px;}
 .sp-story-src{font-size:.82rem;color:var(--muted);margin-top:6px;}
+.sp-badge{display:inline-block;font-size:.8rem;font-weight:700;padding:4px 10px;border-radius:999px;margin-bottom:6px;}
+.sp-badge.wait{background:#fff3cd;color:#8a5a00;border:1px solid #f0d58a;}
+.sp-badge.ok{background:#e6f4ea;color:#1e6b34;border:1px solid #b7dfc3;}
 .sp-empty{color:var(--muted);text-align:center;padding:18px 6px;}
 .sp-sub{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
 .sp-sub button{flex:1 1 0;min-width:90px;padding:7px 8px;font-size:.85rem;}
@@ -2913,7 +2916,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '24-Oct-2026 E';
+const APP_VERSION = '24-Oct-2026 G';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -9097,6 +9100,8 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
+  { id: 'n9', d: '24-Oct-2026', text: 'الغذاء اليومي: القراءات وقصة اليوم بيتمسحوا من البرنامج أول ما يومهم يعدّي، عشان البرنامج يفضل خفيف.' },
+  { id: 'n8', d: '24-Oct-2026', admin: true, text: '📚 قصة اليوم بتوصل للأدمن الأول: يقدر يعدّلها، وبعدين يدوس "موافقة ونشر للكل" عشان الخدام يشوفوها. قصص الـ3 أيام الجاية بتتجهز من بدري، وتقدر تراجعها بالأسهم.' },
   { id: 'n7', d: '24-Oct-2026', text: '📚 قصة اليوم بقت بتظهر كاملة جوه البرنامج من غير ما تفتح الموقع. أول ما حد يفتحها بتتحفظ للكل، وقصص الأيام الجاية بتتجهز من بدري.' },
   { id: 'n6', d: '24-Oct-2026', text: 'في الغذاء اليومي: "رسالة اليوم" بقت "📚 قصة اليوم"، كل يوم قصة قصيرة جديدة لأبونا تادرس يعقوب ملطي من موقع سانت تكلا (أكتر من 600 قصة بالدور). لو القصة مظهرتش جوه البرنامج دوس "افتح القصة على الموقع".' },
   { id: 'n5', d: '24-Oct-2026', text: 'أعلى البرنامج اتنظم من جديد: صورتك كبيرة على اليمين ومعاها اسمك والزراير، واسم البرنامج واسم الاجتماع في النص، واللوجو كبير على الشمال.' },
@@ -9306,13 +9311,42 @@ async function spLoadReadings(d){
   const res = await fetch(SP_API + k + '?languageId=3');
   if(!res.ok) throw new Error('HTTP ' + res.status);
   const j = await res.json();
+  // a day that already passed is shown but not kept
+  if(spDayIndex(d) < spDayIndex(new Date())) return j;
   spReadCache[k] = j;
-  try{
-    // keep only a week of cached days on the device
-    Object.keys(localStorage).filter(x=>x.indexOf('khodam_sp_read_') === 0).sort().slice(0, -6).forEach(x=>localStorage.removeItem(x));
-    localStorage.setItem('khodam_sp_read_' + k, JSON.stringify(j));
-  }catch(e){}
+  try{ localStorage.setItem('khodam_sp_read_' + k, JSON.stringify(j)); }catch(e){}
   return j;
+}
+// once a day: drop readings and stories whose day has passed (device cache, and the
+// shared story records from the admin's device)
+let spPurgedDay = '';
+function spPurgeOld(){
+  const now = new Date(), today = spDayIndex(now), tk = spKeyDate(now);
+  if(spPurgedDay === tk) return;
+  spPurgedDay = tk;
+  const dayOf = k=>{ const m = /(\d\d)-(\d\d)-(\d{4})$/.exec(k); return m ? spDayIndex(new Date(+m[3], +m[2] - 1, +m[1])) : today; };
+  Object.keys(spReadCache).forEach(k=>{ if(dayOf(k) < today) delete spReadCache[k]; });
+  const keep = new Set([0, 1, 2, 3].map(i=>{ const x = new Date(now); x.setDate(x.getDate() + i); return tadrosForDay(x).slug; }));
+  try{
+    Object.keys(localStorage).forEach(x=>{
+      if(x.indexOf('khodam_sp_read_') === 0 && dayOf(x) < today) localStorage.removeItem(x);
+      if(x.indexOf('khodam_tadros_raw_') === 0 && !keep.has(x.slice(18))) localStorage.removeItem(x);
+      else if(/^khodam_tadros_\d{4}/.test(x)) localStorage.removeItem(x); // left by older versions
+    });
+  }catch(e){}
+  Object.keys(tadrosText).forEach(s=>{ if(!keep.has(s)) delete tadrosText[s]; });
+  if(!isAdmin()) return;
+  let last = 0;
+  try{ last = +localStorage.getItem('khodam_tadros_purged') || 0; }catch(e){}
+  const from = Math.max(TADROS_START, last, today - 30);
+  (async ()=>{
+    for(let i = from; i < today; i++){
+      const st = TADROS_STORIES[(((i - TADROS_START) % TADROS_STORIES.length) + TADROS_STORIES.length) % TADROS_STORIES.length];
+      if(keep.has(st.slug)) continue;
+      try{ await window.storage.delete('khodam_tadros_' + st.slug, true); }catch(e){}
+    }
+    try{ localStorage.setItem('khodam_tadros_purged', String(today)); }catch(e){}
+  })();
 }
 function spHtmlToParas(html){
   const doc = new DOMParser().parseFromString('<div>' + (html||'') + '</div>', 'text/html');
@@ -9342,6 +9376,7 @@ function spReadingText(it){
 }
 function spReadingHead(it){ return it.sec + ' — ' + (it.sub === 'المزمور والإنجيل' ? (it.verses.length && /مزامير/.test(it.ref) ? 'المزمور' : 'الإنجيل') : it.sub) + (it.title ? ': ' + it.title : ''); }
 async function renderSpirit(){
+  try{ spPurgeOld(); }catch(e){}
   const panel = document.getElementById('panel-spirit');
   panel.style.setProperty('--sp-scale', spScale());
   panel.querySelectorAll('[data-sp]').forEach(b=>{ b.className = b.dataset.sp === spTab ? 'primary' : 'ghost'; });
@@ -10217,8 +10252,8 @@ const TADROS_STORIES = `
 `.trim().split('\n').map(l=>{ const i = l.indexOf('|'); return { slug: l.slice(0, i), title: l.slice(i + 1) }; });
 /* Daily story: one of Fr. Tadros Yacoub Malaty's short stories from St-Takla.org,
    in order starting 24-Oct-2026 (story 1). The list (file name + title) is bundled;
-   the text is fetched from the site (directly or through a reader/proxy) and saved
-   in the shared store, so the first device that gets a story brings it to everyone. */
+   the admin's device fetches the text from the site (directly or through a reader/proxy)
+   as a draft; it reaches everyone once the admin reviews and approves it. */
 const TADROS_BASE = 'https://st-takla.org/Full-Free-Coptic-Books/FreeCopticBooks-020-Father-Tadros-Yaacoub-Malaty/007-Short-Stories/Short-Stories-';
 const TADROS_START = Date.UTC(2026, 9, 24) / 86400000;
 const tadrosText = {};
@@ -10268,17 +10303,28 @@ async function tadrosFetch(u, asJson){
     return s;
   }finally{ clearTimeout(t); }
 }
+// Each story is saved in the shared store as { paras, title?, ok, by, at }. The admin's
+// device brings it from the site as a draft (ok:false); servants see it only after the
+// admin approves it (ok:true), with any edits the admin made.
 const tadrosBusy = {};
-function tadrosLoad(st){
-  if(tadrosText[st.slug]) return Promise.resolve(tadrosText[st.slug]);
-  if(!tadrosBusy[st.slug]) tadrosBusy[st.slug] = tadrosLoadNow(st).finally(()=>{ delete tadrosBusy[st.slug]; });
-  return tadrosBusy[st.slug];
+let tadrosEditing = '';
+function tadrosKey(st){ return 'khodam_tadros_' + st.slug; }
+async function tadrosRecord(st, fresh){
+  if(tadrosText[st.slug] && !fresh) return tadrosText[st.slug];
+  const r = await storageGetWithRetry(tadrosKey(st), true);
+  if(!r.confirmed) throw new Error('story not confirmed');
+  let rec = null;
+  if(r.value){ try{ const v = JSON.parse(r.value); rec = Array.isArray(v) ? { paras: v, ok: false } : v; }catch(e){} }
+  if(rec) tadrosText[st.slug] = rec;
+  return rec;
 }
-async function tadrosLoadNow(st){
-  const key = 'khodam_tadros_' + st.slug;
-  try{ const c = localStorage.getItem(key); if(c) return (tadrosText[st.slug] = JSON.parse(c)); }catch(e){}
-  // someone already brought this story: it's saved for everyone
-  try{ const r = await window.storage.get(key, true); if(r && r.value){ tadrosText[st.slug] = JSON.parse(r.value); try{ localStorage.setItem(key, r.value); }catch(e){} return tadrosText[st.slug]; } }catch(e){}
+async function tadrosSave(st, rec){
+  await window.storage.set(tadrosKey(st), JSON.stringify(rec), true);
+  tadrosText[st.slug] = rec;
+}
+async function tadrosFromSite(st){
+  const lk = 'khodam_tadros_raw_' + st.slug;
+  try{ const c = localStorage.getItem(lk); if(c) return JSON.parse(c); }catch(e){}
   const e = encodeURIComponent(st.url);
   const tries = [[st.url], ['https://api.allorigins.win/raw?url=' + e], ['https://api.allorigins.win/get?url=' + e, true],
     ['https://api.codetabs.com/v1/proxy/?quest=' + st.url], ['https://r.jina.ai/' + st.url], ['https://corsproxy.io/?url=' + e]];
@@ -10286,37 +10332,91 @@ async function tadrosLoadNow(st){
     let paras = null;
     try{ const raw = await tadrosFetch(u, asJson); if(raw) paras = tadrosParse(raw); }catch(err){}
     if(!paras) continue;
-    tadrosText[st.slug] = paras;
-    const v = JSON.stringify(paras);
-    try{ localStorage.setItem(key, v); }catch(err){}
-    try{ if(currentUser) window.storage.set(key, v, true).catch(()=>{}); }catch(err){}
+    try{ localStorage.setItem(lk, JSON.stringify(paras)); }catch(err){}
     return paras;
   }
   return null;
 }
+// admin only: make sure the story exists as at least a draft
+function tadrosLoad(st){
+  if(!tadrosBusy[st.slug]) tadrosBusy[st.slug] = (async ()=>{
+    let rec = null;
+    try{ rec = await tadrosRecord(st); }catch(e){}
+    if(rec) return rec;
+    const paras = await tadrosFromSite(st);
+    if(!paras) return null;
+    rec = { paras, ok: false, by: currentUser.name, at: Date.now() };
+    try{ await tadrosSave(st, rec); }catch(e){ tadrosText[st.slug] = rec; }
+    return rec;
+  })().finally(()=>{ delete tadrosBusy[st.slug]; });
+  return tadrosBusy[st.slug];
+}
 async function spRenderStory(body, d){
-  const st = tadrosForDay(d), req = ++tadrosReq;
-  const head = `<div class="sp-story-title">📚 ${escHtml(st.title)}</div>
-    <div class="sp-story-src">قصة رقم ${st.num} من ${TADROS_STORIES.length} — من قصص أبونا تادرس يعقوب ملطي (موقع سانت تكلا)</div>`;
-  const paint = (inner, ok)=>{
-    if(spTab !== 'story' || req !== tadrosReq) return;
-    body.innerHTML = `<div class="card">${head}${inner}
-      ${ok ? '<div style="margin-top:10px;"><button class="primary" id="spStoryShare">📤 مشاركة القصة</button></div>' : ''}</div>`;
-    const share = document.getElementById('spStoryShare');
-    if(share) share.onclick = ()=>spShare('📚 قصة اليوم: ' + st.title, tadrosText[st.slug].join('\n') + '\n\n— من قصص أبونا تادرس يعقوب ملطي');
-    const retry = document.getElementById('spStoryRetry');
-    if(retry) retry.onclick = ()=>spRenderStory(body, d);
-  };
-  const show = paras=>paint(`<div class="sp-read">${paras.map(t=>t.startsWith('✦ ') ? `<p><b>${escHtml(t.slice(2))}</b></p>` : `<p>${escHtml(t)}</p>`).join('')}</div>`, true);
-  if(tadrosText[st.slug]) show(tadrosText[st.slug]);
-  else {
-    paint('<div class="sp-empty" style="margin:10px 0;">جاري تحميل القصة…</div>');
-    const paras = await tadrosLoad(st);
-    if(paras) show(paras);
-    else paint('<div class="sp-empty" style="margin:10px 0;">القصة لسه متحملتش. اتأكد إن النت شغال وجرّب تاني.<br><br><button class="ghost" id="spStoryRetry">🔄 حاول تاني</button></div>');
+  const st = tadrosForDay(d), req = ++tadrosReq, admin = isAdmin();
+  if(spDayIndex(d) < spDayIndex(new Date())){
+    body.innerHTML = `<div class="card"><div class="sp-story-title">📚 ${escHtml(st.title)}</div><div class="sp-empty" style="margin:10px 0;">ميعاد القصة دي عدّى، والقصص اللي يومها بيعدي مبتتحفظش في البرنامج 🙏</div></div>`;
+    return;
   }
-  // bring the next days' stories ahead of time, so they're ready for everyone
-  if(spKeyDate(d) === spKeyDate(new Date())){
+  const paint = (rec, inner)=>{
+    if(spTab !== 'story' || req !== tadrosReq) return;
+    const title = (rec && rec.title) || st.title;
+    const editing = admin && rec && tadrosEditing === st.slug;
+    const badge = admin && rec ? (rec.ok ? '<span class="sp-badge ok">✅ منشورة للكل</span>' : '<span class="sp-badge wait">⏳ مستنية مراجعتك — الخدام لسه مش شايفينها</span>') : '';
+    const text = rec ? `<div class="sp-read">${rec.paras.map(t=>t.startsWith('✦ ') ? `<p><b>${escHtml(t.slice(2))}</b></p>` : `<p>${escHtml(t)}</p>`).join('')}</div>` : '';
+    body.innerHTML = `<div class="card">
+      ${badge}
+      <div class="sp-story-title">📚 ${escHtml(title)}</div>
+      <div class="sp-story-src">قصة رقم ${st.num} من ${TADROS_STORIES.length} — من قصص أبونا تادرس يعقوب ملطي (موقع سانت تكلا)</div>
+      ${editing ? `<div class="sp-story-form" style="margin-top:10px;">
+          <input type="text" id="spTdTitle" value="${escHtml(title)}" style="width:100%;margin-bottom:8px;">
+          <textarea id="spTdText" style="min-height:320px;">${escHtml(rec.paras.join('\n\n'))}</textarea>
+          <p style="font-size:.8rem;color:var(--muted);margin:6px 0;">سيب سطر فاضي بين كل فقرة والتانية. السطر اللي يبدأ بـ ✦ بيظهر عنوان صغير.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="primary" id="spTdSave">💾 حفظ التعديل</button>
+            ${rec.ok ? '' : '<button class="primary" id="spTdSaveOk">✅ حفظ وموافقة</button>'}
+            <button class="ghost" id="spTdCancel">إلغاء</button></div></div>`
+        : (inner || text)}
+      ${!editing && rec && (rec.ok || admin) ? `<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+          ${admin && !rec.ok ? '<button class="primary" id="spTdApprove">✅ موافقة ونشر للكل</button>' : ''}
+          ${admin ? '<button class="ghost" id="spTdEdit">✏️ تعديل</button>' : ''}
+          ${admin && rec.ok ? '<button class="ghost" id="spTdHide">↩️ إلغاء النشر</button>' : ''}
+          ${rec.ok ? '<button class="ghost" id="spStoryShare">📤 مشاركة القصة</button>' : ''}</div>` : ''}
+    </div>`;
+    const on = (id, fn)=>{ const b = document.getElementById(id); if(b) b.onclick = fn; };
+    on('spStoryShare', ()=>spShare('📚 قصة اليوم: ' + title, rec.paras.map(t=>t.replace(/^✦ /, '')).join('\n') + '\n\n— من قصص أبونا تادرس يعقوب ملطي'));
+    on('spStoryRetry', ()=>spRenderStory(body, d));
+    on('spTdEdit', ()=>{ tadrosEditing = st.slug; paint(rec); });
+    on('spTdCancel', ()=>{ tadrosEditing = ''; paint(rec); });
+    const save = async (ok, btn, what)=>{
+      const next = Object.assign({}, rec, { ok, by: currentUser.name, at: Date.now() });
+      const ti = document.getElementById('spTdTitle'), tx = document.getElementById('spTdText');
+      if(tx){
+        const paras = tx.value.split(/\n\s*\n/).map(x=>x.replace(/\s+/g, ' ').trim()).filter(Boolean);
+        if(!paras.length){ alert('نص القصة فاضي.'); return; }
+        next.paras = paras;
+        const t = ti.value.trim(); if(t && t !== st.title) next.title = t; else delete next.title;
+      }
+      btn.disabled = true;
+      try{ await tadrosSave(st, next); }catch(e){ btn.disabled = false; alert('متحفظش. اتأكد من النت وجرّب تاني.'); return; }
+      try{ auditPush({ area:'الغذاء اليومي', action: what, target: next.title || st.title, changes: [] }); }catch(e){}
+      tadrosEditing = ''; paint(next);
+    };
+    on('spTdApprove', e=>save(true, e.target, 'موافقة على قصة اليوم'));
+    on('spTdHide', e=>{ if(confirm('تشيل القصة دي من عند الخدام؟')) save(false, e.target, 'إلغاء نشر قصة'); });
+    on('spTdSave', e=>save(rec.ok, e.target, 'تعديل قصة اليوم'));
+    on('spTdSaveOk', e=>save(true, e.target, 'تعديل وموافقة على قصة اليوم'));
+  };
+  const cached = tadrosText[st.slug];
+  if(cached && (admin || cached.ok)) paint(cached);
+  else paint(null, '<div class="sp-empty" style="margin:10px 0;">جاري تحميل القصة…</div>');
+  let rec = null;
+  try{ rec = admin ? await tadrosLoad(st) : await tadrosRecord(st, true); }catch(e){}
+  if(req !== tadrosReq) return;
+  if(rec && (admin || rec.ok)){ if(tadrosEditing !== st.slug) paint(rec); }
+  else if(!admin && (rec || navigator.onLine)) paint(null, '<div class="sp-empty" style="margin:10px 0;">قصة النهارده لسه بتتراجع، وهتظهر هنا أول ما تتنشر 🙏</div>');
+  else paint(null, '<div class="sp-empty" style="margin:10px 0;">القصة لسه متحملتش. اتأكد إن النت شغال وجرّب تاني.<br><br><button class="ghost" id="spStoryRetry">🔄 حاول تاني</button></div>');
+  // admin: bring the next days' stories ahead of time, so they can be reviewed early
+  if(admin && spKeyDate(d) === spKeyDate(new Date())){
     for(let k = 1; k <= 3; k++){ const nd = new Date(d); nd.setDate(nd.getDate() + k); await tadrosLoad(tadrosForDay(nd)).catch(()=>{}); }
   }
 }
