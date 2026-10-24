@@ -2913,7 +2913,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '24-Oct-2026 D';
+const APP_VERSION = '24-Oct-2026 E';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -9097,6 +9097,7 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
+  { id: 'n7', d: '24-Oct-2026', text: '📚 قصة اليوم بقت بتظهر كاملة جوه البرنامج من غير ما تفتح الموقع. أول ما حد يفتحها بتتحفظ للكل، وقصص الأيام الجاية بتتجهز من بدري.' },
   { id: 'n6', d: '24-Oct-2026', text: 'في الغذاء اليومي: "رسالة اليوم" بقت "📚 قصة اليوم"، كل يوم قصة قصيرة جديدة لأبونا تادرس يعقوب ملطي من موقع سانت تكلا (أكتر من 600 قصة بالدور). لو القصة مظهرتش جوه البرنامج دوس "افتح القصة على الموقع".' },
   { id: 'n5', d: '24-Oct-2026', text: 'أعلى البرنامج اتنظم من جديد: صورتك كبيرة على اليمين ومعاها اسمك والزراير، واسم البرنامج واسم الاجتماع في النص، واللوجو كبير على الشمال.' },
   { id: 'n4', d: '24-Oct-2026', text: 'تقرير المتكلمين: المتكلم اللي اسمه مكتوب بأكتر من شكل وليه نفس رقم التليفون بقى بيظهر مرة واحدة بصورته وكل مواعيده.' },
@@ -10216,7 +10217,8 @@ const TADROS_STORIES = `
 `.trim().split('\n').map(l=>{ const i = l.indexOf('|'); return { slug: l.slice(0, i), title: l.slice(i + 1) }; });
 /* Daily story: one of Fr. Tadros Yacoub Malaty's short stories from St-Takla.org,
    in order starting 24-Oct-2026 (story 1). The list (file name + title) is bundled;
-   the text is loaded from the site when it can be, else the user opens the page. */
+   the text is fetched from the site (directly or through a reader/proxy) and saved
+   in the shared store, so the first device that gets a story brings it to everyone. */
 const TADROS_BASE = 'https://st-takla.org/Full-Free-Coptic-Books/FreeCopticBooks-020-Father-Tadros-Yaacoub-Malaty/007-Short-Stories/Short-Stories-';
 const TADROS_START = Date.UTC(2026, 9, 24) / 86400000;
 const tadrosText = {};
@@ -10225,54 +10227,98 @@ function tadrosForDay(d){
   const n = TADROS_STORIES.length, i = (((spDayIndex(d) - TADROS_START) % n) + n) % n;
   return Object.assign({ num: i + 1, url: TADROS_BASE + TADROS_STORIES[i].slug + '.html' }, TADROS_STORIES[i]);
 }
-async function tadrosLoad(st){
-  if(tadrosText[st.slug]) return tadrosText[st.slug];
-  try{ const c = localStorage.getItem('khodam_tadros_' + st.slug); if(c) return (tadrosText[st.slug] = JSON.parse(c)); }catch(e){}
-  const tries = [st.url, 'https://api.allorigins.win/raw?url=' + encodeURIComponent(st.url), 'https://corsproxy.io/?url=' + encodeURIComponent(st.url)];
-  for(const u of tries){
-    try{
-      const ctl = new AbortController(), t = setTimeout(()=>ctl.abort(), 9000);
-      const res = await fetch(u, { signal: ctl.signal }); clearTimeout(t);
-      if(!res.ok) continue;
-      const buf = await res.arrayBuffer();
-      let html = new TextDecoder('utf-8').decode(buf);
-      if((html.match(/�/g) || []).length > 20) html = new TextDecoder('windows-1256').decode(buf);
-      const doc = new DOMParser().parseFromString(html, 'text/html');
-      doc.querySelectorAll('script,style,noscript,nav,header,footer,form,iframe,select,button').forEach(x=>x.remove());
-      const bad = /st-takla|takla|تكلا|تكلاهيمانوت|©|حقوق|copyright|فهرس|محتويات|اذهب|انظر|الصفحة|رابط|http/i;
-      const paras = [...doc.querySelectorAll('p')].map(p=>p.textContent.replace(/\s+/g, ' ').trim())
-        .filter(x=>x.length >= 25 && /[؀-ۿ]/.test(x) && !bad.test(x));
-      if(paras.length < 2) continue;
-      tadrosText[st.slug] = paras.slice(0, 80);
-      try{ localStorage.setItem('khodam_tadros_' + st.slug, JSON.stringify(tadrosText[st.slug])); }catch(e){}
-      return tadrosText[st.slug];
-    }catch(e){}
+// story page → paragraphs. The text sits after the "# N- قصة: …" heading and ends
+// before the footnotes / next-page links; works on the page's HTML or a reader's markdown.
+const TADROS_STOP = /الحواشي والمراجع|الصفحة التالية|الصفحة السابقة|تقصير الرابط/;
+const TADROS_SKIP = /st-takla|divider|ترجمة القصة|تكلا هيمانوت|image:|نرجو الصلاة/i;
+function tadrosClean(t){ return String(t).replace(/!\[[^\]]*\]\([^)]*\)/g, '').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/[*_#>]+/g, '').replace(/\s+/g, ' ').trim(); }
+function tadrosParse(raw){
+  let blocks = [];
+  if(/<html|<body|<p[\s>]/i.test(raw)){
+    const doc = new DOMParser().parseFromString(raw, 'text/html');
+    doc.querySelectorAll('script,style,noscript,iframe,form,select,button,img,nav').forEach(x=>x.remove());
+    const BLOCK = 'p,div,h1,h2,h3,h4,h5,li,blockquote,td,center,table,ul,ol', isBlock = new Set(BLOCK.toUpperCase().split(','));
+    const all = [...doc.body.querySelectorAll('*')].filter(el=>isBlock.has(el.tagName) && !el.querySelector(BLOCK));
+    blocks = all.map(el=>({ h: /^H[1-5]$/.test(el.tagName), t: tadrosClean(el.textContent) }));
+  } else {
+    blocks = String(raw).split(/\n\s*\n/).map(b=>({ h: /^\s*#/.test(b), t: tadrosClean(b) }));
+  }
+  let start = blocks.findIndex(b=>b.h && /قصة/.test(b.t));
+  const out = [];
+  for(let i = start + 1; i < blocks.length; i++){
+    const { h, t } = blocks[i];
+    if(!t) continue;
+    if(TADROS_STOP.test(t) && t.length < 120) break;
+    if(TADROS_SKIP.test(t) || !/[؀-ۿ]/.test(t)) continue;
+    if(start < 0 && t.length < 25) continue;
+    const line = h ? '✦ ' + t : t;
+    if(out[out.length - 1] !== line) out.push(line);
+  }
+  return out.join('').length >= 200 ? out.slice(0, 100) : null;
+}
+async function tadrosFetch(u, asJson){
+  const ctl = new AbortController(), t = setTimeout(()=>ctl.abort(), 12000);
+  try{
+    const res = await fetch(u, { signal: ctl.signal });
+    if(!res.ok) return null;
+    if(asJson){ const j = await res.json(); return j && j.contents; }
+    const buf = await res.arrayBuffer();
+    let s = new TextDecoder('utf-8').decode(buf);
+    if((s.match(/�/g) || []).length > 20) s = new TextDecoder('windows-1256').decode(buf);
+    return s;
+  }finally{ clearTimeout(t); }
+}
+const tadrosBusy = {};
+function tadrosLoad(st){
+  if(tadrosText[st.slug]) return Promise.resolve(tadrosText[st.slug]);
+  if(!tadrosBusy[st.slug]) tadrosBusy[st.slug] = tadrosLoadNow(st).finally(()=>{ delete tadrosBusy[st.slug]; });
+  return tadrosBusy[st.slug];
+}
+async function tadrosLoadNow(st){
+  const key = 'khodam_tadros_' + st.slug;
+  try{ const c = localStorage.getItem(key); if(c) return (tadrosText[st.slug] = JSON.parse(c)); }catch(e){}
+  // someone already brought this story: it's saved for everyone
+  try{ const r = await window.storage.get(key, true); if(r && r.value){ tadrosText[st.slug] = JSON.parse(r.value); try{ localStorage.setItem(key, r.value); }catch(e){} return tadrosText[st.slug]; } }catch(e){}
+  const e = encodeURIComponent(st.url);
+  const tries = [[st.url], ['https://api.allorigins.win/raw?url=' + e], ['https://api.allorigins.win/get?url=' + e, true],
+    ['https://api.codetabs.com/v1/proxy/?quest=' + st.url], ['https://r.jina.ai/' + st.url], ['https://corsproxy.io/?url=' + e]];
+  for(const [u, asJson] of tries){
+    let paras = null;
+    try{ const raw = await tadrosFetch(u, asJson); if(raw) paras = tadrosParse(raw); }catch(err){}
+    if(!paras) continue;
+    tadrosText[st.slug] = paras;
+    const v = JSON.stringify(paras);
+    try{ localStorage.setItem(key, v); }catch(err){}
+    try{ if(currentUser) window.storage.set(key, v, true).catch(()=>{}); }catch(err){}
+    return paras;
   }
   return null;
 }
 async function spRenderStory(body, d){
   const st = tadrosForDay(d), req = ++tadrosReq;
   const head = `<div class="sp-story-title">📚 ${escHtml(st.title)}</div>
-    <div class="sp-story-src">قصة رقم ${st.num} من ${TADROS_STORIES.length} — قصص قصيرة لأبونا تادرس يعقوب ملطي (موقع سانت تكلا)</div>`;
-  const tools = `<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-      <button class="primary" id="spStoryOpen">📖 افتح القصة على الموقع</button>
-      <button class="ghost" id="spStoryShare">📤 مشاركة القصة</button></div>`;
-  const paint = (inner)=>{
-    if(spTab !== 'story') return;
-    body.innerHTML = `<div class="card">${head}${inner}${tools}</div>`;
-    document.getElementById('spStoryOpen').onclick = ()=>window.open(st.url, '_blank', 'noopener');
+    <div class="sp-story-src">قصة رقم ${st.num} من ${TADROS_STORIES.length} — من قصص أبونا تادرس يعقوب ملطي (موقع سانت تكلا)</div>`;
+  const paint = (inner, ok)=>{
+    if(spTab !== 'story' || req !== tadrosReq) return;
+    body.innerHTML = `<div class="card">${head}${inner}
+      ${ok ? '<div style="margin-top:10px;"><button class="primary" id="spStoryShare">📤 مشاركة القصة</button></div>' : ''}</div>`;
     const share = document.getElementById('spStoryShare');
-    if(share) share.onclick = ()=>{
-      const txt = tadrosText[st.slug];
-      spShare('📚 قصة اليوم: ' + st.title, (txt ? txt.join('\n') + '\n\n' : '') + 'من قصص أبونا تادرس يعقوب ملطي:\n' + st.url);
-    };
+    if(share) share.onclick = ()=>spShare('📚 قصة اليوم: ' + st.title, tadrosText[st.slug].join('\n') + '\n\n— من قصص أبونا تادرس يعقوب ملطي');
+    const retry = document.getElementById('spStoryRetry');
+    if(retry) retry.onclick = ()=>spRenderStory(body, d);
   };
-  if(tadrosText[st.slug]){ paint(`<div class="sp-read">${tadrosText[st.slug].map(t=>`<p>${escHtml(t)}</p>`).join('')}</div>`); return; }
-  paint('<div class="sp-empty" style="margin:10px 0;">جاري تحميل القصة…</div>');
-  const paras = await tadrosLoad(st);
-  if(req !== tadrosReq) return;
-  paint(paras ? `<div class="sp-read">${paras.map(t=>`<p>${escHtml(t)}</p>`).join('')}</div>`
-    : '<div class="sp-empty" style="margin:10px 0;">مقدرناش نعرض القصة جوه البرنامج دلوقتي. دوس على الزرار وهتفتحلك على موقع سانت تكلا.</div>');
+  const show = paras=>paint(`<div class="sp-read">${paras.map(t=>t.startsWith('✦ ') ? `<p><b>${escHtml(t.slice(2))}</b></p>` : `<p>${escHtml(t)}</p>`).join('')}</div>`, true);
+  if(tadrosText[st.slug]) show(tadrosText[st.slug]);
+  else {
+    paint('<div class="sp-empty" style="margin:10px 0;">جاري تحميل القصة…</div>');
+    const paras = await tadrosLoad(st);
+    if(paras) show(paras);
+    else paint('<div class="sp-empty" style="margin:10px 0;">القصة لسه متحملتش. اتأكد إن النت شغال وجرّب تاني.<br><br><button class="ghost" id="spStoryRetry">🔄 حاول تاني</button></div>');
+  }
+  // bring the next days' stories ahead of time, so they're ready for everyone
+  if(spKeyDate(d) === spKeyDate(new Date())){
+    for(let k = 1; k <= 3; k++){ const nd = new Date(d); nd.setDate(nd.getDate() + k); await tadrosLoad(tadrosForDay(nd)).catch(()=>{}); }
+  }
 }
 document.querySelectorAll('#panel-spirit [data-sp]').forEach(b=>b.addEventListener('click', ()=>{ spTab = b.dataset.sp; spEditNote = ''; spEditStory = ''; renderSpirit(); }));
 document.getElementById('spPrevDay').addEventListener('click', ()=>{ spOffset--; renderSpirit(); });
