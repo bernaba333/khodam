@@ -587,15 +587,27 @@ img.zoomable{cursor:zoom-in;}
 #logoutBtn{display:inline-flex;align-items:center;gap:6px;margin:0;padding:7px 12px;border-radius:999px;font-size:.78rem;line-height:1;}
 #mySettingsBtn{align-items:center;justify-content:center;margin:0;padding:0;width:32px;height:32px;border-radius:50%;flex:none;}
 .user-box .ghost:hover{background:rgba(255,255,255,.18);}
-/* bigger header photo: the user card is the photo + name/role with the buttons under them */
-.user-box{border-radius:20px;padding:8px 10px;}
-.user-box-row{gap:12px;}
-.user-main{display:flex;flex-direction:column;gap:7px;min-width:0;}
-.user-actions{display:flex;align-items:center;gap:6px;}
-#userAvatar{box-shadow:0 0 0 2.5px var(--gold),0 0 0 6px rgba(255,255,255,.12),0 6px 16px rgba(0,0,0,.25);}
-#userAvatar .avatar, #userAvatar img{width:64px !important;height:64px !important;font-size:21px !important;}
-.user-box .user-name{font-size:.98rem;}
-.user-box .user-role{font-size:.72rem;}
+/* header in 3 columns: user photo (right) | Coptic name + meeting name (middle) | big logo (left) */
+header{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"user mid logo";align-items:center;}
+header > .halo-mark{grid-area:logo;width:108px;height:108px;padding:3px;position:relative;z-index:1;box-shadow:0 0 0 2.5px var(--gold),0 0 0 7px rgba(255,255,255,.10),0 0 0 8px rgba(201,162,39,.35),0 8px 22px rgba(0,0,0,.30),0 0 26px rgba(233,207,122,.18);}
+/* middle column: thin gold side lines, bigger Coptic name, small gold ornament before the meeting name */
+header > div:not(.user-box){padding:4px 22px;background:linear-gradient(to bottom,transparent,rgba(201,162,39,.55),transparent) left center/1px 78% no-repeat,linear-gradient(to bottom,transparent,rgba(201,162,39,.55),transparent) right center/1px 78% no-repeat;}
+header .app-brand{font-size:1.12rem;margin-bottom:0;}
+header .app-brand .mean{letter-spacing:.04em;}
+header .app-brand::after{content:'';display:block;width:160px;height:12px;margin:7px auto 6px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='12' viewBox='0 0 160 12'%3E%3Cdefs%3E%3ClinearGradient id='a' x1='0' x2='1'%3E%3Cstop offset='0' stop-color='%23c9a227' stop-opacity='0'/%3E%3Cstop offset='1' stop-color='%23c9a227'/%3E%3C/linearGradient%3E%3ClinearGradient id='b' x1='1' x2='0'%3E%3Cstop offset='0' stop-color='%23c9a227' stop-opacity='0'/%3E%3Cstop offset='1' stop-color='%23c9a227'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='4' y='5.5' width='62' height='1' fill='url(%23a)'/%3E%3Crect x='94' y='5.5' width='62' height='1' fill='url(%23b)'/%3E%3Ccircle cx='70' cy='6' r='1.6' fill='%23c9a227'/%3E%3Ccircle cx='90' cy='6' r='1.6' fill='%23c9a227'/%3E%3Cpath d='M80 0.5 L85.5 6 L80 11.5 L74.5 6 Z' fill='none' stroke='%23e2c56a' stroke-width='1.2'/%3E%3Cpath d='M80 3.5 L82.5 6 L80 8.5 L77.5 6 Z' fill='%23e2c56a'/%3E%3C/svg%3E") center/contain no-repeat;}
+header h1{color:#fbf3dc;text-shadow:0 1px 2px rgba(0,0,0,.25);letter-spacing:.01em;}
+#userBox .user-name{color:#fdf8ec;}
+#userBox .user-role{display:inline-block;margin-top:3px;padding:1px 10px;border-radius:999px;border:1px solid rgba(201,162,39,.55);background:rgba(201,162,39,.12);}
+header > div:not(.user-box){grid-area:mid;text-align:center;min-width:0;position:relative;z-index:1;}
+#userBox{grid-area:user;margin:0;background:none;border:none;box-shadow:none;padding:0;backdrop-filter:none;-webkit-backdrop-filter:none;}
+.user-box-row{flex-direction:column;align-items:center;gap:7px;}
+.user-main{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;}
+.user-text{text-align:center;}
+.user-actions{display:flex;align-items:center;justify-content:center;gap:6px;}
+#userAvatar{box-shadow:0 0 0 2.5px var(--gold),0 0 0 7px rgba(255,255,255,.10),0 0 0 8px rgba(201,162,39,.35),0 8px 22px rgba(0,0,0,.30),0 0 26px rgba(233,207,122,.18);}
+#userAvatar .avatar, #userAvatar img{width:84px !important;height:84px !important;font-size:26px !important;}
+.user-box .user-name{font-size:.95rem;max-width:150px;overflow:hidden;text-overflow:ellipsis;}
+.user-box .user-role{font-size:.7rem;margin-top:1px;}
 #logoutBtn{padding:0 12px;height:32px;}
 
 /* ---- team chat ---- */
@@ -1025,16 +1037,21 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
 @media (max-width:760px){
   header{flex-wrap:nowrap !important;}
   header h1{flex:1;min-width:0;}
-  /* phone: logo + title on the first line, the user card full width under them with a big photo */
-  header{flex-wrap:wrap !important;}
-  header > div:not(.user-box){flex:1;min-width:0;}
-  #userBox{margin:0;flex:1 1 100%;padding:7px 9px !important;border-radius:16px;}
-  .user-box-row{gap:11px !important;}
-  .user-main{flex:1;flex-direction:row;align-items:center;gap:8px;}
-  .user-text{flex:1;min-width:0;}
-  #userAvatar .avatar, #userAvatar img{width:54px !important;height:54px !important;font-size:18px !important;}
-  .user-box .user-name{font-size:.92rem !important;overflow:hidden;text-overflow:ellipsis;}
-  .user-box .user-role{font-size:.68rem !important;margin-top:2px !important;}
+  /* phone: same 3 columns, a bit smaller */
+  header > .halo-mark{width:74px !important;height:74px !important;}
+  header{gap:10px !important;padding:14px 14px !important;}
+  header h1{font-size:.98rem !important;}
+  header > div:not(.user-box){padding:2px 10px;}
+  header .app-brand{font-size:.98rem;}
+  header .app-brand::after{width:110px;height:10px;margin:5px auto 4px;}
+  #userBox{padding:0 !important;}
+  .user-box-row{gap:5px !important;}
+  .user-main{gap:4px;}
+  #userAvatar .avatar, #userAvatar img{width:66px !important;height:66px !important;font-size:21px !important;}
+  .user-box .user-name{font-size:.78rem !important;max-width:96px;}
+  .user-box .user-role{font-size:.62rem !important;margin-top:0 !important;}
+  .user-actions{gap:4px;}
+  .user-actions .ghost{width:28px !important;height:28px !important;font-size:13px !important;}
   #logoutBtn{padding:0 !important;width:32px;height:32px;justify-content:center;}
   #logoutBtn span{display:none;}
   .row-actions{flex-direction:row !important;flex-wrap:wrap;gap:6px !important;justify-content:flex-start;}
@@ -1224,7 +1241,7 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
     <div class="sp-seg">
       <button class="primary" data-sp="readings">📖 القراءات</button>
       <button class="ghost" data-sp="notes">📝 نوتتي الروحية</button>
-      <button class="ghost" data-sp="story">💌 رسالة اليوم</button>
+      <button class="ghost" data-sp="story">📚 قصة اليوم</button>
     </div>
     <div class="sp-daybar">
       <div><div class="d" id="spDayLabel"></div><div class="cd" id="spCopticLabel"></div></div>
@@ -2896,7 +2913,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '24-Oct-2026 A';
+const APP_VERSION = '24-Oct-2026 D';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -9080,7 +9097,8 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
-  { id: 'n5', d: '24-Oct-2026', text: 'صورتك في أعلى البرنامج بقت أكبر، واسمك وزراير التنبيهات والخروج اتنظموا جنبها. على الموبايل بقت في سطر لوحدها تحت اسم الاجتماع.' },
+  { id: 'n6', d: '24-Oct-2026', text: 'في الغذاء اليومي: "رسالة اليوم" بقت "📚 قصة اليوم"، كل يوم قصة قصيرة جديدة لأبونا تادرس يعقوب ملطي من موقع سانت تكلا (أكتر من 600 قصة بالدور). لو القصة مظهرتش جوه البرنامج دوس "افتح القصة على الموقع".' },
+  { id: 'n5', d: '24-Oct-2026', text: 'أعلى البرنامج اتنظم من جديد: صورتك كبيرة على اليمين ومعاها اسمك والزراير، واسم البرنامج واسم الاجتماع في النص، واللوجو كبير على الشمال.' },
   { id: 'n4', d: '24-Oct-2026', text: 'تقرير المتكلمين: المتكلم اللي اسمه مكتوب بأكتر من شكل وليه نفس رقم التليفون بقى بيظهر مرة واحدة بصورته وكل مواعيده.' },
   { id: 'n2', d: '24-Oct-2026', text: 'برنامج الخدمة وفقرة العشر دقايق: زرار "🔁 تبديل / نقل" جنب كل ميعاد، تبدّل بيه متكلمين يومين، أو تنقل متكلم لميعاد فاضي، أو تبدّل الميعادين بالموضوعات.' },
   { id: 'n3', d: '24-Oct-2026', text: 'تقرير المتكلمين مبقاش بيكرر نفس المتكلم (مرة بصورة ومرة من غير)، والمتكرر القديم بيتدمج لوحده أول ما يتفتح التقرير.' },
@@ -9556,86 +9574,705 @@ async function spLoadStories(force){
   spStories = r.value ? JSON.parse(r.value) : [];
   return spStories;
 }
-async function spRenderStory(body, d){
-  if(!spStories) body.innerHTML = '<div class="card sp-empty">جاري التحميل…</div>';
-  try{ await spLoadStories(); }catch(e){ body.innerHTML = '<div class="card sp-empty">معرفناش نجيب رسالة اليوم. اتأكد من النت وجرّب تاني.</div>'; return; }
-  if(spTab !== 'story') return;
-  const admin = isAdmin();
-  let story = null;
-  if(spStories.length){
-    const st = spStories[((spDayIndex(d) % spStories.length) + spStories.length) % spStories.length];
-    story = { title: st.title, paras: String(st.text).split(/\n+/).map(x=>x.trim()).filter(Boolean), src: st.source || 'من كتب أبونا تادرس يعقوب ملطي' };
-  } else {
-    // nothing added yet: the day's Synaxarium story
+const TADROS_STORIES = `
+0001-One-Photo|احتفظي بصورة، وإلقي بالأخرى!
+0002-Herring|هب لي قطعة رنجة!
+0003-Glass|الزجاج الشفاف
+0004-Sick|والدك مريض بالمستشفى، احضر بعد الامتحانات!
+0005-Unpure-Pure|كلهم دنسون! كلهم أطهار!
+0006-Fellow|الرفيق الأبدي
+0007-Only|بقي وحده معي!
+0008-Cross|حملت معه صليبه!
+0009-Sad|أنا (زعلان) من ربنا!
+0010-Bomb|قنبلة ذرية!
+0011-Friend|صديقٌ من السماء!
+0012-Paradise|غني في الفردوس
+0013-Strong|طفل صاحب شخصية قوية
+0014-Metropolitan|على كتفي مطران
+0015-Afraid|خائفٍ على نفسي!
+0016-Stupid|غباوة سجين
+0017-Scorpion|لدغة عقرب!
+0018-Ant|حوار مع نملة!!!
+0019-Like|لنعشْ كسائرِ البشر!
+0020-Sin|خطية تافهة!
+0021-Lesson|درسٌ من شيخٍ ساقطٍ
+0022-Build|شيخ فتى يبني الكنيسة!
+0023-Church|كنيسة جديدة! وقلب جديد!
+0024-Pay|دفعا الكثير!!
+0025-Fr-Bishoy|أبونا بيشوي! أبونا بيشوي!
+0026-Slap|صفعني بالقلم!
+0027-Car|تحطمت سيارتي وملأني الفرح!
+0028-Big|كن الأكبر!
+0029-Save|طفلة تنقذ والديها
+0030-Love-Him|صدقوني: إني أحبه!
+0031-Died|أبونا مينا مات!
+0032-Three-Hours|محتاج إلى ثلاث ساعات
+0033-Listen|لأستمع إلى الطرفين!
+0034-Her-Voice|هل هو صوتها؟!
+0035-Poor-Rich|فقيرة غنية!
+0036-Rain|تحت المطر الغزير!
+0037-Blessing|تركت بركة لبناتي!
+0038-Bless-Me|باركني يا ابني!
+0039-Tears|دموع راهبٍ شيخٍ
+0040-Deacon|شماس يقرأ بقلبه
+0041-Smile|ابتسامة عريضة في الهيكل
+0042-Lie|شاب يكذب يا بابا!
+0043-Condolences|تعزيات مقدمًا!
+0044-Twenty-Times|قرأته عشرين مرَّة!
+0045-Fast|طفلتان تقدسان صومًا!
+0046-Gif-Or|هدية أم إهانة
+0047-Friendship|لا تسحب صداقتك عني!
+0048-Mercy|الرحمة لمن لا يستحق الرحمة
+0049-Furnature|أين هو أثاث بيتك؟
+0050-Not-Convinced|أن أتبعك، هذا ما لست مُقتنعًا به!
+0051-Matchstick|عود كبريت!
+0052-Birds|الطيور المغردة
+0053-Fingers|لن أفلت من بين أصابعه!
+0054-Tears|أعطه مفاتيحك، فيعطيك قلبه!
+0055-Gift|هبة الألم
+0056-Sad-Artist|الفنان الحزين
+0057-Growing-Up|تكلفة النضوج!
+0058-Marathon|سباق في الحب
+0059-Hunters|صيادون ماهرون!
+0060-No-Smell|عرض بلا رائحة ولا جمال
+0061-Wars|كيف تنشأ الحروب؟
+0062-Plants|لتكتسح النباتات الزوان!
+0063-Look|يكفيها نظرة من أبيها!
+0064-Father|على درب أبيه
+0065-Poor-Millionaire|المليونيرة الفقيرة
+0066-Better|أفضل مني ومنك
+0067-Pardon|عفو لا سلطة
+0068-Flower|زهرة جميلة بين العشب
+0069-Ice|طريق وسط الثلوج
+0070-Sleep|نم مستريحًا!
+0071-Mountains|فن تسلق الجبال
+0072-Draw|لأرسم ملامح وجه سيدي!
+0073-Wounds|جراحات الغضب
+0074-Mind|لا ترى عقلك!
+0075-Pigeons|نزاع الحمام
+0076-Watch|لم تترقبي مجيئي!
+0077-Microscope|وداعًا أيها المجهر (الميكروسكوب)
+0078-Straight|قناة مستقيمة أم نهر متعرج؟
+0079-Full|تعلم واشبع!
+0080-Jonah|لا تدعهم يأخذون يونان منك!
+0081-Translation|ترجمة أبي
+0082-Imperial|إمبراطورية فريدة
+0083-Dogs|أنا خائف من الكلاب
+0084-Psalms|مخزن مزامير
+0085-Visit|زيارة في نصف الليل
+0086-Alef-Yaa2|الألف والياء
+0087-Carpenter|بنات النجار
+0088-Wall|ماذا تقول الحائط لأختها؟
+0089-Doesnt|إنه لا يهينني!
+0090-Laws|تجري القوانين في الطرق التي يشتهيها الملوك!
+0091-Shadow|يخاف من ظله!
+0092-Mad|جنون واعظ
+0093-Want|أريد أن أقتني ما تقتنيه أنت!
+0094-Dies|أغنى رجل في الوادي يموت الليلة!
+0095-No-Need|لا حاجة لنا إليه!
+0096-Run-Away|اهرب لحياتك
+0097-Cover|تنازل عن غطاء مائدة!
+0098-Talking|توقف عن الحديث معي، لكي يتحدث مع الجزار!
+0099-Fire|نار في السفن!
+0100-Door|لا تغلق باب سيدنا!
+0101-Time|عجلة الزمن
+0102-Medal|المدالية الذهبية نزعت آلامي!
+0103-Freedom|حرية وراء القضبان
+0104-Perfume|طيب كثير الثمن
+0105-Body|استرخاء الجسد!
+0106-Obedience|طاعة لابن خمس سنوات
+0107-Sight|عطية فقد البصر
+0108-Treason|مربية خائنة!
+0109-Unique|نبوغ فريد
+0110-Isolation|العزلة
+0111-Bible|لم أقرأ الإنجيل منذ زمان طويل!
+0112-People|في خدمة الشعب
+0113-Butterfly|فراشة في آمان
+0114-Doesnt-Love-Me|إنها لا تحبني
+0115-Honey|مأساة في عسل النحل!
+0116-Voice|صوت محبة أم ضجيج مقلق؟!
+0117-Flying|الحمام الطائر
+0118-Donkeys|حمارا الأسقف
+0119-Cell|القلاية المتحركة
+0120-Road|في طريقٍ مظلمٍ
+0121-Wedding|الاستعداد للعُرس
+0122-Cannibal|من أكله لحوم البشر!
+0123-Soul|باركي يا نفسي الرب
+0124-Land|أسعد كائن على الأرض
+0125-Emperor|الإمبراطور والفنان
+0126-Love|بشاشة الحب الخالص!
+0127-Ready|أنا مستعد أن أُقبِّل قدميه
+0128-Recorder|اغلق المُسجل (الريكوردر)
+0129-Bing|صاحب نفس كبيرة
+0130-Strict|الحب الحازم
+0131-Death|ظل الموت
+0132-Kiss|أقَبِّل ثيابها!
+0133-Bones|أين عظام الإمبراطور فيليب؟
+0134-Empty|يد فارغة!
+0135-Lost|الأب المفقود
+0136-Took|لأن اللَّه أخذه!
+0137-Pages|اقلب صفحة الكتاب المقدس
+0138-Electric-Blanket|بطانية كهرباء!
+0139-After-Death|سؤال محيِّر: ماذا بعد الموت؟
+0140-Car|سيارة مسرعة
+0141-Daughter|هي ابنتك لا ابنتي!
+0142-Stronger|أقوى من الموت!
+0143-Chair|لمن هذا الكرسي؟
+0144-New|يوحنا الجديد
+0145-Hen|حنان دجاجة
+0146-Heal|بحُبره شفينا!
+0147-Run|اهرب مما أنت فيه!
+0148-Who|من يسندني؟
+0149-Wait|هل يُمكن أن تنتظرني؟
+0150-Melon|بطيخة مسمومة
+0151-Bee|نحلة بلا إبرة ماصة!
+0152-Will|لتكن إرادتك!
+0153-Title|أخطأت في العنوان
+0154-Taught|منْ علَّم ابنتي الكذب؟
+0155-Conference|مؤتمر بين أدوات النجارة
+0156-Love-and-Tears|حب ودموُع
+0157-Tailor|الخياط الطوباوي
+0158-Solitary|المتوحد الهارب!
+0159-Little|اقبل هذا القليل
+0160-Word|الكلمة الطيبة
+0161-Arm|صاحب الذراع المكسور
+0162-Niagra|شلالات نياجرا وقشرة البرتقال
+0163-Servant|خادمة للبشرية
+0164-Narrow|الباب ضيق
+0165-Mud|كتلة من الطين
+0166-Touches|لمسات يد خلاّقة!
+0167-Thread|الخيط الخفي
+0168-Between|بين المؤدبين
+0169-Cellar|سراديب صغيرة!
+0170-Slave|العبد الناسك
+0171-Retreat|انسحب من الجلسة
+0172-Do|اعمل هذا، وأنت تستريح!
+0173-Trust|أزمة ثقة
+0174-Baron|درع البارون فريتاس
+0175-Debt|الدين قد وُفي!
+0176-Mother|الأم مدينة لجون
+0177-More|ضربات أكثر!
+0178-Dirty|الأصابع المتسخة!
+0179-Wallington|والِنْجِتُن (Wallington) هزم
+0180-Grace|عهد النعمة
+0181-Prayer|الملحد والصلاة المستجابة!
+0182-Not-Alone|وحدي أنا، لكنني لست وحدي!
+0183-Everything|إني مدين لكِ بكل شيء يا أمّاه
+0184-Night|ليلة الاستعداد
+0185-Police|في قبضة الحب
+0186-Donkey|استضافة حمار وبغل
+0187-Strange|الحلواني العجيب
+0188-Hear|لم أسمع شيئًا
+0189-From|انتقل من الموت إلى الحياة
+0190-Woman|مُلحد وسيدة فلاحة
+0191-Heaven|علم السماء
+0192-Beauty|الجمال الفائق
+0193-Pin|دبوس إبرة أم لسعة عقرب؟
+0194-Needle|المسلة المرذولة
+0195-Meeting|لقاء مفاجئ
+0196-Horse|الفرس المسكين
+0197-Tap|صنبور مفتوح!
+0198-Captain|أنا الربان
+0199-Stranger|الإشبين الغريب
+0200-Christ|المسيح مُفرِّح الأسرة
+0201-With-This|بهذا تغتني!
+0202-Grape|عنقود العنب
+0203-Moment|في اللحظة الحاسمة
+0204-Agree|اتفقا ألا يتفقا!
+0205-Brave|الجندي الشجاع
+0206-Saw|لم أرَ أحدًا!
+0207-Animals|من العيادة إلى حديقة الحيوانات
+0208-Stones|لا تقذف قاربي بالحجارة!
+0209-Window|من الباب لا الشباك
+0210-Letters|خطابان في أسبوع واحد
+0211-Prisoned|هل سبق أن سُجنت؟
+0212-Thursty|أنا عطشان!
+0213-Drawing|أين ذهب الرسم؟
+0214-Angels|ملاك الرأفة
+0215-Exist|ربنا موجود
+0216-Farmer|في زي فلاح!
+0217-Stick|العكاز العجيب!
+0218-Coffee|فنجان قهوة
+0219-Lost|أشعر بالضياع
+0220-House|هذا منزلي!
+0221-Giving|التقدمة الحقة!
+0222-Conversation|حوار بين بقرة وخنزير
+0223-Password|كلمة السرّ!
+0224-Eggs|البيض انكسر!
+0225-Eagle|لتطرْ مع النسر الصغير
+0226-Nest|ليتني لا أستقر في عشٍ!
+0227-Know|هل نعرف بعضنا بعضًا على الأرض؟!
+0228-Bad-Friends|أصدقاء السوء!
+0229-My-Father|إنه أبي!
+0230-Bridle|لقد سلمته اللجام!
+0231-Computer|أعظم كومبيتور في العالم
+0232-Room|ماذا لو بدأنا بالحجرة؟
+0233-Flying-Man|الرجل الطائر
+0234-Aghaby|مائدة محبة تغيِّر التاريخ
+0235-Brothres|متشبهًا بأخوته
+0236-Wonders|عجائب فائقة
+0237-Line|أعمالي المجيدة في سطرٍ واحدٍ!
+0238-Boss|رئيسي حاضر دائمًا!
+0239-Wash|من يغسل يديها؟!
+0240-Bravery|لا تكتم شجاعته!
+0241-Note|نوتة موسيقية
+0242-Broken|القلب المنكسر!
+0243-Buy|من يشتري مقعدي في السماء؟
+0244-Hebrew|اكتشاف ترتيب الأفعال العبرية
+0245-Fire|نيران الجحيم
+0246-Appear|ليس خفي إلاّ ويظهر!
+0247-Meek|سرّ الوداعة
+0248-Life-Plant|نبات الحياة
+0249-Victoria|لقاء مع الملكة فيكتوريا
+0250-Horizon|الأفق الرائع!
+0251-Norway|أمير النرويج
+0252-Lose|قد خسرت كل شيء
+0253-Sacrifice|ذبيحة حب!
+0254-Blind|أعمى بالمولد
+0255-Talking-Bottles|زجاجات تتكلم!
+0256-Mouth|اغسل فمك!
+0257-Gas|وأغلقت على الغاز!
+0258-Carry|أنا أحمل أثقالهم، والمسيح يحملني مع الأثقال!
+0259-Burdon|أبي يعرف ما احتمله!
+0260-Please|اصنعوا محبة، لا تكلموني!
+0261-Under-Me|ستكونون تحتي!
+0262-Happy|حرب مفرحة!
+0263-Memories|حجرة الذكريات
+0264-Table|على رأس المائدة
+0265-Leaves|أوراق الشجر الميتة
+0266-Athiest|اعتراف ملحد
+0267-Cheque|شيك مصرفي على بياض!
+0268-Quarrel|نزاع المحبة
+0269-Judge|أُحكم على نفسك، قبل أن يُحكم عليك!
+0270-Tree|اصعد فوق الشجرة!
+0271-Extortion|اغتصاب الحب
+0272-Water|كل قطرة مياه لها ثمنها!
+0273-Beggar|المليونير الشحاذ!
+0274-Train|اندفاع قطار في نهرٍ
+0275-Say|ما يقوله الإنسان عن أبيه
+0276-Under-Rocks|امرأة تحت الحجارة
+0277-Satan|الشيطان وأصدقاؤه
+0278-Tenth|الرجل العاشر
+0279-Album|"ألبوم" الذكريات
+0280-Kind|الملك الذي يغفر!
+0281-Falcon|الملك خان وصقره المحبوب
+0282-Horseshoe|حِدْوة فرس
+0283-Brides|العرائس الثلاث
+0284-Policeman|لطف ضابط وثني
+0285-British|جرَّاح بريطاني يصير مسيحيًا!
+0286-Learn-From-Who|ممن أتعلم؟!
+0287-Moses|أنا موسى
+0288-Dream|حلم الحطَّاب
+0289-Mire|في وسط الوحل
+0290-Wine|نبيذ اللصوص
+0291-Box|صندوق الهموم
+0292-Word-War-One|في الحرب العالمية الأولى
+0293-Thanks|شكرًا... شكرًا!
+0294-Come|جئتُ إليك ثلاث مرات!
+0295-Pearl|من يستحق هذه اللؤلؤة؟
+0296-Light|نور أمي
+0297-Sparta|أسوار أسبارتا القديمة!
+0298-Orange-Juice|عصير البرتقال
+0299-Kings-Words|كلمة الملك
+0300-Ruth|الطفلة راعوث وعصابة اللصوص
+0301-Tribes|حاكم القبائل الهمجية
+0302-His-Chair|خادم كلمة يتنازل عن كرسيه
+0303-Six-Months|ستة أشهر لحفظ مزمورٍ
+0304-Elijah|إيليا النبي يعزيني
+0305-Lantern|قدِّم لي مصباحًا سحريًا
+0306-Saw-the-King|رأت الملك
+0307-Name-of-the-Lord|مبارك الآتي باسم الرب!
+0308-Disagreement|خلاف بين أصابع اليد
+0309-Accuracy|كومبيوتر ربنا أدق
+0310-Happiest|أسعد إنسان على الأرض!
+0311-Cancer|في مستشفى السرطان
+0312-First-Born|بكور المحصول للرب
+0313-Fake|اللآلئ المزيفة
+0314-Payback|تصفية الحساب
+0315-Thank|ينتظر من يشكره
+0316-Ship|مُلحد على ظهر السفينة
+0317-Twenty-Three|ينقذ ثلاثة وعشرين شخصًا!
+0318-Left-Me|تركني الملاك!
+0319-Patriarch|أَمَا من أبٍ؟
+0320-Hit|اتركوه يضربني!
+0321-Hospital|في مستشفى الأمراض العقلية
+0322-Killed|قتلت ابني
+0323-Gods|لينعم الكل بالآلهة
+0324-Priest|كاهن يتعلم!
+0325-Precious|أغلى هدية!
+0326-Dead-Roses|باقة ورد ذابلة
+0327-Raven|الغراب المتخفّي
+0328-Noah|نوح يعزيني!
+0329-Name|اللَّه اسم أم فعل؟
+0330-If|إن
+0331-Kid|بطريرك يهتم بطفلٍ
+0332-Question|سؤال إلى العلماء
+0333-Planets|عجائب بين الكواكب!
+0334-Inner|التعب عميق في داخلي
+0335-Bulldozer|طفل يقود بلدوزر
+0336-Black|اخلعي الثياب السوداء!
+0337-Tickets|على شباك التذاكر
+0338-Wear|عليك بركة البسها!
+0339-Goose|الإوزة ذات البيض الذهبي
+0340-You|ماذا عنك؟
+0341-Feelings|مشاعر الرئيس!
+0342-Ears|لا تصدق أذنك!
+0343-Bus|مع سائق الأتوبيس
+0344-Golden|اللمسة الذهبية
+0345-Break|كِسَرْ الزجاج
+0346-Cigarettes|فوق علبة السجاير
+0347-Information|معلومات خاطئة
+0348-Elder|شيخ يشعل نارًا في بيته!
+0349-Pestilence|ناقلوا الطاعون
+0350-Working|العمل عبادة
+0351-Reading|يقرأ الكتاب المقدس بلسانه
+0352-Coin|العُملة الذهبية
+0353-Gods-Will|لأتمم إرادة اللَّه
+0354-Saint-Perpetua|الشهيدة بربتوا
+0355-Heart|قلبي مستعد!
+0356-Birth|ميلادك حوّل حياتي إلى سماء حيَّة
+0357-Your-Birth|ميلادك أشبع أعماقي
+0358-Strawberry|علبة فراولة
+0359-Feast|أَمَا من عيد؟!
+0360-Their-Sins|أنت مطالب بخطايا هذا الشعب الذي يمجدّك!
+0361-Camera|كاميرا في وادي النطرون
+0362-Cow|سارق البقرة!
+0363-Bread|قطعة من الخبز
+0364-Abroad|دموع في أرض المهجر
+0365-Broken-Hand|صاحب اليد المكسورة
+0366-Dead-Sea|لماذا مات البحر الميت؟
+0367-Saints|صداقة بين قديسين معاصرين
+0368-Great|العظماء يحتاجون إلى اللَّه
+0369-Sweet|قطعة حلوى مملوءة ترابًا!
+0370-Cake|الكعكة المحروقة
+0371-Carry|لأحمل صليبي بفرح!
+0372-Mirrors-and-Windows|المرايا والنوافذ
+0373-Lay-Off|ليس عند اللَّه Lay off
+0374-Stranger-Young-Man|الشاب الغريب!
+0375-St-Demiana-Church|كنيسة الشهيدة دميانة
+0376-Nothing-Like-God|ليس مثل اللَّه
+0377-Success|نجاح بدون فشل
+0378-Image|صورة أم قوة!
+0379-He-Left-Me|تركني! وأهملني!
+0380-Wednesday|الأربعاء أم الثلاثاء
+0381-Rats|حوار بين فأرين
+0382-Gold-Or-Rocks|ذهب أم حجارة
+0383-Manger|كلب في مزود
+0384-Feathers|أجمع ريش الطيور
+0385-Girlfriend|الشاب وصديقته
+0386-Crime|جريمة في الفكر وفي القلب
+0387-Hornet|الدبور والعصفور
+0388-Adam|ضلوع آدم
+0389-Steps|إثر خطواتها!
+0390-Fish|سمكة أم قطة؟!
+0391-Nails|أثار المسامير
+0392-Frog|الضفدعة والخنزير
+0393-Mattress|مرتبة تذبح صاحبها!
+0394-Mine|مناجم الذهب
+0395-Barhoum|برهوم وابنه وحماره
+0396-Photograph|محتاجة إلى صورة!
+0397-Gentiles|لا تثقلوا على الراجعين من الأمم
+0398-Eyes|هل عيناي عينيْ كلب؟
+0399-Australia|هدية من أستراليا
+0400-Better-than-You|أنه أفضل منك!
+0401-Departure|قررت أن أغادر الدير
+0402-Trial|لا تدخلني في تجربة
+0403-Serpant|صداقة بين ضفدعة وحية!
+0404-Princess|الضفدعة الأميرة
+0405-Revelation|ثورة ضد مجرى مياه!
+0406-Challange|طفل يتحدى الجماهير
+0407-Going|أنت ذاهب إلى بيتك!
+0408-Behind-Me|الموت خلفي!
+0409-Europe|ولو أُعطيت لي ثروة أوربا!
+0410-End|الموت يُنهي كل شيء!
+0411-Germany|زمّار في ألمانيا
+0412-Prison|قائد يعود إلى السجن!
+0413-Journey|رحلة مشتركة بين الحق والباطل
+0414-Temple|كيف أُعيد بناء الهيكل؟
+0415-Wolf|ذئب! ذئب! أنقذوا غنمي!
+0416-Small-Liar|الكذَّابة الصغيرة
+0417-George-Washington|جورج واشنطن وشجرة الكريز
+0418-Dad|أبي! يوجد من يراك!
+0419-Small-Bird|محرر العبيد والطائر الصغير
+0420-Cloth|قطعة قماش من الحرير الأبيض
+0421-Fog|ضباب في المطار
+0422-feigning-Illness|الحمار المتمارض!
+0423-Nona|نونا ترعى زوجها!
+0424-President|الرئيس شيميل وأمه
+0425-Preacher|واعظ الطيور
+0426-Different|مختلفون عنا!
+0427-Letter|خطاب يفتح أبواب السماء!
+0428-Wolfs-Gift|هدية ذئب!
+0429-Travel|لن أسافر حتى يؤجر لي مسكنًا!
+0430-Worms|حيرة ديدان في البِركة
+0431-Befnoty|دموع بفنوتي الصغير
+0432-Minister|مزارع يصير وزيرًا
+0433-Funeral|جنازة ملوكية
+0434-Love-Death|سيدة تحب الموت!
+0435-Decision|قرار من مؤتمر الفئران
+0436-Lion|أسد في معرض فنان!
+0437-Umitating|حمار يقلد حمارًا
+0438-Mosquito|بعوضة تُعطي درسًا لملك الحيوانات
+0439-Wise|الأسد المريض والثعلب الحكيم
+0440-Bear|دبٌ يهمس في أذن إنسانٍ!
+0441-Gout|حوار بين مرض النقرس (مرض الملوك) والعنكبوت
+0442-Crow|غراب أراد أن يصير نسرًا!
+0443-Humankind|عصفوران يحزنان على البشرية!
+0444-Cat|القط المخادع والفئران
+0445-Cock|الديك والثعلب
+0446-Skin|حمار يرتدي جلد أسدٍ
+0447-Pride|الأسد والحمار المتكبر
+0448-Gluttony|الثعلب والذئب النهم
+0449-Monkey|القرد الحكيم
+0450-Fight|معركة بين قطٍ وكلبٍ
+0451-Grandfather|الفأر الصغير ونصيحة جده!
+0452-Fool|الرجل الأحمق والطائر الحكيم
+0453-Head|الرأس والذيل
+0454-Pig|الخنزير والأتان والجحش
+0455-Small-Girl|طفلة صغيرة تعترف!
+0456-Ant|النملة السعيدة
+0457-Oxen|الضفادع ومعركة ثورين
+0458-Praise|الغراب المسكين وكلمات المديح
+0459-Milk|ضفدعتان في إناء لبن كامل الدسم
+0460-Sheep|الثعلب الماكر والكبش
+0461-Indian|لعبة الهندي والرجل الأبيض
+0462-Canal|القناة الضيقة
+0463-Fox|ذئب يشي بثعلب لدى الأسد
+0464-King|العصفور وملك الطيور
+0465-Make-Happy|طفلتان تسعدان أمهما
+0466-Marriage|ثعلب يشوّه صورة الزواج
+0467-Tear|دمعة حب تقتنص نفسًا
+0468-Parrot|دانيال والببغاء
+0469-Build|تصريح ببناء كنيسة تفوز به سيدة!
+0470-Monks|راهبان شيخان وقطعة من اللبن النيّ
+0471-Bluebird|طائر الزرقا
+0472-Fetus|حوار بين جنينين!
+0473-Monk|الراهب محب الاستطلاع وإخراج الشياطين!
+0474-Encounter|وقيعة بين نسر وخنزير
+0475-Theta|الثلاثة حروف ثيتا
+0476-Catholic|قس كاثوليكي يرى القديسة مريم في مصر
+0477-Money|مؤتمر عن الكنيسة والمال
+0478-Hurt|خطية تجرح مسيحي!
+0479-Balance|كم هو رصيدنا؟
+0480-Behind|خلف الجبل
+0481-Hedgehog|القنفذ الطفل الكسلان
+0482-Space|رحلة من سكان الفضاء
+0483-Boy|طفل في وسط النار
+0484-Drums|لغة ضربات الطبول
+0485-No-Visit|لا أريد زيارتها!
+0486-Apostles|سبعة رسل
+0487-Marc|مارك والكرة المتعددة الألوان
+0488-Mark|حامل إشارة القطار
+0489-Admonition|صديقي يعاتبني!
+0490-Food|السماء نزِّلت طعامًا
+0491-Kangaroo|الكانجرو الصغير ووعكة البرد
+0492-Need-Smile|محتاجة إلى ابتسامة ابنتي!
+0493-Fell|وانهارت الملايين!
+0494-Mayor|أنا عمدة المدينة
+0495-Millions|ملايين الضفادع!
+0496-Fishing|نسر يصطاد سمكة!
+0497-Spider|لماذا يعيش العنكبوت منزويًا؟ ولماذا يأكل العنكبوت الحشرات الميتة؟
+0498-Ants-n-Ice|نملة وسط الثلوج
+0499-Fear|أنا خائف عليك!
+0500-Shady|شادي والضفدعة الصغيرة
+0501-Gorilla|غوريلا بين أنياب الأسد
+0502-With-Jesus|أول عيد ميلاد لي مع المسيح
+0503-In-Heaven|أول عيد ميلاد لي في السماء!
+0504-Mouse|خفت من الفأر ولم أخف من الله!
+0505-Spaceship|طفلٌ في مركبة الفضاء
+0506-Alaska|ثلاثة ذئاب في ألاسكا
+0507-Castle|ابنِ لي قصرًا كقصرك!
+0508-Steal|سارق الآلهة
+0508-manna|لماذا أرسل الله المن كل صباح؟
+0509-Jackal|ابن آوى الجاحد
+0510-Saw-God|رأيت ربي يسوع!
+0511-Play|أبي! هلم نلعب معًا!
+0512-Saint|من هو القديس؟
+0513-Stork|رأس اللقلق في فم ذئب
+0514-Stomach|بطن الكلب وشهوته
+0515-Pope|متوحدون في ضيافة البابا ثاوفيلس
+0516-Share|نصيبي هو الرب قالت نفسي
+0517-Moon|رحلة القطار الصغير إلى القمر
+0518-Secondary|خدمة شباب طلبة ثانوي
+0519-Save|نحلة تنقذ ملكًا!
+0520-Meme|ميمي والقط الصغير
+0521-Christmas-Tree|شجرة الميلاد المحنية
+0522-Morse-Code|عامل تلغراف نظام شفر مورس
+0523-Crown|لا... لن تسرق إكليلي!
+0524-Xmas-Gift|هدية الكريسماس
+0525-Tortoise|سلحفاة تؤكد أن الكذب أكثر ضررًا من الجراحات
+0526-Stolen-Car|السيارة المسروقة
+0527-Move|نقلت السور!
+0528-Live|لماذا تعيش الضفادع في الوحل؟
+0529-Rabbit|سباق بين سلحفاة وأرنب وحشي
+0530-Nobel|جائزة نوبل العالمية
+0531-In-Paradise|ماذا يفعل ربنا يسوع في الفردوس؟
+0532-Jacklin|صداقة بين جاكلين والببغاء
+0533-Anger|أثر الغضب
+0534-Choir|خورس من ثلاث شجرات
+0535-Win|يفوز بنجاح باهر!
+0536-Goat|الماعز الثائرة
+0537-Men|غالبة الرجال
+0538-Saves|من ينقذ السفينة؟
+0539-Cottage|نار في الكوخ!
+0540-Taxi|سائق التاكسي وكلمة محبة!
+0541-Arrogant|الأسد المتكبر
+0542-Camel|الجمل الصغير وأصدقاء السوء
+0543-Snake|ألفريد والحية السامة
+0544-Receive|أطفال يستقبلون الملك
+0545-Strange-Bird|الطائر العجيب
+0546-Only-Son|محولجي يضحي بابنه الوحيد
+0547-Kneel|ركعت أمام إلهي!
+0548-With-Wolf|حوارٌ مع ذئب
+0549-Son-of-Tears|ابن الدموع
+0550-Deceived|ضفدعتان مخدوعتان
+0551-Electricity|انقطاع التيار الكهربائي
+0552-Chauffeur|سائق الإمبراطور
+0553-Brains|الثعلب صاحب السبعة وسبعين مخًا
+0554-Bosom|في حضن المسيح
+0555-Seeds|البذار الرحالة
+0556-Wisdom-Box|العنكبوت وصندوق الحكمة
+0557-Got-It|وجدتها!
+0558-Big-Sister|الأخت الكبرى
+0559-Chain|لا تسمح لسلسلة الحب أن تنتهي بك!
+0560-Three-Angels|رأيت ثلاثة ملائكة
+0561-Sorry|أخطأت سامحني
+0562-Help|النجدة! النجدة!
+0563-My-Gifts|تذكر عطاياي لك!
+0564-Fathers-Feelings|مشاعر أب
+0565-Grandpa|أنا سامع صوت جدو!
+0566-Sea|بحر من الزجاج!
+0567-Pot|الجرة المشقوقة
+0568-Proclaim|كارز بالحب غير المشروط
+0569-Soccer|لاعب كرة القدم
+0570-Ling|يحيا الإمبراطور الجديد لينج!
+0571-Small-Horse|الأسد المتشامخ والحصان الصغير
+0572-Rocks-Cutter|قاطع الأحجار
+0573-St-Mary|حلم القديسة مريم
+0574-Poor-Rabbit|الأرنب المسكين وصديق السوء
+0575-Chocolate|قطعة من الشكولاته
+0576-Tiger|النمر كاسر الوعد
+0577-Weak-Tiger|النمر الضعيف
+0578-Nature|الإنسان الذي أفسد الطبيعة
+0579-To-King|هدية الفلاح للملك
+0580-Beautiful-Pearl|اللؤلؤة الجميلة
+0581-Sir|أستاذ فيلسوف ملحد
+0582-Duck|البطة الطائرة
+0583-Ignorant|هذا الأمي علمني درسًا!
+0583-fruits|من ثمار المحبة
+0583-life|في طريق الحياة
+0584-Bent|الشجرة المحنية
+0585-Antique|الإناء الأثري الفاخر
+0586-Cage|القفص الذهبي والرجل المجنون
+0587-Special-Room|حجرة خاصة
+0588-Precius|اللآلئ الثمينة
+0589-Guards|محاط بستة وعشرين حارسًا
+0590-Two-Priests|كاهنان سحبا قلبي إلى السماء!
+0591-Ears|الله يهتم حتى بغطاء للأذنين!
+0592-Casey|كاسي تتحدى الموت
+0593-Pain|راشيل سكوت تبحث عن الألم
+0594-Real-Son|من هو الابن الحقيقي؟
+0595-Barley|كيلتان من الشعير
+0596-Didnt-Buy|لم أشترِ اللؤلؤة
+0597-Dynamo|دينامو الكنيسة الفعال!
+0598-Young-Man|الشاب الشقي وكلمات التشجيع
+0599-Chosen|الإناء المختار
+0600-Eshak|اسحق في رحلة إلى القمر
+0601-Christian|من هو المسيحي؟
+0602-Dont-Read|لا تقرأ هذه الرسالة
+0603-Price|بكم ثمن المعجزة؟
+0604-Abo-Sefein|رائحة أبي سيفين
+0605-Plate|طفلة في طبق
+0606-Jared|ياريد والنجار
+0607-Out|لن تخرجي من المنزل!
+0608-City|المدينة العجيبة
+0609-Ball|الكرة المشعرة
+0610-Blazing|شابان ملتهبان بالروح
+0612-Footsteps|صوت أقدام أمي
+0613-Maregerges|حصان مارجرجس
+0614-Replaced|مارجرجس استبدل حصانه!
+0615-Truth|صداقة بين الحق والقصة
+0616-Jump|قفزة حب
+0617-Better|أجمل البيوت وأغناها
+0618-Face|وجه أمي المبتسم
+0619-Saint-Neno|شخصية كارزة: نينو الأسيرة تقود دولة
+0620-Despair|البؤس والحب
+0621-East|حنين إلى الشرق!
+0622-Egypt|شوق إلى مصر
+0623-Clock|الساعة الثانية عشر وربع
+0624-Beautiful-Hands|أجمل يدين في المدينة!
+0625-January|الأستاذ يناير
+0626-Hummingbird|الطائر الطنّان
+0627-Cornilia|جواهر كورنيليا
+0628-Poverty|مسكين يشفق على الفقر!
+0629-Dances|رقصات البؤس المتهلل
+0630-Like-Mw|من هو مثلي
+0631-My-Cross|لم تشر إلى صليبي!
+0632-Operation|عملية جراحية لقلب طفل
+0633-His-Arms|أنا أعرفه! لقد حملني بذراعيه!
+0634-Ugly|يا لك من قبيح الشكل!
+0635-Streets|شوارع مملوءة ذهبًا!
+0636-Despise|أسد يحتقر فأرًا
+`.trim().split('\n').map(l=>{ const i = l.indexOf('|'); return { slug: l.slice(0, i), title: l.slice(i + 1) }; });
+/* Daily story: one of Fr. Tadros Yacoub Malaty's short stories from St-Takla.org,
+   in order starting 24-Oct-2026 (story 1). The list (file name + title) is bundled;
+   the text is loaded from the site when it can be, else the user opens the page. */
+const TADROS_BASE = 'https://st-takla.org/Full-Free-Coptic-Books/FreeCopticBooks-020-Father-Tadros-Yaacoub-Malaty/007-Short-Stories/Short-Stories-';
+const TADROS_START = Date.UTC(2026, 9, 24) / 86400000;
+const tadrosText = {};
+let tadrosReq = 0;
+function tadrosForDay(d){
+  const n = TADROS_STORIES.length, i = (((spDayIndex(d) - TADROS_START) % n) + n) % n;
+  return Object.assign({ num: i + 1, url: TADROS_BASE + TADROS_STORIES[i].slug + '.html' }, TADROS_STORIES[i]);
+}
+async function tadrosLoad(st){
+  if(tadrosText[st.slug]) return tadrosText[st.slug];
+  try{ const c = localStorage.getItem('khodam_tadros_' + st.slug); if(c) return (tadrosText[st.slug] = JSON.parse(c)); }catch(e){}
+  const tries = [st.url, 'https://api.allorigins.win/raw?url=' + encodeURIComponent(st.url), 'https://corsproxy.io/?url=' + encodeURIComponent(st.url)];
+  for(const u of tries){
     try{
-      const it = spFlatten(await spLoadReadings(d)).find(x=>x.sub === 'السنكسار' && x.paras.length);
-      if(it) story = { title: it.title || 'سنكسار اليوم', paras: it.paras, src: 'من السنكسار — لحد ما الأدمن يضيف قصص' };
+      const ctl = new AbortController(), t = setTimeout(()=>ctl.abort(), 9000);
+      const res = await fetch(u, { signal: ctl.signal }); clearTimeout(t);
+      if(!res.ok) continue;
+      const buf = await res.arrayBuffer();
+      let html = new TextDecoder('utf-8').decode(buf);
+      if((html.match(/�/g) || []).length > 20) html = new TextDecoder('windows-1256').decode(buf);
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      doc.querySelectorAll('script,style,noscript,nav,header,footer,form,iframe,select,button').forEach(x=>x.remove());
+      const bad = /st-takla|takla|تكلا|تكلاهيمانوت|©|حقوق|copyright|فهرس|محتويات|اذهب|انظر|الصفحة|رابط|http/i;
+      const paras = [...doc.querySelectorAll('p')].map(p=>p.textContent.replace(/\s+/g, ' ').trim())
+        .filter(x=>x.length >= 25 && /[؀-ۿ]/.test(x) && !bad.test(x));
+      if(paras.length < 2) continue;
+      tadrosText[st.slug] = paras.slice(0, 80);
+      try{ localStorage.setItem('khodam_tadros_' + st.slug, JSON.stringify(tadrosText[st.slug])); }catch(e){}
+      return tadrosText[st.slug];
     }catch(e){}
   }
-  if(spTab !== 'story') return;
-  const editing = spEditStory ? spStories.find(x=>x.id === spEditStory) : null;
-  body.innerHTML = `<div class="card">
-      ${story ? `<div class="sp-story-title">💌 ${escHtml(story.title)}</div>
-        <div class="sp-read">${story.paras.map(t=>`<p>${escHtml(t)}</p>`).join('')}</div>
-        <div class="sp-story-src">${escHtml(story.src)}</div>
-        <div style="margin-top:10px;"><button class="primary" id="spStoryShare">📤 مشاركة القصة</button></div>`
-      : '<div class="sp-empty">لسه مفيش قصص. ' + (admin ? 'ضيف أول قصة من تحت.' : 'الأدمن هيضيفها قريب.') + '</div>'}
-    </div>
-    ${admin ? `<div class="card sp-story-form">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
-        <b>📚 قصص رسالة اليوم (${spStories.length})</b>
-        <button class="ghost" id="spStoryToggle">${spShowStoryForm || editing ? 'إخفاء' : '➕ إضافة / تعديل القصص'}</button>
-      </div>
-      ${spShowStoryForm || editing ? `
-        <p style="font-size:.82rem;color:var(--muted);margin:8px 0;">كل يوم بتظهر قصة واحدة منهم بالدور. تقدر تلصق كذا قصة مرة واحدة: افصل بينهم بسطر فيه <b>***</b>، وأول سطر في كل قصة هو العنوان.</p>
-        <input type="text" id="spStoryTitle" placeholder="عنوان القصة (لو قصة واحدة)" value="${escHtml(editing ? editing.title : '')}" style="width:100%;margin-bottom:8px;">
-        <textarea id="spStoryText" placeholder="نص القصة…">${escHtml(editing ? editing.text : '')}</textarea>
-        <input type="text" id="spStorySource" placeholder="المصدر (مثلاً: اسم الكتاب)" value="${escHtml(editing ? (editing.source||'') : '')}" style="width:100%;margin-top:8px;">
-        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
-          <button class="primary" id="spStorySave">${editing ? 'حفظ التعديل' : '💾 حفظ'}</button>
-          ${editing ? '<button class="ghost" id="spStoryCancel">إلغاء</button>' : ''}
-        </div>
-        ${spStories.map((st, i)=>`<div class="sp-note"><div class="meta"><span><b>${i+1}. ${escHtml(st.title)}</b>${(spDayIndex(d) % spStories.length) === i ? ' ⭐ النهارده' : ''}</span>
-          <span class="sp-actions"><button class="ghost" data-st-edit="${escHtml(st.id)}">✏️</button><button class="ghost danger" data-st-del="${escHtml(st.id)}">حذف</button></span></div>
-          <div style="font-size:.85rem;color:var(--ink-soft);">${escHtml(String(st.text).slice(0, 120))}…</div></div>`).join('')}` : ''}
-    </div>` : ''}`;
-  const share = document.getElementById('spStoryShare');
-  if(share) share.onclick = ()=>spShare('💌 رسالة اليوم: ' + story.title, story.paras.join('\n') + '\n\n' + story.src);
-  if(!admin) return;
-  document.getElementById('spStoryToggle').onclick = ()=>{ spShowStoryForm = !(spShowStoryForm || editing); spEditStory = ''; renderSpirit(); };
-  const save = document.getElementById('spStorySave');
-  if(save) save.onclick = async ()=>{
-    const title = document.getElementById('spStoryTitle').value.trim();
-    const text = document.getElementById('spStoryText').value.trim();
-    const source = document.getElementById('spStorySource').value.trim();
-    if(!text){ alert('اكتب نص القصة.'); return; }
-    let add = [];
-    if(!editing){
-      const parts = text.split(/^\s*\*{3,}\s*$/m).map(x=>x.trim()).filter(Boolean);
-      if(parts.length > 1 || !title){
-        add = parts.map(p=>{ const ls = p.split('\n'); return { title: ls[0].trim(), text: ls.slice(1).join('\n').trim() || ls[0].trim() }; });
-      } else add = [{ title, text }];
-    }
-    save.disabled = true;
-    try{
-      await spLoadStories(true);
-      if(editing){ const st = spStories.find(x=>x.id === editing.id); if(st){ st.title = title || st.title; st.text = text; st.source = source; } }
-      else add.forEach((a, i)=>spStories.push({ id: Date.now().toString(36) + i + Math.random().toString(36).slice(2,5), title: a.title, text: a.text, source, addedBy: currentUser.name, at: Date.now() }));
-      await window.storage.set(SP_STORIES_KEY, JSON.stringify(spStories), true);
-      auditPush({ area:'الغذاء اليومي', action: editing ? 'تعديل قصة' : 'إضافة قصص', target: editing ? (title || editing.title) : add.map(a=>a.title).join('، ').slice(0, 200), changes: [] });
-      spEditStory = ''; renderSpirit();
-      if(add.length > 1) alert('اتضافت ' + add.length + ' قصص ✓');
-    }catch(e){ save.disabled = false; alert('متحفظش. اتأكد من النت وجرّب تاني.'); }
+  return null;
+}
+async function spRenderStory(body, d){
+  const st = tadrosForDay(d), req = ++tadrosReq;
+  const head = `<div class="sp-story-title">📚 ${escHtml(st.title)}</div>
+    <div class="sp-story-src">قصة رقم ${st.num} من ${TADROS_STORIES.length} — قصص قصيرة لأبونا تادرس يعقوب ملطي (موقع سانت تكلا)</div>`;
+  const tools = `<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="primary" id="spStoryOpen">📖 افتح القصة على الموقع</button>
+      <button class="ghost" id="spStoryShare">📤 مشاركة القصة</button></div>`;
+  const paint = (inner)=>{
+    if(spTab !== 'story') return;
+    body.innerHTML = `<div class="card">${head}${inner}${tools}</div>`;
+    document.getElementById('spStoryOpen').onclick = ()=>window.open(st.url, '_blank', 'noopener');
+    const share = document.getElementById('spStoryShare');
+    if(share) share.onclick = ()=>{
+      const txt = tadrosText[st.slug];
+      spShare('📚 قصة اليوم: ' + st.title, (txt ? txt.join('\n') + '\n\n' : '') + 'من قصص أبونا تادرس يعقوب ملطي:\n' + st.url);
+    };
   };
-  const cancel = document.getElementById('spStoryCancel'); if(cancel) cancel.onclick = ()=>{ spEditStory = ''; renderSpirit(); };
-  body.querySelectorAll('[data-st-edit]').forEach(b=>b.onclick = ()=>{ spEditStory = b.dataset.stEdit; renderSpirit(); });
-  body.querySelectorAll('[data-st-del]').forEach(b=>b.onclick = async ()=>{
-    const st = spStories.find(x=>x.id === b.dataset.stDel);
-    if(!st || !confirm(`تحذف قصة "${st.title}"؟`)) return;
-    try{ await spLoadStories(true); spStories = spStories.filter(x=>x.id !== st.id); await window.storage.set(SP_STORIES_KEY, JSON.stringify(spStories), true);
-      auditPush({ area:'الغذاء اليومي', action:'حذف قصة', target: st.title, changes: [] }); renderSpirit(); }
-    catch(e){ alert('متحذفتش. جرّب تاني.'); }
-  });
+  if(tadrosText[st.slug]){ paint(`<div class="sp-read">${tadrosText[st.slug].map(t=>`<p>${escHtml(t)}</p>`).join('')}</div>`); return; }
+  paint('<div class="sp-empty" style="margin:10px 0;">جاري تحميل القصة…</div>');
+  const paras = await tadrosLoad(st);
+  if(req !== tadrosReq) return;
+  paint(paras ? `<div class="sp-read">${paras.map(t=>`<p>${escHtml(t)}</p>`).join('')}</div>`
+    : '<div class="sp-empty" style="margin:10px 0;">مقدرناش نعرض القصة جوه البرنامج دلوقتي. دوس على الزرار وهتفتحلك على موقع سانت تكلا.</div>');
 }
 document.querySelectorAll('#panel-spirit [data-sp]').forEach(b=>b.addEventListener('click', ()=>{ spTab = b.dataset.sp; spEditNote = ''; spEditStory = ''; renderSpirit(); }));
 document.getElementById('spPrevDay').addEventListener('click', ()=>{ spOffset--; renderSpirit(); });
