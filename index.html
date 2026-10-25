@@ -597,6 +597,12 @@ header .app-brand{font-size:1.12rem;margin-bottom:0;}
 header .app-brand .mean{letter-spacing:.04em;}
 header .app-brand::after{content:'';display:block;width:160px;height:12px;margin:7px auto 6px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='12' viewBox='0 0 160 12'%3E%3Cdefs%3E%3ClinearGradient id='a' x1='0' x2='1'%3E%3Cstop offset='0' stop-color='%23c9a227' stop-opacity='0'/%3E%3Cstop offset='1' stop-color='%23c9a227'/%3E%3C/linearGradient%3E%3ClinearGradient id='b' x1='1' x2='0'%3E%3Cstop offset='0' stop-color='%23c9a227' stop-opacity='0'/%3E%3Cstop offset='1' stop-color='%23c9a227'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='4' y='5.5' width='62' height='1' fill='url(%23a)'/%3E%3Crect x='94' y='5.5' width='62' height='1' fill='url(%23b)'/%3E%3Ccircle cx='70' cy='6' r='1.6' fill='%23c9a227'/%3E%3Ccircle cx='90' cy='6' r='1.6' fill='%23c9a227'/%3E%3Cpath d='M80 0.5 L85.5 6 L80 11.5 L74.5 6 Z' fill='none' stroke='%23e2c56a' stroke-width='1.2'/%3E%3Cpath d='M80 3.5 L82.5 6 L80 8.5 L77.5 6 Z' fill='%23e2c56a'/%3E%3C/svg%3E") center/contain no-repeat;}
 header h1{color:#fbf3dc;text-shadow:0 1px 2px rgba(0,0,0,.25);letter-spacing:.01em;}
+/* meeting name: words fade in one by one when the app opens, then a soft gold glow every 20 seconds */
+header h1 .hw{display:inline-block;animation:hdrWordIn .7s ease-out both;}
+@keyframes hdrWordIn{from{opacity:0;transform:translateY(10px);filter:blur(3px)}to{opacity:1;transform:none;filter:none}}
+header h1.glow{animation:hdrGlow 20s ease-in-out infinite;}
+@keyframes hdrGlow{0%,18%,100%{text-shadow:0 1px 2px rgba(0,0,0,.25)}9%{text-shadow:0 0 14px rgba(233,207,122,.7),0 0 28px rgba(233,207,122,.3),0 1px 2px rgba(0,0,0,.25)}}
+@media (prefers-reduced-motion:reduce){header h1 .hw,header h1.glow{animation:none;}}
 #userBox .user-name{color:#fdf8ec;}
 /* name + role sit in a small navy/gold label over the bottom of the photo, so the photo column mirrors the logo */
 #userBox .user-text{position:relative;z-index:2;margin-top:-16px;padding:3px 12px 4px;border-radius:12px;background:linear-gradient(135deg,#1b2440,#2a3558);border:1px solid rgba(201,162,39,.75);box-shadow:0 4px 12px rgba(0,0,0,.3);max-width:140px;}
@@ -2935,7 +2941,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '25-Oct-2026 E';
+const APP_VERSION = '25-Oct-2026 G';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -4869,6 +4875,15 @@ async function loadBrandingAndApply(){
   applyBranding(title, logo);
 }
 
+// header meeting name: words appear one by one (once per opening), then the 20-second glow starts
+function animateHeaderTitle(){
+  const h = document.querySelector('header h1');
+  if(!h || h.dataset.animated) return;
+  h.dataset.animated = '1';
+  const words = (h.textContent || '').trim().split(/\s+/);
+  h.innerHTML = words.map((w,i)=>`<span class="hw" style="animation-delay:${(i*0.22).toFixed(2)}s">${escHtml(w)}</span>`).join(' ');
+  setTimeout(()=>h.classList.add('glow'), words.length*220 + 800);
+}
 function applyBranding(title, logo){
   document.title = 'Ϣⲙϣⲉ · ' + title;
   document.querySelector('header h1').textContent = title;
@@ -5601,6 +5616,7 @@ function applyUserUI(){
   resetInactivityTimer();
   showWelcomeBanner();
   setTimeout(maybeShowNews, 1200);
+  animateHeaderTitle();
   document.getElementById('usersCard').style.display = isAdmin() ? 'block' : 'none';
   document.getElementById('permissionsCard').style.display = isAdmin() ? 'block' : 'none';
   document.getElementById('brandingCard').style.display = isAdmin() ? 'block' : 'none';
@@ -5668,7 +5684,7 @@ function startLiveClock(){
   if(liveClockInterval) return; // already running
   const update = ()=>{
     const now = new Date();
-    const time = now.toLocaleTimeString('ar-EG-u-nu-latn', {hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true});
+    const time = now.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true}); // e.g. 12:51:32 PM
     const date = now.toLocaleDateString('ar-EG-u-nu-latn', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
     // the time on top; under it one line: weekday + date — Coptic date
     document.getElementById('liveClock').textContent = time;
@@ -9164,7 +9180,7 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
-  { id: 'n11', d: '25-Oct-2026', text: 'أعلى البرنامج بقى متماثل: صورتك على اليمين واللوجو على الشمال بنفس الحجم ونفس الإطار الدهبي. وزراير 🔔 والخروج اتنقلت لسطر التاريخ والساعة، واللي بقى لونه نبيتي ودهبي. والتحية بقت باسمك الأول وإيموجي حسب الوقت ☀️🌙' },
+  { id: 'n11', d: '25-Oct-2026', text: 'أعلى البرنامج بقى متماثل: صورتك على اليمين واللوجو على الشمال بنفس الحجم ونفس الإطار الدهبي. وزراير 🔔 والخروج اتنقلت لسطر التاريخ والساعة، واللي بقى لونه نبيتي ودهبي. والتحية بقت باسمك الأول وإيموجي حسب الوقت ☀️🌙. واسم الاجتماع بيظهر كلمة كلمة وبيتوهج بالدهبي كل 20 ثانية ✨' },
   { id: 'n10', d: '25-Oct-2026', text: 'البوستر بقى بيتحفظ ويتبعت صورة JPG. ولما تختار متكلم متسجل وانت بتكتب الميعاد، بيظهر اسمه وصورته وتليفونه وكنيسته، والتليفون والكنيسة بيتكتبوا لوحدهم.' },
   { id: 'n9', d: '24-Oct-2026', text: 'الغذاء اليومي: القراءات وقصة اليوم بيتمسحوا من البرنامج أول ما يومهم يعدّي، عشان البرنامج يفضل خفيف.' },
   { id: 'n8', d: '24-Oct-2026', admin: true, text: '📚 قصة اليوم بتوصل للأدمن الأول: يقدر يعدّلها، وبعدين يدوس "موافقة ونشر للكل" عشان الخدام يشوفوها. قصص الـ3 أيام الجاية بتتجهز من بدري، وتقدر تراجعها بالأسهم.' },
