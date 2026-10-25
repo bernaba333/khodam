@@ -589,6 +589,7 @@ img.zoomable{cursor:zoom-in;}
 .user-box .ghost:hover{background:rgba(255,255,255,.18);}
 /* header in 3 columns: user photo (right) | Coptic name + meeting name (middle) | big logo (left) */
 header{display:grid;grid-template-columns:150px minmax(0,1fr) 150px;grid-template-areas:"user mid logo";align-items:center;}
+header{margin-bottom:10px;}
 header > .halo-mark{justify-self:center;box-sizing:border-box;margin-bottom:24px;} /* lines the logo up with the photo (the name label hangs under the photo) */
 header > .halo-mark{grid-area:logo;width:104px;height:104px;padding:3px;position:relative;z-index:1;box-shadow:0 0 0 2.5px var(--gold),0 0 0 7px rgba(255,255,255,.10),0 0 0 8px rgba(201,162,39,.35),0 8px 22px rgba(0,0,0,.30),0 0 26px rgba(233,207,122,.18);}
 /* middle column: thin gold side lines, bigger Coptic name, small gold ornament before the meeting name */
@@ -599,9 +600,9 @@ header .app-brand::after{content:'';display:block;width:160px;height:12px;margin
 header h1{color:#fbf3dc;text-shadow:0 1px 2px rgba(0,0,0,.25);letter-spacing:.01em;}
 /* meeting name: words fade in one by one when the app opens, then a soft gold glow every 20 seconds */
 header h1 .hw{display:inline-block;animation:hdrWordIn .7s ease-out both;}
-@keyframes hdrWordIn{from{opacity:0;transform:translateY(10px);filter:blur(3px)}to{opacity:1;transform:none;filter:none}}
-header h1.glow{animation:hdrGlow 20s ease-in-out infinite;}
-@keyframes hdrGlow{0%,18%,100%{text-shadow:0 1px 2px rgba(0,0,0,.25)}9%{text-shadow:0 0 14px rgba(233,207,122,.7),0 0 28px rgba(233,207,122,.3),0 1px 2px rgba(0,0,0,.25)}}
+@keyframes hdrWordIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+header h1.glow{animation:hdrGlow 3.6s ease-in-out 1;}
+@keyframes hdrGlow{0%,100%{text-shadow:0 1px 2px rgba(0,0,0,.25)}50%{text-shadow:0 0 14px rgba(233,207,122,.7),0 0 28px rgba(233,207,122,.3),0 1px 2px rgba(0,0,0,.25)}}
 @media (prefers-reduced-motion:reduce){header h1 .hw,header h1.glow{animation:none;}}
 #userBox .user-name{color:#fdf8ec;}
 /* name + role sit in a small navy/gold label over the bottom of the photo, so the photo column mirrors the logo */
@@ -623,7 +624,7 @@ header > div:not(.user-box){grid-area:mid;text-align:center;min-width:0;position
 #welcomeText{grid-area:greet;color:#fbf3dc !important;text-shadow:0 1px 2px rgba(0,0,0,.25);}
 .wb-mid{grid-area:mid;display:flex;flex-direction:column;align-items:center;gap:3px;}
 #copticDate{color:#e9cf7a !important;font-family:'Cairo',sans-serif !important;font-size:.85rem;font-weight:700;letter-spacing:.01em;text-align:center;}
-#liveClock{color:#fbf3dc !important;font-size:1.05rem;letter-spacing:.04em;padding:2px 16px;border-radius:999px;background:rgba(0,0,0,.22);border:1px solid rgba(201,162,39,.45);white-space:nowrap;justify-self:auto !important;}
+#liveClock{font-variant-numeric:tabular-nums;color:#fbf3dc !important;font-size:1.05rem;letter-spacing:.04em;padding:2px 16px;border-radius:999px;background:rgba(0,0,0,.22);border:1px solid rgba(201,162,39,.45);white-space:nowrap;justify-self:auto !important;}
 .wb-actions{grid-area:act;justify-self:end;display:flex;align-items:center;gap:6px;}
 .wb-actions .ghost{background:rgba(255,255,255,.08);color:#fdf8ec;border:1px solid rgba(233,207,122,.55);}
 .wb-actions .ghost:hover{background:rgba(233,207,122,.18);}
@@ -2941,7 +2942,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '25-Oct-2026 G';
+const APP_VERSION = '25-Oct-2026 H';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -4882,7 +4883,8 @@ function animateHeaderTitle(){
   h.dataset.animated = '1';
   const words = (h.textContent || '').trim().split(/\s+/);
   h.innerHTML = words.map((w,i)=>`<span class="hw" style="animation-delay:${(i*0.22).toFixed(2)}s">${escHtml(w)}</span>`).join(' ');
-  setTimeout(()=>h.classList.add('glow'), words.length*220 + 800);
+  const glow = ()=>{ if(document.hidden) return; h.classList.remove('glow'); void h.offsetWidth; h.classList.add('glow'); };
+  setTimeout(()=>{ glow(); setInterval(glow, 20000); }, words.length*220 + 800);
 }
 function applyBranding(title, logo){
   document.title = 'Ϣⲙϣⲉ · ' + title;
