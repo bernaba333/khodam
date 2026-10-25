@@ -618,16 +618,16 @@ header > div:not(.user-box){grid-area:mid;text-align:center;min-width:0;position
 #userAvatar .avatar, #userAvatar img{width:104px !important;height:104px !important;font-size:32px !important;}
 .user-box .user-name{font-size:.9rem;max-width:120px;overflow:hidden;text-overflow:ellipsis;line-height:1.3;}
 .user-box .user-role{font-size:.66rem;margin-top:0;line-height:1.2;}
-/* greeting / date / clock line: wine and gold, with the bell, settings and logout buttons on its left */
+/* greeting / date / clock line: full gold with a navy frame and navy text, with the bell, settings and logout buttons on its left */
 .welcome-banner{display:grid !important;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-areas:"greet mid act";align-items:center;gap:12px;
-  background:linear-gradient(135deg,#4a1823 0%,#6e2433 50%,#4a1823 100%) !important;border-color:rgba(201,162,39,.7) !important;color:#fbf3dc;padding:10px 16px !important;box-shadow:0 6px 18px rgba(74,24,35,.25);}
-#welcomeText{grid-area:greet;color:#fbf3dc !important;text-shadow:0 1px 2px rgba(0,0,0,.25);}
+  background:linear-gradient(135deg,#b08a2e 0%,#e2c56a 50%,#b08a2e 100%) !important;border:2px solid #1b2440 !important;outline:1px solid rgba(27,36,64,.45) !important;outline-offset:-7px !important;color:#1b2440;padding:10px 16px !important;box-shadow:0 6px 18px rgba(27,36,64,.25);}
+#welcomeText{grid-area:greet;color:#1b2440 !important;text-shadow:0 1px 0 rgba(255,250,235,.45);}
 .wb-mid{grid-area:mid;display:flex;flex-direction:column;align-items:center;gap:3px;}
-#copticDate{color:#e9cf7a !important;font-family:'Cairo',sans-serif !important;font-size:.85rem;font-weight:700;letter-spacing:.01em;text-align:center;}
-#liveClock{font-variant-numeric:tabular-nums;color:#fbf3dc !important;font-size:1.05rem;letter-spacing:.04em;padding:2px 16px;border-radius:999px;background:rgba(0,0,0,.22);border:1px solid rgba(201,162,39,.45);white-space:nowrap;justify-self:auto !important;}
+#copticDate{color:#1b2440 !important;font-family:'Cairo',sans-serif !important;font-size:.85rem;font-weight:700;letter-spacing:.01em;text-align:center;}
+#liveClock{font-variant-numeric:tabular-nums;color:#fbf3dc !important;font-size:1.05rem;letter-spacing:.04em;padding:2px 16px;border-radius:999px;background:linear-gradient(135deg,#1b2440,#2c3a63);border:1px solid rgba(27,36,64,.6);box-shadow:inset 0 0 0 1px rgba(233,207,122,.35);white-space:nowrap;justify-self:auto !important;}
 .wb-actions{grid-area:act;justify-self:end;display:flex;align-items:center;gap:6px;}
-.wb-actions .ghost{background:rgba(255,255,255,.08);color:#fdf8ec;border:1px solid rgba(233,207,122,.55);}
-.wb-actions .ghost:hover{background:rgba(233,207,122,.18);}
+.wb-actions .ghost{background:rgba(255,250,235,.35);color:#1b2440;border:1px solid rgba(27,36,64,.55);}
+.wb-actions .ghost:hover{background:rgba(255,250,235,.6);}
 #logoutBtn{padding:0 12px;height:32px;}
 
 /* ---- team chat ---- */
@@ -1071,7 +1071,7 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
   .user-box .user-name{font-size:.72rem !important;max-width:72px;}
   .user-box .user-role{font-size:.58rem !important;margin-top:0 !important;}
   .welcome-banner{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"greet act" "mid mid";gap:6px 10px;padding:8px 12px !important;}
-  .wb-mid{gap:4px;padding-top:7px;border-top:1px solid rgba(201,162,39,.35);}
+  .wb-mid{gap:4px;padding-top:7px;border-top:1px solid rgba(27,36,64,.3);}
   .welcome-banner #liveClock{font-size:.95rem !important;}
   .welcome-banner #copticDate{font-size:.76rem !important;}
   .wb-actions{gap:5px;}
@@ -2942,7 +2942,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '25-Oct-2026 H';
+const APP_VERSION = '25-Oct-2026 I';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -9182,7 +9182,7 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
-  { id: 'n11', d: '25-Oct-2026', text: 'أعلى البرنامج بقى متماثل: صورتك على اليمين واللوجو على الشمال بنفس الحجم ونفس الإطار الدهبي. وزراير 🔔 والخروج اتنقلت لسطر التاريخ والساعة، واللي بقى لونه نبيتي ودهبي. والتحية بقت باسمك الأول وإيموجي حسب الوقت ☀️🌙. واسم الاجتماع بيظهر كلمة كلمة وبيتوهج بالدهبي كل 20 ثانية ✨' },
+  { id: 'n11', d: '25-Oct-2026', text: 'أعلى البرنامج بقى متماثل: صورتك على اليمين واللوجو على الشمال بنفس الحجم ونفس الإطار الدهبي. وزراير 🔔 والخروج اتنقلت لسطر التاريخ والساعة، واللي بقى دهبي بإطار كحلي. والتحية بقت باسمك الأول وإيموجي حسب الوقت ☀️🌙. واسم الاجتماع بيظهر كلمة كلمة وبيتوهج بالدهبي كل 20 ثانية ✨' },
   { id: 'n10', d: '25-Oct-2026', text: 'البوستر بقى بيتحفظ ويتبعت صورة JPG. ولما تختار متكلم متسجل وانت بتكتب الميعاد، بيظهر اسمه وصورته وتليفونه وكنيسته، والتليفون والكنيسة بيتكتبوا لوحدهم.' },
   { id: 'n9', d: '24-Oct-2026', text: 'الغذاء اليومي: القراءات وقصة اليوم بيتمسحوا من البرنامج أول ما يومهم يعدّي، عشان البرنامج يفضل خفيف.' },
   { id: 'n8', d: '24-Oct-2026', admin: true, text: '📚 قصة اليوم بتوصل للأدمن الأول: يقدر يعدّلها، وبعدين يدوس "موافقة ونشر للكل" عشان الخدام يشوفوها. قصص الـ3 أيام الجاية بتتجهز من بدري، وتقدر تراجعها بالأسهم.' },
