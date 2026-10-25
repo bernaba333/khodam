@@ -702,6 +702,22 @@ html[data-theme="dark"] #alertsOverlay .al-item.read.new{background:#1e3a22;}
 #alertsOverlay .al-del{background:none;border:none;color:inherit;cursor:pointer;text-decoration:underline;font-size:.72rem;padding:0;}
 #alertsOverlay .al-foot{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--line-soft);}
 #alertsOverlay .al-foot button{flex:1;}
+.chat-msg .rx-add{background:none;border:none;color:inherit;opacity:.7;cursor:pointer;font-size:.8rem;padding:0 2px;line-height:1;filter:grayscale(.3);}
+.chat-msg .rx{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;}
+.chat-msg .rx button{display:inline-flex;align-items:center;gap:3px;border:1px solid var(--line-soft);background:var(--card);color:var(--ink);border-radius:999px;padding:1px 7px;font-family:inherit;font-size:.78rem;line-height:1.5;cursor:pointer;}
+.chat-msg .rx button b{font-size:.68rem;font-weight:700;color:var(--text-2);}
+.chat-msg .rx button.on{border-color:var(--gold);background:rgba(201,162,39,.2);}
+.chat-msg.mine .rx button{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.25);color:#fdf8ec;}
+.chat-msg.mine .rx button b{color:#fdf8ec;}
+.chat-msg.mine .rx button.on{background:rgba(201,162,39,.45);border-color:var(--gold);}
+.chat-msg .bub.rx-pick{box-shadow:0 0 0 2px var(--gold);}
+#chatRxPicker{position:absolute;z-index:5;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.22);padding:6px;max-width:calc(100% - 16px);direction:rtl;}
+#chatRxPicker .rxp-row{display:flex;gap:2px;}
+#chatRxPicker .rxp-row button{background:none;border:none;font-size:1.45rem;width:40px;height:40px;border-radius:50%;cursor:pointer;padding:0;line-height:1;transition:transform .12s;}
+#chatRxPicker .rxp-row button:hover{transform:scale(1.18);background:var(--cream-dark);}
+#chatRxPicker .rxp-row button.on{background:rgba(201,162,39,.25);box-shadow:0 0 0 1.5px var(--gold) inset;}
+#chatRxPicker .rxp-who{border-top:1px solid var(--line-soft);margin-top:6px;padding:6px 4px 2px;font-size:.74rem;color:var(--text-2);max-height:110px;overflow:auto;line-height:1.7;}
+#chatRxPicker .rxp-who div{display:flex;gap:6px;}
 .chat-msg .del{background:none;border:none;color:inherit;opacity:.6;cursor:pointer;font-size:.62rem;padding:0;text-decoration:underline;}
 #chatPanel .avatar{background:linear-gradient(135deg,#e9cf7a,var(--gold)) !important;color:#1b2440 !important;}
 html[data-theme="dark"] .chat-msg.mine .bub{background:#34508a;}
@@ -2147,6 +2163,9 @@ setInterval(()=>{ if(alertLsGet(ALERT_Q_KEY, []).length) flushAlerts(); }, 60000
   }, err=>{ console.error('chat watch failed', err); if(onErr) onErr(err); });
   fbStore.chatSend = m=> db.collection('chat').add(m);
   fbStore.chatDelete = id=> db.collection('chat').doc(id).delete();
+  // reactions: re.<name> = emoji (one per person); no emoji removes it
+  fbStore.chatReact = (id, name, emoji)=> db.collection('chat').doc(id).update(
+    new firebase.firestore.FieldPath('re', name), emoji || firebase.firestore.FieldValue.delete());
   fbStore.chatPruneOld = async before=>{
     const snap = await db.collection('chat').where('at','<',before).limit(50).get();
     snap.docs.forEach(d=>d.ref.delete().catch(()=>{}));
@@ -2942,7 +2961,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '25-Oct-2026 I';
+const APP_VERSION = '25-Oct-2026 J';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -9075,6 +9094,59 @@ function chatDay(ts){
   if(d.toDateString() === y.toDateString()) return 'امبارح';
   return d.toLocaleDateString('ar-EG', { weekday:'long', day:'numeric', month:'long' });
 }
+// reactions: tap 😊 (or long-press / double-click a message) for the picker; one reaction per person
+const CHAT_RX = ['👍', '❤️', '😂', '🙏', '😮', '😢'];
+let chatRxFor = '';
+function chatRxList(m){
+  const re = m && m.re && typeof m.re === 'object' ? m.re : {};
+  return Object.keys(re).filter(n=>re[n]).map(n=>({ name: n, e: String(re[n]) }));
+}
+function chatRxHtml(m){
+  const list = chatRxList(m); if(!list.length) return '';
+  const me = currentUser ? currentUser.name : '';
+  const groups = [];
+  list.forEach(r=>{ let g = groups.find(x=>x.e === r.e); if(!g){ g = { e: r.e, names: [] }; groups.push(g); } g.names.push(r.name); });
+  groups.sort((a,b)=>b.names.length - a.names.length);
+  return `<div class="rx">${groups.map(g=>`<button type="button" class="${g.names.includes(me) ? 'on' : ''}" data-id="${escHtml(m.id)}" data-e="${escHtml(g.e)}" title="${escHtml(g.names.join('، '))}">${escHtml(g.e)}${g.names.length > 1 ? `<b>${g.names.length}</b>` : ''}</button>`).join('')}</div>`;
+}
+function chatRxClose(){
+  chatRxFor = '';
+  const pk = document.getElementById('chatRxPicker'); if(pk) pk.remove();
+  document.querySelectorAll('#chatMsgs .bub.rx-pick').forEach(b=>b.classList.remove('rx-pick'));
+}
+function chatRxOpen(id, refresh){
+  const m = chatMsgsCache.find(x=>x.id === id);
+  const row = [...document.querySelectorAll('#chatMsgs .chat-msg')].find(el=>el.dataset.mid === id);
+  if(!m || !row){ chatRxClose(); return; }
+  const panel = document.getElementById('chatPanel');
+  let pk = document.getElementById('chatRxPicker');
+  if(!pk){ pk = document.createElement('div'); pk.id = 'chatRxPicker'; panel.appendChild(pk); }
+  chatRxFor = id;
+  document.querySelectorAll('#chatMsgs .bub.rx-pick').forEach(b=>b.classList.remove('rx-pick'));
+  const bub = row.querySelector('.bub'); bub.classList.add('rx-pick');
+  const me = currentUser ? currentUser.name : '';
+  const list = chatRxList(m), mineE = (list.find(r=>r.name === me) || {}).e || '';
+  pk.innerHTML = `<div class="rxp-row">${CHAT_RX.map(e=>`<button type="button" class="${e === mineE ? 'on' : ''}" data-e="${e}" aria-label="${e}">${e}</button>`).join('')}</div>`
+    + (list.length ? `<div class="rxp-who">${list.map(r=>`<div><span>${escHtml(r.e)}</span><span>${r.name === me ? 'إنت' : escHtml(r.name)}</span></div>`).join('')}</div>` : '');
+  // place it just above the message (or below it when there's no room)
+  const pr = panel.getBoundingClientRect(), br = bub.getBoundingClientRect();
+  const w = pk.offsetWidth, h = pk.offsetHeight;
+  let top = br.top - pr.top - h - 6;
+  if(top < 50) top = br.bottom - pr.top + 6;
+  top = Math.max(8, Math.min(top, pr.height - h - 8));
+  const mine = row.classList.contains('mine');
+  let left = mine ? br.right - pr.left - w : br.left - pr.left;
+  left = Math.max(8, Math.min(left, pr.width - w - 8));
+  pk.style.top = top + 'px'; pk.style.left = left + 'px';
+}
+async function chatRxSet(id, emoji){
+  const m = chatMsgsCache.find(x=>x.id === id);
+  if(!m || !currentUser || !window.storage.chatReact) return;
+  const cur = m.re && m.re[currentUser.name];
+  const next = cur === emoji ? '' : emoji;
+  try{ await window.storage.chatReact(id, currentUser.name, next); }
+  catch(err){ alert('الرياكت متبعتش. اتأكد من النت وجرّب تاني.'); }
+}
 function renderChatMsgs(){
   const box = document.getElementById('chatMsgs');
   if(!chatIsOpen()) return;
@@ -9090,17 +9162,19 @@ function renderChatMsgs(){
     const canDel = mine || isAdmin();
     const dm = m.kind === 'dm';
     const dmTag = !dm ? '' : mine ? `<div class="dmtag" data-to="${escHtml(m.to)}" title="رد عليه برسالة خاصة">🔒 رسالة خاصة لـ ${escHtml(m.to)}</div>` : `<div class="dmtag">🔒 رسالة خاصة ليك</div>`;
-    html += `<div class="chat-msg${mine ? ' mine' : ''}${m.kind === 'alert' ? ' alert' : ''}${dm ? ' dm' : ''}">
+    html += `<div class="chat-msg${mine ? ' mine' : ''}${m.kind === 'alert' ? ' alert' : ''}${dm ? ' dm' : ''}" data-mid="${escHtml(m.id)}">
       ${mine ? '' : avatarHtml(per, 30)}
       <div class="bub">
         ${mine ? '' : `<div class="by">${escHtml(m.by)}${tag ? `<small>${tag}</small>` : ''}</div>`}
         ${dmTag}
         <div class="txt">${escHtml(m.text)}</div>
-        <div class="tm">${chatTime(m.at||Date.now())}${canDel ? `<button type="button" class="del" data-id="${escHtml(m.id)}">مسح</button>` : ''}</div>
+        <div class="tm">${chatTime(m.at||Date.now())}<button type="button" class="rx-add" data-id="${escHtml(m.id)}" title="رياكت" aria-label="رياكت">😊</button>${canDel ? `<button type="button" class="del" data-id="${escHtml(m.id)}">مسح</button>` : ''}</div>
+        ${chatRxHtml(m)}
       </div>
     </div>`;
   });
   box.innerHTML = html;
+  if(chatRxFor) chatRxOpen(chatRxFor, true);
   if(nearBottom || box.dataset.first !== '1'){ box.scrollTop = box.scrollHeight; box.dataset.first = '1'; }
   chatMarkSeen();
 }
@@ -9182,6 +9256,7 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
+  { id: 'n12', d: '25-Oct-2026', text: '💬 تقدر تعمل رياكت على أي رسالة في الشات: دوس 😊 جنب وقت الرسالة (أو دوس على الرسالة ضغطة طويلة على الموبايل، أو دبل كليك على الكمبيوتر) واختار 👍 ❤️ 😂 🙏 😮 😢. الرياكتات بتظهر تحت الرسالة، ولما تفتح القايمة تشوف مين عمل إيه. دوس على نفس الرياكت تاني عشان تشيله.' },
   { id: 'n11', d: '25-Oct-2026', text: 'أعلى البرنامج بقى متماثل: صورتك على اليمين واللوجو على الشمال بنفس الحجم ونفس الإطار الدهبي. وزراير 🔔 والخروج اتنقلت لسطر التاريخ والساعة، واللي بقى دهبي بإطار كحلي. والتحية بقت باسمك الأول وإيموجي حسب الوقت ☀️🌙. واسم الاجتماع بيظهر كلمة كلمة وبيتوهج بالدهبي كل 20 ثانية ✨' },
   { id: 'n10', d: '25-Oct-2026', text: 'البوستر بقى بيتحفظ ويتبعت صورة JPG. ولما تختار متكلم متسجل وانت بتكتب الميعاد، بيظهر اسمه وصورته وتليفونه وكنيسته، والتليفون والكنيسة بيتكتبوا لوحدهم.' },
   { id: 'n9', d: '24-Oct-2026', text: 'الغذاء اليومي: القراءات وقصة اليوم بيتمسحوا من البرنامج أول ما يومهم يعدّي، عشان البرنامج يفضل خفيف.' },
@@ -9328,13 +9403,36 @@ async function openNewsReview(daily){
     }catch(err){ save.disabled = false; msg.textContent = 'محصلش حفظ، جرّب تاني.'; }
   });
 }
-function closeChat(){ document.getElementById('chatPanel').style.display = 'none'; chatTypingStop(); renderChatBadge(); }
+function closeChat(){ chatRxClose(); document.getElementById('chatPanel').style.display = 'none'; chatTypingStop(); renderChatBadge(); }
 document.getElementById('chatFab').addEventListener('click', ()=>{ chatIsOpen() ? closeChat() : openChat(); });
 document.getElementById('chatCloseBtn').addEventListener('click', closeChat);
 document.getElementById('chatTo').addEventListener('change', ()=>{ syncChatTo(); chatTypingStop(); document.getElementById('chatInput').focus(); });
 document.getElementById('chatInput').addEventListener('input', e=>{ e.target.value.trim() ? chatTypingPing() : chatTypingStop(); });
 document.getElementById('chatInput').addEventListener('blur', ()=>setTimeout(()=>{ if(!document.getElementById('chatInput').value.trim()) chatTypingStop(); }, 200));
+document.getElementById('chatPanel').addEventListener('click', e=>{
+  const b = e.target.closest('#chatRxPicker button[data-e]');
+  if(b){ const id = chatRxFor; chatRxClose(); chatRxSet(id, b.dataset.e); return; }
+  if(Date.now() - chatRxPressAt < 700) return;  // the click that ends a long-press
+  if(chatRxFor && !e.target.closest('#chatRxPicker') && !e.target.closest('.rx-add')) chatRxClose();
+});
+document.getElementById('chatMsgs').addEventListener('scroll', ()=>{ if(chatRxFor) chatRxClose(); }, { passive: true });
+document.getElementById('chatMsgs').addEventListener('dblclick', e=>{
+  const row = e.target.closest('.chat-msg[data-mid]'); if(!row || e.target.closest('button')) return;
+  e.preventDefault(); chatRxOpen(row.dataset.mid);
+});
+let chatRxPress = null, chatRxPressAt = 0;
+document.getElementById('chatMsgs').addEventListener('touchstart', e=>{
+  const row = e.target.closest('.chat-msg[data-mid]'); if(!row || e.target.closest('button')) return;
+  clearTimeout(chatRxPress);
+  chatRxPress = setTimeout(()=>{ chatRxPress = null; chatRxPressAt = Date.now(); if(navigator.vibrate) try{ navigator.vibrate(15); }catch(err){} chatRxOpen(row.dataset.mid); }, 480);
+}, { passive: true });
+document.getElementById('chatMsgs').addEventListener('contextmenu', e=>{ if(Date.now() - chatRxPressAt < 1500) e.preventDefault(); });
+['touchend', 'touchmove', 'touchcancel'].forEach(ev=>document.getElementById('chatMsgs').addEventListener(ev, ()=>{ clearTimeout(chatRxPress); chatRxPress = null; }, { passive: true }));
 document.getElementById('chatMsgs').addEventListener('click', async e=>{
+  const add = e.target.closest('.rx-add');
+  if(add){ chatRxFor === add.dataset.id ? chatRxClose() : chatRxOpen(add.dataset.id); return; }
+  const chip = e.target.closest('.rx button[data-e]');
+  if(chip){ chatRxSet(chip.dataset.id, chip.dataset.e); return; }
   const dt = e.target.closest('.dmtag[data-to]');
   if(dt && isAdmin()){ const sel = document.getElementById('chatTo'); sel.value = dt.dataset.to; if(sel.value === dt.dataset.to){ syncChatTo(); document.getElementById('chatInput').focus(); } return; }
   const btn = e.target.closest('.del'); if(!btn) return;
