@@ -851,6 +851,9 @@ html[data-theme="dark"] .chat-msg.mine .bub{background:linear-gradient(150deg,#3
   #chatFab{left:14px;bottom:calc(82px + env(safe-area-inset-bottom,0px));width:54px;height:54px;}
   #chatPanel,#chatPanel.on-right{left:8px;right:8px;width:auto;max-width:none;top:calc(8px + env(safe-area-inset-top,0px));bottom:calc(8px + env(safe-area-inset-bottom,0px));height:auto;}
   body.chat-open #chatFab{display:none !important;}
+  /* the bottom tabs bar sits above everything; hide it while the chat is open so the typing box shows */
+  body.chat-open .bottom-nav{display:none !important;}
+  #chatPanel{z-index:5050;}
 }
 @media print{ #chatFab, #chatPanel{display:none !important;} }
 
@@ -3087,7 +3090,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '26-Oct-2026 B';
+const APP_VERSION = '26-Oct-2026 C';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -9586,6 +9589,7 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
+  { id: 'n15', d: '26-Oct-2026', text: '💬 على الموبايل: خانة الكتابة في الشات كانت مستخبية تحت شريط الأزرار اللي تحت، دلوقتي الشات بياخد الشاشة كلها وخانة الكتابة باينة.' },
   { id: 'n14', d: '26-Oct-2026', text: 'أعلى البرنامج: اللوجو بقى على اليمين وصورتك على الشمال. واسم الاجتماع بقى بيدخل كلمة كلمة بالدهبي ويتوهج، أول ما تفتح وبعدين كل 5 دقايق ✨' },
   { id: 'n13', d: '26-Oct-2026', text: '💬 الشات اتجدد بشكل كحلي ودهبي، وأيقونته بقت بتنبض لما توصل رسالة وبيطلع جنبها أول كلامها، وتقدر تسحبها بصباعك لأي مكان على الشاشة. وفيه كمان: ↩️ رد على رسالة معينة، و@ تعمل منشن لحد فيوصله تنبيه دهبي، وأرقام الموبايل في الرسايل بتتصل بضغطة، و📌 الأدمن يثبت رسالة مهمة فوق، و✓✓ صور صغيرة تحت رسالتك بمين شافها، والشات بيفتح عند أول رسالة ما قريتهاش، وردود سريعة (آمين 🙏، تمام 👍…)، و🔍 بحث في الرسايل.' },
   { id: 'n12', d: '25-Oct-2026', text: '💬 تقدر تعمل رياكت على أي رسالة في الشات: دوس 😊 جنب وقت الرسالة (أو دوس على الرسالة ضغطة طويلة على الموبايل، أو دبل كليك على الكمبيوتر) واختار 👍 ❤️ 😂 🙏 😮 😢. الرياكتات بتظهر تحت الرسالة، ولما تفتح القايمة تشوف مين عمل إيه. دوس على نفس الرياكت تاني عشان تشيله.' },
