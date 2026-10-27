@@ -620,8 +620,14 @@ header > div:not(.user-box){grid-area:mid;text-align:center;min-width:0;position
 /* greeting / date / clock line: full gold with a navy frame and navy text, with the bell, settings and logout buttons on its left */
 .welcome-banner{display:grid !important;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-areas:"greet mid act";align-items:center;gap:12px;
   background:linear-gradient(135deg,#d4b24f 0%,#f0dc95 50%,#d4b24f 100%) !important;border:2px solid #1b2440 !important;outline:1px solid rgba(27,36,64,.45) !important;outline-offset:-7px !important;color:#1b2440;padding:10px 16px !important;box-shadow:0 6px 18px rgba(27,36,64,.25);}
+/* the time-of-day emoji sits in a small navy circle so it shows on the gold */
+#welcomeText .wb-emoji{display:inline-flex;align-items:center;justify-content:center;width:1.9em;height:1.9em;margin-inline-start:4px;vertical-align:middle;border-radius:50%;background:radial-gradient(circle at 35% 30%,#2c3a63,#1b2440);box-shadow:0 0 0 1.5px #f0dc95,0 2px 6px rgba(14,22,48,.35);font-size:.95em;line-height:1;text-shadow:none;}
 #welcomeText{grid-area:greet;font-family:'Cairo',sans-serif !important;font-weight:800 !important;font-size:1.02rem;color:#0e1630 !important;text-shadow:0 1px 0 rgba(255,250,235,.6);}
 .wb-mid{grid-area:mid;display:flex;flex-direction:column;align-items:center;gap:3px;}
+/* weather under the date: emoji + temperature, refreshed every 30 minutes */
+#weatherLine{display:inline-flex;align-items:center;gap:6px;font-family:'Cairo',sans-serif;font-weight:800;font-size:.85rem;color:#0e1630;padding:1px 12px 1px 4px;border-radius:999px;background:rgba(255,250,235,.55);border:1px solid rgba(27,36,64,.4);direction:rtl;}
+#weatherLine .wx-emoji{display:inline-flex;align-items:center;justify-content:center;width:1.7em;height:1.7em;border-radius:50%;background:radial-gradient(circle at 35% 30%,#2c3a63,#1b2440);box-shadow:0 0 0 1.5px #f0dc95;font-size:.9em;line-height:1;}
+#weatherLine .wx-t{direction:ltr;font-variant-numeric:tabular-nums;}
 #copticDate{color:#0e1630 !important;font-family:'Cairo',sans-serif !important;font-size:.9rem;font-weight:800;text-shadow:0 1px 0 rgba(255,250,235,.55);letter-spacing:.01em;text-align:center;}
 #liveClock{font-variant-numeric:tabular-nums;color:#fbf3dc !important;font-size:1.05rem;letter-spacing:.04em;padding:2px 16px;border-radius:999px;background:linear-gradient(135deg,#1b2440,#2c3a63);border:1px solid rgba(27,36,64,.6);box-shadow:inset 0 0 0 1px rgba(233,207,122,.35);white-space:nowrap;justify-self:auto !important;}
 .wb-actions{grid-area:act;justify-self:end;display:flex;align-items:center;gap:6px;}
@@ -866,6 +872,16 @@ html[data-theme="dark"] .chat-msg:not(.mine) .txt{color:#f1f3f8;}
 .chat-form input{font-size:1rem;}
 .chat-typing{font-size:.82rem;}
 .chat-day{font-size:.78rem;}
+/* clearer emoji in the chat: full color, bigger (user asked 27-Oct) */
+.chat-msg .tm button.rx-add,.chat-msg .rx button,#chatRxPicker .rxp-row button{font-family:"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",'Cairo',sans-serif;}
+.chat-msg .tm button.rx-add{filter:none;opacity:1;font-size:1.25rem;padding:0 3px;}
+.chat-msg .rx{gap:5px;margin-top:5px;}
+.chat-msg .rx button{font-size:1.15rem;padding:2px 9px;line-height:1.4;}
+.chat-msg .rx button b{font-size:.8rem;font-family:'Cairo',sans-serif;color:var(--ink);}
+html[data-theme="dark"] .chat-msg .rx button b,.chat-msg.mine .rx button b{color:#f3dc8c;}
+#chatRxPicker .rxp-row button{font-size:1.9rem;width:48px;height:48px;}
+#chatRxPicker .rxp-who{font-size:.86rem;}
+#chatRxPicker .rxp-who span:first-child{font-size:1.1rem;}
 @media (max-width:760px){
   #chatFab{left:14px;bottom:calc(82px + env(safe-area-inset-bottom,0px));width:54px;height:54px;}
   #chatPanel,#chatPanel.on-right{left:8px;right:8px;width:auto;max-width:none;top:calc(8px + env(safe-area-inset-top,0px));bottom:calc(8px + env(safe-area-inset-bottom,0px));height:auto;}
@@ -1337,6 +1353,7 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
   <div class="wb-mid">
     <div id="liveClock"></div>
     <div id="copticDate"></div>
+    <div id="weatherLine" style="display:none;"></div>
   </div>
   <div class="wb-actions">
       <button class="ghost" id="alertBellBtn" title="التنبيهات" aria-label="التنبيهات" style="display:none;">🔔<span id="alertBellBadge" style="display:none;"></span></button>
@@ -3110,7 +3127,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '27-Oct-2026 A';
+const APP_VERSION = '27-Oct-2026 E';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -5833,7 +5850,7 @@ function showWelcomeBanner(){
   const first = String(currentUser.name || '').trim().split(/\s+/)[0] || currentUser.name;
   const h = new Date().getHours();
   const emoji = h < 12 ? '☀️' : h < 17 ? '🌤️' : '🌙';
-  document.getElementById('welcomeText').textContent = `${greetingByTime()} يا ${first} ${emoji}`;
+  document.getElementById('welcomeText').innerHTML = `${escHtml(greetingByTime())} يا ${escHtml(first)} <span class="wb-emoji" aria-hidden="true">${emoji}</span>`;
   banner.style.display = 'flex';
   startLiveClock();
 }
@@ -5856,7 +5873,77 @@ function copticDateStr(d){
 })();
 
 let liveClockInterval = null;
+// weather (Open-Meteo, free, no key) for where the device is (asked once; Cairo if refused); cached 30 min
+const WX_DEFAULT = { name: 'القاهرة', lat: 30.0444, lon: 31.2357 };
+let WX_PLACE = WX_DEFAULT;
+function wxLoadPlace(){
+  try{ const p = JSON.parse(localStorage.getItem('khodam_wx_place') || 'null'); if(p && p.lat) WX_PLACE = p; }catch(e){}
+}
+// find the device's city: location permission (once), then its Arabic name; keeps the last place for 6 hours
+function wxLocate(){
+  return new Promise(resolve=>{
+    let saved = null;
+    try{ saved = JSON.parse(localStorage.getItem('khodam_wx_place') || 'null'); }catch(e){}
+    if(saved && saved.at && Date.now() - saved.at < 6*3600*1000) return resolve(false);
+    if(!navigator.geolocation) return resolve(false);
+    navigator.geolocation.getCurrentPosition(async pos=>{
+      const lat = +pos.coords.latitude.toFixed(3), lon = +pos.coords.longitude.toFixed(3);
+      let name = 'مكانك';
+      try{
+        const r = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=ar`);
+        const j = await r.json();
+        name = j.city || j.locality || j.principalSubdivision || name;
+      }catch(e){}
+      const moved = !saved || Math.abs(saved.lat - lat) > 0.05 || Math.abs(saved.lon - lon) > 0.05;
+      WX_PLACE = { name, lat, lon, at: Date.now() };
+      try{ localStorage.setItem('khodam_wx_place', JSON.stringify(WX_PLACE)); }catch(e){}
+      resolve(moved);
+    }, ()=>resolve(false), { maximumAge: 3600*1000, timeout: 15000 });
+  });
+}
+let wxTimer = null;
+function wxEmoji(code, day){
+  if(code === 0) return day ? '☀️' : '🌙';
+  if(code <= 2) return day ? '🌤️' : '☁️';
+  if(code === 3) return '☁️';
+  if(code === 45 || code === 48) return '🌫️';
+  if(code >= 95) return '⛈️';
+  if((code >= 71 && code <= 77) || code === 85 || code === 86) return '❄️';
+  if(code >= 80) return '🌦️';
+  if(code >= 51) return '🌧️';
+  return '🌡️';
+}
+function wxShow(d){
+  const el = document.getElementById('weatherLine');
+  if(!el || !d) return;
+  el.innerHTML = `<span class="wx-emoji" aria-hidden="true">${wxEmoji(d.code, d.day)}</span><span class="wx-t">${Math.round(d.temp)}°C</span><span>${escHtml(d.place || WX_PLACE.name)}</span>`;
+  el.title = 'الجو دلوقتي';
+  el.style.display = 'inline-flex';
+}
+function wxShowName(){ try{ const c = JSON.parse(localStorage.getItem('khodam_wx') || 'null'); if(c) wxShow(c); }catch(e){} }
+async function wxUpdate(force){
+  let cached = null;
+  try{ cached = JSON.parse(localStorage.getItem('khodam_wx') || 'null'); }catch(e){}
+  if(cached) wxShow(cached);
+  if(!force && cached && cached.lat === WX_PLACE.lat && cached.lon === WX_PLACE.lon && Date.now() - cached.at < 30*60*1000) return;
+  try{
+    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${WX_PLACE.lat}&longitude=${WX_PLACE.lon}&current=temperature_2m,weather_code,is_day&timezone=auto`);
+    if(!r.ok) return;
+    const j = await r.json(), c = j && j.current;
+    if(!c || typeof c.temperature_2m !== 'number') return;
+    const d = { temp: c.temperature_2m, code: c.weather_code, day: c.is_day === 1, at: Date.now(), lat: WX_PLACE.lat, lon: WX_PLACE.lon, place: WX_PLACE.name };
+    try{ localStorage.setItem('khodam_wx', JSON.stringify(d)); }catch(e){}
+    wxShow(d);
+  }catch(e){ /* offline: keep the last reading, or nothing */ }
+}
+function startWeather(){
+  wxLoadPlace();
+  wxUpdate(false);
+  wxLocate().then(moved=>{ if(moved) wxUpdate(true); else if(WX_PLACE !== WX_DEFAULT) wxShowName(); });
+  if(!wxTimer) wxTimer = setInterval(()=>wxUpdate(true), 30*60*1000);
+}
 function startLiveClock(){
+  try{ startWeather(); }catch(e){}
   if(liveClockInterval) return; // already running
   const update = ()=>{
     const now = new Date();
@@ -9609,6 +9696,9 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
+  { id: 'n19', d: '27-Oct-2026', text: 'تحت التاريخ بقت تظهر درجة الحرارة وإيموجي الجو (☀️ 🌤️ ☁️ 🌧️ 🌙)، وبتتحدث لوحدها كل نص ساعة. وبتعرض جو المدينة اللي إنت فيها لو سمحت للبرنامج يعرف مكانك، وإلا جو القاهرة.' },
+  { id: 'n18', d: '27-Oct-2026', text: 'إيموجي التحية (☀️ 🌤️ 🌙) بقى جوه دايرة كحلي صغيرة، علشان يبان كويس على السطر الدهبي.' },
+  { id: 'n17', d: '27-Oct-2026', text: '💬 الإيموجي في الشات بقى أكبر وألوانه أوضح: زرار 😊 والرياكتات تحت الرسايل وقايمة اختيار الرياكت.' },
   { id: 'n17', d: '27-Oct-2026', text: 'سطر الساعة والتاريخ بقى أوضح: الكلام أغمق وأتقل، وزرار الخروج والجرس بقوا باينين أكتر على الدهبي.' },
   { id: 'n16', d: '27-Oct-2026', text: '💬 خط الشات بقى أكبر وأوضح: الرسايل والأسماء والوقت والردود السريعة وخانة الكتابة.' },
   { id: 'n15', d: '26-Oct-2026', text: '💬 على الموبايل: خانة الكتابة في الشات كانت مستخبية تحت شريط الأزرار اللي تحت، دلوقتي الشات بياخد الشاشة كلها وخانة الكتابة باينة.' },
