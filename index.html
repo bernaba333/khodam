@@ -619,13 +619,14 @@ header > div:not(.user-box){grid-area:mid;text-align:center;min-width:0;position
 .user-box .user-role{font-size:.66rem;margin-top:0;line-height:1.2;}
 /* greeting / date / clock line: full gold with a navy frame and navy text, with the bell, settings and logout buttons on its left */
 .welcome-banner{display:grid !important;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-areas:"greet mid act";align-items:center;gap:12px;
-  background:linear-gradient(135deg,#b08a2e 0%,#e2c56a 50%,#b08a2e 100%) !important;border:2px solid #1b2440 !important;outline:1px solid rgba(27,36,64,.45) !important;outline-offset:-7px !important;color:#1b2440;padding:10px 16px !important;box-shadow:0 6px 18px rgba(27,36,64,.25);}
-#welcomeText{grid-area:greet;color:#1b2440 !important;text-shadow:0 1px 0 rgba(255,250,235,.45);}
+  background:linear-gradient(135deg,#d4b24f 0%,#f0dc95 50%,#d4b24f 100%) !important;border:2px solid #1b2440 !important;outline:1px solid rgba(27,36,64,.45) !important;outline-offset:-7px !important;color:#1b2440;padding:10px 16px !important;box-shadow:0 6px 18px rgba(27,36,64,.25);}
+#welcomeText{grid-area:greet;font-family:'Cairo',sans-serif !important;font-weight:800 !important;font-size:1.02rem;color:#0e1630 !important;text-shadow:0 1px 0 rgba(255,250,235,.6);}
 .wb-mid{grid-area:mid;display:flex;flex-direction:column;align-items:center;gap:3px;}
-#copticDate{color:#1b2440 !important;font-family:'Cairo',sans-serif !important;font-size:.85rem;font-weight:700;letter-spacing:.01em;text-align:center;}
+#copticDate{color:#0e1630 !important;font-family:'Cairo',sans-serif !important;font-size:.9rem;font-weight:800;text-shadow:0 1px 0 rgba(255,250,235,.55);letter-spacing:.01em;text-align:center;}
 #liveClock{font-variant-numeric:tabular-nums;color:#fbf3dc !important;font-size:1.05rem;letter-spacing:.04em;padding:2px 16px;border-radius:999px;background:linear-gradient(135deg,#1b2440,#2c3a63);border:1px solid rgba(27,36,64,.6);box-shadow:inset 0 0 0 1px rgba(233,207,122,.35);white-space:nowrap;justify-self:auto !important;}
 .wb-actions{grid-area:act;justify-self:end;display:flex;align-items:center;gap:6px;}
-.wb-actions .ghost{background:rgba(255,250,235,.35);color:#1b2440;border:1px solid rgba(27,36,64,.55);}
+.wb-actions .ghost{background:rgba(255,250,235,.8);color:#0e1630;border:1.5px solid #1b2440;font-weight:800;}
+.wb-actions .ghost svg{stroke-width:2.6;}
 .wb-actions .ghost:hover{background:rgba(255,250,235,.6);}
 #logoutBtn{padding:0 12px;height:32px;}
 
@@ -847,6 +848,24 @@ html[data-theme="dark"] .chat-msg.mine .bub{background:linear-gradient(150deg,#3
 .chat-form button{width:44px;height:44px;background:linear-gradient(135deg,#f3dc8c,#C9A227 55%,#a8841a) !important;color:#1B2A4A !important;border:none;box-shadow:0 4px 12px rgba(201,162,39,.45);}
 #chatRxPicker .rxp-act{display:flex;gap:6px;border-top:1px solid var(--line-soft);margin-top:6px;padding-top:6px;}
 #chatRxPicker .rxp-act button{flex:1;background:var(--cream);border:1px solid var(--line);border-radius:999px;font-family:'Cairo',sans-serif;font-size:.78rem;color:var(--ink);padding:3px 8px;cursor:pointer;}
+/* bigger, clearer chat text (user asked 27-Oct) */
+.chat-msg .txt{font-size:1.02rem;line-height:1.65;font-weight:500;}
+html[data-theme="dark"] .chat-msg:not(.mine) .txt{color:#f1f3f8;}
+.chat-msg.mine .txt{color:#fff;}
+.chat-msg .by{font-size:.84rem;}
+.chat-msg .by small{font-size:.74rem;}
+.chat-msg .tm{font-size:.74rem;opacity:1;gap:10px;margin-top:4px;}
+.chat-msg .tm button{opacity:1;font-size:.95rem;}
+.chat-msg .tm .del{font-size:.74rem;opacity:.9;}
+.chat-msg .rx button{font-size:.9rem;}
+.chat-msg .q{font-size:.86rem;}
+.chat-msg .q b{font-size:.76rem;}
+.chat-quick button{font-size:.9rem;padding:3px 12px;color:var(--ink);}
+.chat-to{font-size:.85rem;}
+.chat-to select{font-size:.92rem;}
+.chat-form input{font-size:1rem;}
+.chat-typing{font-size:.82rem;}
+.chat-day{font-size:.78rem;}
 @media (max-width:760px){
   #chatFab{left:14px;bottom:calc(82px + env(safe-area-inset-bottom,0px));width:54px;height:54px;}
   #chatPanel,#chatPanel.on-right{left:8px;right:8px;width:auto;max-width:none;top:calc(8px + env(safe-area-inset-top,0px));bottom:calc(8px + env(safe-area-inset-bottom,0px));height:auto;}
@@ -1197,7 +1216,8 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
   .welcome-banner{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"greet act" "mid mid";gap:6px 10px;padding:8px 12px !important;}
   .wb-mid{gap:4px;padding-top:7px;border-top:1px solid rgba(27,36,64,.3);}
   .welcome-banner #liveClock{font-size:.95rem !important;}
-  .welcome-banner #copticDate{font-size:.76rem !important;}
+  .welcome-banner #copticDate{font-size:.84rem !important;}
+  .welcome-banner #welcomeText{font-size:.92rem !important;}
   .wb-actions{gap:5px;}
   .wb-actions .ghost{width:30px !important;height:30px !important;font-size:13px !important;}
   #logoutBtn{padding:0 !important;width:32px;height:32px;justify-content:center;}
@@ -3090,7 +3110,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '26-Oct-2026 C';
+const APP_VERSION = '27-Oct-2026 A';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -9589,6 +9609,8 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
+  { id: 'n17', d: '27-Oct-2026', text: 'سطر الساعة والتاريخ بقى أوضح: الكلام أغمق وأتقل، وزرار الخروج والجرس بقوا باينين أكتر على الدهبي.' },
+  { id: 'n16', d: '27-Oct-2026', text: '💬 خط الشات بقى أكبر وأوضح: الرسايل والأسماء والوقت والردود السريعة وخانة الكتابة.' },
   { id: 'n15', d: '26-Oct-2026', text: '💬 على الموبايل: خانة الكتابة في الشات كانت مستخبية تحت شريط الأزرار اللي تحت، دلوقتي الشات بياخد الشاشة كلها وخانة الكتابة باينة.' },
   { id: 'n14', d: '26-Oct-2026', text: 'أعلى البرنامج: اللوجو بقى على اليمين وصورتك على الشمال. واسم الاجتماع بقى بيدخل كلمة كلمة بالدهبي ويتوهج، أول ما تفتح وبعدين كل 5 دقايق ✨' },
   { id: 'n13', d: '26-Oct-2026', text: '💬 الشات اتجدد بشكل كحلي ودهبي، وأيقونته بقت بتنبض لما توصل رسالة وبيطلع جنبها أول كلامها، وتقدر تسحبها بصباعك لأي مكان على الشاشة. وفيه كمان: ↩️ رد على رسالة معينة، و@ تعمل منشن لحد فيوصله تنبيه دهبي، وأرقام الموبايل في الرسايل بتتصل بضغطة، و📌 الأدمن يثبت رسالة مهمة فوق، و✓✓ صور صغيرة تحت رسالتك بمين شافها، والشات بيفتح عند أول رسالة ما قريتهاش، وردود سريعة (آمين 🙏، تمام 👍…)، و🔍 بحث في الرسايل.' },
