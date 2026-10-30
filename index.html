@@ -1301,6 +1301,76 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
 .sp-week td:first-child,.sp-week th:first-child{text-align:start;width:40%;font-size:.76rem;line-height:1.3;}
 .sp-week .y{color:#0F766E;font-weight:700;}
 .sp-week .n{color:var(--faint);}
+
+/* ===== users list v2 (30-Oct B): compact cards, details open full width ===== */
+#usersCard h2{display:flex;align-items:center;gap:8px;}
+#usersCard h2 .uc-count{font-family:'Cairo',sans-serif;font-size:.78rem;font-weight:700;background:var(--gold-soft);color:var(--chip-ink);padding:2px 10px;border-radius:999px;}
+#usersCard .set-usertools{display:grid;grid-template-columns:auto auto 1fr;gap:8px;margin-bottom:12px;}
+#usersCard .set-usertools button{padding:8px 14px;font-size:.84rem;border-radius:10px;white-space:nowrap;}
+#usersCard .set-usertools input{min-width:0;padding:8px 12px;font-size:.88rem;}
+#usersList{display:flex;flex-direction:column;gap:6px;}
+#usersList .user-row{
+  display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;column-gap:10px;row-gap:0;
+  padding:8px 10px;border:1px solid var(--line-soft);border-radius:12px;background:var(--card);font-size:.86rem;
+}
+#usersList .user-row:last-child{border-bottom:1px solid var(--line-soft);}
+#usersList .user-row > .avatar, #usersList .user-row > img{width:36px !important;height:36px !important;font-size:12px !important;}
+#usersList .user-row.locked{border-color:#e3a19c;}
+#usersList .user-row .user-info{display:block;}
+#usersList .user-row .user-info b{font-size:.92rem;color:var(--ink);}
+#usersList .user-row .role-tag{font-size:.66rem;padding:2px 8px;margin-inline-start:6px;vertical-align:1px;white-space:nowrap;}
+#usersList .user-mini{font-size:.72rem;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#usersList .user-row > .avatar, #usersList .user-row > img{grid-row:1;grid-column:1;}
+#usersList .user-row > .user-info{grid-row:1;grid-column:2;}
+#usersList .user-toggle{grid-row:1;grid-column:3;padding:5px 10px;font-size:.76rem;border-radius:8px;}
+#usersList .user-row.open{background:var(--hi);border-color:var(--gold);align-items:start;}
+#usersList .user-row.open > .user-toggle{background:var(--card);}
+#usersList .user-row.open .perm-sum{font-size:.76rem;line-height:1.7;margin-top:6px;}
+#usersList .user-row.open .chips{margin-top:6px !important;gap:4px;}
+#usersList .user-row.open .chip{font-size:.68rem;padding:2px 8px;}
+#usersList .user-row > .row-actions{
+  grid-row:2;grid-column:1 / -1;display:flex;flex-direction:row !important;flex-wrap:wrap;gap:6px !important;
+  width:auto;margin-top:10px;padding-top:10px !important;border-top:1px dashed var(--line);
+}
+#usersList .user-row > .row-actions .profile-select{flex:1 1 150px;min-width:0;padding:6px 8px;}
+#usersList .user-row > .row-actions button{padding:5px 10px;font-size:.76rem;}
+#usersList .user-row > .row-actions .del-user{margin-inline-start:auto;}
+#usersList .edit-panel:not([style*="none"]){margin:-2px 0 4px;padding:10px 12px !important;border:1px solid var(--gold);border-top:none;border-radius:0 0 12px 12px;background:var(--hi);}
+@media(max-width:560px){
+  #usersCard .set-usertools{grid-template-columns:1fr 1fr;}
+  #usersCard .set-usertools input{grid-column:1 / -1;}
+  #usersList .user-row{padding:8px;column-gap:8px;}
+  #usersList .user-row > .row-actions .profile-select{flex-basis:100%;}
+}
+
+/* ===== permission editor v2 (30-Oct C) ===== */
+.pm-presets{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:10px 0;}
+.pm-presets > span{font-size:.78rem;color:var(--ink-soft);font-weight:700;}
+.pm-presets button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:4px 11px;font-family:'Cairo',sans-serif;font-size:.76rem;cursor:pointer;}
+.pm-presets button:hover{border-color:var(--gold);background:var(--hi);}
+.pm-list{display:flex;flex-direction:column;gap:6px;}
+.pm-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 10px;padding:7px 10px;border:1px solid var(--line-soft);border-radius:10px;background:var(--card);}
+.pm-label{font-size:.86rem;font-weight:700;color:var(--ink);}
+.pm-row[data-lvl="0"] .pm-label{color:var(--faint);font-weight:600;}
+.pm-row[data-lvl="2"]{border-color:var(--sage);}
+.pm-seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--input);}
+.pm-seg button{border:none;background:transparent;padding:5px 10px;font-family:'Cairo',sans-serif;font-size:.74rem;color:var(--ink-soft);cursor:pointer;white-space:nowrap;}
+.pm-seg button + button{border-inline-start:1px solid var(--line);}
+.pm-seg button.on[data-lvl="0"]{background:var(--cream-dark);color:var(--ink);font-weight:700;}
+.pm-seg button.on[data-lvl="1"]{background:var(--gold-soft);color:var(--chip-ink);font-weight:700;}
+.pm-seg button.on[data-lvl="2"]{background:var(--sage);color:#fff;font-weight:700;}
+.pm-sub{grid-column:1 / -1;display:none;gap:14px;font-size:.76rem;color:var(--ink-soft);padding-inline-start:4px;}
+.pm-row[data-lvl="2"] .pm-sub{display:flex;}
+.pm-data-title{font-size:.82rem;font-weight:700;margin:14px 0 6px;}
+.pm-data{display:flex;flex-wrap:wrap;gap:6px;}
+.pm-chip{border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:.78rem;cursor:pointer;background:var(--card);color:var(--ink-soft);user-select:none;}
+.pm-chip input{display:none;}
+.pm-chip.on{background:var(--sage);border-color:var(--sage);color:#fff;font-weight:700;}
+@media(max-width:560px){
+  .pm-row{grid-template-columns:1fr;}
+  .pm-seg{width:100%;}
+  .pm-seg button{flex:1 1 0;padding:6px 4px;}
+}
 </style>
 </head>
 <body>
@@ -1799,7 +1869,7 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
   </div>
 
   <div class="card" id="usersCard" style="display:none;">
-    <h2>المستخدمين (<span id="userCount">0</span>)</h2>
+    <h2>المستخدمين <span class="uc-count" id="userCount">0</span></h2>
     <div class="set-usertools">
       <button type="button" class="primary" id="newUserToggleBtn">＋ مستخدم جديد</button>
       <button type="button" class="ghost" id="deviceActBtn" title="كود يفتح البرنامج على موبايل جديد من غير باسورد الخدمة">📱 تفعيل جهاز جديد</button>
@@ -1816,6 +1886,7 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
       <select id="newUserRole" style="padding:10px;border-radius:10px;border:1px solid var(--line);font-family:'Cairo',sans-serif;">
         <option value="user">خادم (الصلاحيات العامة)</option>
         <option value="attendance">حضور وافتقاد</option>
+        <option value="afeqad">افتقاد بس</option>
         <option value="viewOnly">يشوف بس</option>
         <option value="program">برنامج الخدمة بس</option>
         <option value="tenmin">فقرة العشر دقايق بس</option>
@@ -1863,15 +1934,7 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
     <h2>🔐 صلاحيات الخادم العادي</h2>
     <p style="font-size:.82rem;color:var(--ink-soft);margin-top:0;">بتتطبق على كل حد نوعه "خادم" (<span id="globalPermUsersCount">0</span>). لأي حد تاني اختار نوعه من قايمة المستخدمين فوق بضغطة واحدة.</p>
     <div class="perm-sum" id="globalPermSummary" style="font-size:.84rem;"></div>
-    <div class="perm-quick">
-      <span style="font-size:.8rem;">اختيار سريع:</span>
-      <button type="button" class="ghost" data-gpreset="all">كل الشاشات</button>
-      <button type="button" class="ghost" data-gpreset="attendance">حضور وافتقاد</button>
-      <button type="button" class="ghost" data-gpreset="viewOnly">يشوف بس</button>
-    </div>
-    <details class="follow-all"><summary>⚙️ تفاصيل (شاشة شاشة)</summary>
-    <div id="globalPermMatrix"></div>
-    </details>
+    <div id="globalPermMatrix" class="perm-box"></div>
     <p style="font-size:.78rem;color:var(--ink-soft);margin-top:8px;">🔒 حذف الأسماء (خدام ومخدومين) للمدير والمشرف بس. حذف الاجتماعات وتصفير البيانات للمدير بس. المستخدم العادي مش بيقدر يحذف أي حاجة.</p>
 
     <button class="primary" style="margin-top:16px;" id="savePermissionsBtn">حفظ الصلاحيات</button>
@@ -3212,7 +3275,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '30-Oct-2026 A';
+const APP_VERSION = '30-Oct-2026 C';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -5379,7 +5442,8 @@ const PERM_PRESETS = {
   viewOnly:()=>Object.fromEntries(ALL_PERM_KEYS.map(k=>[k, !PERM_SCREENS.some(sc=>(sc.edit||[]).includes(k))])),
   program: ()=>Object.fromEntries(ALL_PERM_KEYS.map(k=>[k, k==='tabDashboard' || k==='tabProgram' || k==='editProgram'])),
   tenmin:  ()=>Object.fromEntries(ALL_PERM_KEYS.map(k=>[k, k==='tabDashboard' || k==='tabTenMin' || k==='editTenMin'])),
-  attendance: ()=>{ const on = ['tabDashboard','tabServants','tabAttendance','editAttendance','tabAfeqad','editAfeqad','phones']; return Object.fromEntries(ALL_PERM_KEYS.map(k=>[k, on.includes(k)])); }
+  attendance: ()=>{ const on = ['tabDashboard','tabServants','tabAttendance','editAttendance','tabAfeqad','editAfeqad','phones']; return Object.fromEntries(ALL_PERM_KEYS.map(k=>[k, on.includes(k)])); },
+  afeqad:  ()=>{ const on = ['tabAfeqad','editAfeqad','phones','addresses']; return Object.fromEntries(ALL_PERM_KEYS.map(k=>[k, on.includes(k)])); }
 };
 /* one pick per user: role + ready-made permission set */
 const USER_PROFILES = [
@@ -5387,6 +5451,7 @@ const USER_PROFILES = [
   { id:'supervisor', label:'مشرف',              hint:'كل الشاشات وكل الاجتماعات + حذف الأسماء' },
   { id:'user',       label:'خادم',              hint:'حسب صلاحيات الخادم العادي (تحت)' },
   { id:'attendance', label:'حضور وافتقاد',      hint:'يسجّل الحضور والافتقاد ويشوف التليفونات' },
+  { id:'afeqad',     label:'افتقاد بس',          hint:'شاشة الافتقاد بس (يشوف ويسجّل) + التليفون والعنوان، ومش بيشوف أي شاشة تانية' },
   { id:'viewOnly',   label:'يشوف بس',           hint:'يشوف كل حاجة من غير ما يعدّل' },
   { id:'program',    label:'برنامج الخدمة بس',  hint:'لوحة المعلومات + شاشة برنامج الخدمة (يشوف ويعدّل)' },
   { id:'tenmin',     label:'فقرة العشر دقايق بس', hint:'لوحة المعلومات + شاشة فقرة العشر دقايق (يشوف ويعدّل)' },
@@ -5397,7 +5462,7 @@ function profileOf(u){
   if(!u) return 'user';
   if(u.role === 'admin' || u.role === 'supervisor') return u.role;
   if(!u.perms) return 'user';
-  const hit = ['attendance','viewOnly','program','tenmin','all'].find(id=>{
+  const hit = ['attendance','afeqad','viewOnly','program','tenmin','all'].find(id=>{
     const pr = PERM_PRESETS[id]();
     return ALL_PERM_KEYS.every(k=>effectivePerm(u,k) === !!pr[k]);
   });
@@ -5435,33 +5500,60 @@ function isProgramOnly(user){
   if(!user || user.role !== 'user' || !user.perms) return false;
   return ALL_PERM_KEYS.every(k=>!!user.perms[k] === (k==='tabProgram' || k==='editProgram'));
 }
+/* permission editor: every screen is one row with مخفي / يشوف / يعدّل; the hidden checkboxes
+   (data-perm) stay the source of truth, so readPermMatrix / setPermMatrix work on them */
+const PM_ICONS = { tabDashboard:'📊', tabServants:'👥', tabAttendance:'✅', tabAfeqad:'🏠', tabReports:'📑', tabMoves:'🔀', tabProgram:'📅', tabTenMin:'⏱️' };
+const PM_DATA_ICONS = { phones:'📞', addresses:'📍', otherDetails:'🎂', addedBy:'👤' };
+const PM_PRESETS = [['afeqad','🏠 افتقاد بس'],['attendance','✅ حضور وافتقاد'],['program','📅 برنامج الخدمة بس'],['tenmin','⏱️ العشر دقايق بس'],['viewOnly','👁️ يشوف بس'],['all','✨ كل الشاشات']];
 function permMatrixHtml(values){
   const v = k=>!!values[k];
   return `
-    <div style="overflow-x:auto;">
-    <table class="perm-matrix" style="width:100%;border-collapse:collapse;font-size:.85rem;">
-      <thead><tr><th style="text-align:right;padding:6px;">الشاشة</th><th style="padding:6px;">يشوف</th><th style="padding:6px;">يعدّل</th></tr></thead>
-      <tbody>
-      ${PERM_SCREENS.map(sc=>`
-        <tr style="border-top:1px solid var(--line, var(--line-soft));">
-          <td style="padding:7px 6px;">${sc.label}</td>
-          <td style="text-align:center;"><input type="checkbox" data-perm="${sc.view}" data-role="view" ${v(sc.view)?'checked':''}></td>
-          <td style="text-align:center;white-space:nowrap;">${(sc.edit||[]).length ? sc.edit.map((k,i)=>`<label style="margin:0 4px;font-size:.78rem;"><input type="checkbox" data-perm="${k}" data-role="edit" data-view="${sc.view}" ${v(k)?'checked':''}>${sc.editLabels ? ' ' + sc.editLabels[i] : ''}</label>`).join('') : '<span style="color:var(--faint);font-size:.75rem;">مشاهدة بس</span>'}</td>
-        </tr>`).join('')}
-      </tbody>
-    </table>
+    <div class="pm-presets"><span>ابدأ من:</span>${PM_PRESETS.map(([id,l])=>`<button type="button" data-pm-preset="${id}">${l}</button>`).join('')}</div>
+    <div class="pm-list">
+    ${PERM_SCREENS.map(sc=>{
+      const eds = sc.edit || [];
+      return `<div class="pm-row" data-pm-view="${sc.view}">
+        <span class="pm-label">${PM_ICONS[sc.view] || ''} ${sc.label}</span>
+        <span class="pm-seg" role="group" aria-label="${sc.label}">
+          <button type="button" data-lvl="0">🚫 مخفي</button><button type="button" data-lvl="1">👁️ يشوف</button>${eds.length ? `<button type="button" data-lvl="2">✏️ يعدّل</button>` : ''}
+        </span>
+        <input type="checkbox" hidden data-perm="${sc.view}" data-role="view" ${v(sc.view)?'checked':''}>
+        ${eds.length > 1
+          ? `<span class="pm-sub">${eds.map((k,i)=>`<label><input type="checkbox" data-perm="${k}" data-role="edit" data-view="${sc.view}" ${v(k)?'checked':''}> ${sc.editLabels[i]}</label>`).join('')}</span>`
+          : eds.map(k=>`<input type="checkbox" hidden data-perm="${k}" data-role="edit" data-view="${sc.view}" ${v(k)?'checked':''}>`).join('')}
+      </div>`;
+    }).join('')}
     </div>
-    <label style="display:block;margin:14px 0 6px;font-weight:700;">البيانات الشخصية</label>
-    ${PERM_DATA.map(([k,l])=>`<label class="group-chk" style="margin-bottom:6px;"><input type="checkbox" data-perm="${k}" ${v(k)?'checked':''}> ${l}</label>`).join('')}`;
+    <div class="pm-data-title">البيانات الشخصية اللي يشوفها</div>
+    <div class="pm-data">${PERM_DATA.map(([k])=>`<label class="pm-chip"><input type="checkbox" data-perm="${k}" ${v(k)?'checked':''}> ${PM_DATA_ICONS[k] || ''} ${PERM_DATA_SHORT[k] || k}</label>`).join('')}</div>`;
+}
+function pmSync(container){
+  container.querySelectorAll('.pm-row').forEach(row=>{
+    const view = row.querySelector('input[data-role="view"]');
+    const eds = row.querySelectorAll('input[data-role="edit"]');
+    const lvl = !view.checked ? 0 : (Array.from(eds).some(e=>e.checked) ? 2 : 1);
+    row.dataset.lvl = lvl;
+    row.querySelectorAll('.pm-seg button').forEach(b=>b.classList.toggle('on', +b.dataset.lvl === lvl));
+  });
+  container.querySelectorAll('.pm-chip').forEach(l=>l.classList.toggle('on', l.querySelector('input').checked));
 }
 function wirePermMatrix(container, onChange){
-  if(onChange) container.addEventListener('change', ()=>onChange(readPermMatrix(container)));
+  const fire = ()=>container.dispatchEvent(new Event('change', { bubbles:true }));
+  container.addEventListener('change', ()=>{ pmSync(container); if(onChange) onChange(readPermMatrix(container)); });
   container.querySelectorAll('input[data-role="edit"]').forEach(cb=>cb.addEventListener('change', ()=>{
     if(cb.checked){ const vcb = container.querySelector(`input[data-perm="${cb.dataset.view}"]`); if(vcb) vcb.checked = true; }
   }));
-  container.querySelectorAll('input[data-role="view"]').forEach(cb=>cb.addEventListener('change', ()=>{
-    if(!cb.checked) container.querySelectorAll(`input[data-view="${cb.dataset.perm}"]`).forEach(e=>{ e.checked = false; });
+  container.querySelectorAll('.pm-seg button').forEach(b=>b.addEventListener('click', ()=>{
+    const row = b.closest('.pm-row'), lvl = +b.dataset.lvl;
+    row.querySelector('input[data-role="view"]').checked = lvl > 0;
+    row.querySelectorAll('input[data-role="edit"]').forEach(e=>{ e.checked = lvl === 2; });
+    fire();
   }));
+  container.querySelectorAll('[data-pm-preset]').forEach(b=>b.addEventListener('click', ()=>{
+    setPermMatrix(container, PERM_PRESETS[b.dataset.pmPreset]());
+    fire();
+  }));
+  pmSync(container);
 }
 function readPermMatrix(container){
   const out = {};
@@ -5470,6 +5562,7 @@ function readPermMatrix(container){
 }
 function setPermMatrix(container, values){
   container.querySelectorAll('input[data-perm]').forEach(cb=>{ cb.checked = !!values[cb.dataset.perm]; });
+  pmSync(container);
 }
 function roleLabelFor(role){
   if(role === 'admin') return 'مدير';
@@ -6063,7 +6156,8 @@ function applyTabGating(){
   // someone without the dashboard (e.g. "برنامج الخدمة بس") lands on their first real screen, not settings
   setTimeout(buildBottomNav, 0);
   if(activeHidden || (activeBtn && activeBtn.dataset.tab === 'settings' && !can('tabDashboard'))){
-    const firstVisible = Array.from(document.querySelectorAll('nav.tabs button')).find(b=>b.style.display !== 'none' && b.dataset.tab !== 'settings')
+    const firstVisible = Array.from(document.querySelectorAll('nav.tabs button')).find(b=>b.style.display !== 'none' && b.dataset.tab !== 'settings' && b.dataset.tab !== 'spirit')
+      || Array.from(document.querySelectorAll('nav.tabs button')).find(b=>b.style.display !== 'none' && b.dataset.tab !== 'settings')
       || Array.from(document.querySelectorAll('nav.tabs button')).find(b=>b.style.display !== 'none');
     if(firstVisible) firstVisible.click();
   }
@@ -6074,17 +6168,14 @@ function loadPermissionsForm(){
   const vals = Object.fromEntries(ALL_PERM_KEYS.map(k=>[k, effectivePerm(null, k)]));
   box.innerHTML = permMatrixHtml(vals);
   const sum = document.getElementById('globalPermSummary');
-  const refresh = v=>{ sum.innerHTML = permSummaryHtml(k=>!!v[k]); };
+  const refresh = v=>{
+    const dirty = ALL_PERM_KEYS.some(k=>!!v[k] !== !!vals[k]);
+    sum.innerHTML = permSummaryHtml(k=>!!v[k]) + (dirty ? '<br><span style="color:var(--wine);">⚠️ لسه محتاج تدوس "حفظ الصلاحيات"</span>' : '');
+  };
   wirePermMatrix(box, refresh);
   refresh(vals);
   document.getElementById('globalPermUsersCount').textContent = USERS.filter(u=>profileOf(u)==='user').length;
 }
-document.querySelectorAll('[data-gpreset]').forEach(b=>b.addEventListener('click', ()=>{
-  const box = document.getElementById('globalPermMatrix');
-  const v = PERM_PRESETS[b.dataset.gpreset]();
-  setPermMatrix(box, v);
-  document.getElementById('globalPermSummary').innerHTML = permSummaryHtml(k=>!!v[k]) + '<br><span style="color:var(--wine);">⚠️ لسه محتاج تدوس "حفظ الصلاحيات"</span>';
-}));
 
 document.getElementById('savePermissionsBtn').addEventListener('click', async ()=>{
   if(!isAdmin()) return;
@@ -6182,8 +6273,8 @@ function renderUsersList(){
   const list = document.getElementById('usersList');
   document.getElementById('userCount').textContent = USERS.length;
   list.innerHTML = usersByRole().map(u=>`
-    <div class="user-row${USER_ROWS_OPEN.has(u.name) ? ' open' : ''}" data-name="${escHtml(u.name)}">
-      ${avatarHtml(u, 38)}
+    <div class="user-row${USER_ROWS_OPEN.has(u.name) ? ' open' : ''}${u.locked ? ' locked' : ''}" data-name="${escHtml(u.name)}">
+      ${avatarHtml(u, 36)}
       <div class="user-info">
         <b>${escHtml(u.name)}</b>
         <span class="role-tag ${u.role}">${profileLabel(profileOf(u))}</span>
@@ -6191,19 +6282,19 @@ function renderUsersList(){
         <div class="perm-sum">${userSummaryHtml(u)}</div>
         ${u.role === 'user' ? `<div class="chips" style="margin-top:6px;">${allowedGroupsFor(u).map(gid=>`<span class="chip g-${gid}">${groupName(gid)}</span>`).join('')}</div>` : ''}
         <div class="added-by">أضافه: ${escHtml(u.addedBy || '—')}</div>
-        <div class="user-mini">${u.role === 'user' ? allowedGroupsFor(u).map(groupName).join('، ') : ''}</div>
+        <div class="user-mini">${u.role === 'user' ? allowedGroupsFor(u).map(groupName).join('، ') : 'كل الاجتماعات والصلاحيات'}</div>
       </div>
       <div class="row-actions">
         <select class="profile-select" title="نوع المستخدم وصلاحياته">
           ${USER_PROFILES.filter(p=>p.id!=='custom' || profileOf(u)==='custom' || u.role==='user').map(p=>`<option value="${p.id}" ${profileOf(u)===p.id?'selected':''}>${p.id==='custom' ? 'مخصص… ⚙️' : p.label}</option>`).join('')}
         </select>
-        ${u.role === 'user' ? `<button class="ghost edit-user-perms" title="تخصيص الصلاحيات">⚙️</button>` : ''}
+        ${u.role === 'user' ? `<button class="ghost edit-user-perms" title="تخصيص الصلاحيات شاشة شاشة">🔐 الصلاحيات</button>` : ''}
         ${u.role === 'user' ? `<button class="ghost edit-user-groups">الاجتماعات</button>` : ''}
         ${u.locked ? `<button class="ghost unlock-user" title="يفتح الحساب بنفس كلمة السر">🔓 فتح القفل</button>` : ''}
         <button class="ghost change-pass">${u.locked ? 'كلمة سر جديدة' : 'كلمة السر'}</button>
         <button class="ghost danger del-user">حذف</button>
       </div>
-      <button type="button" class="ghost user-toggle">${USER_ROWS_OPEN.has(u.name) ? 'إخفاء' : 'تعديل'}</button>
+      <button type="button" class="ghost user-toggle">${USER_ROWS_OPEN.has(u.name) ? 'إخفاء ▴' : '✏️ تعديل'}</button>
     </div>
     <div class="edit-panel" data-user-edit-for="${escHtml(u.name)}" style="display:none;padding:10px 0;"></div>
   `).join('');
@@ -6218,7 +6309,7 @@ function renderUsersList(){
         const p = list.querySelector(`.edit-panel[data-user-edit-for="${CSS.escape(name)}"]`);
         if(p) p.style.display = 'none';
       }
-      btn.textContent = open ? 'إخفاء' : 'تعديل';
+      btn.textContent = open ? 'إخفاء ▴' : '✏️ تعديل';
     });
   });
   applyUserSearch();
@@ -6253,7 +6344,7 @@ function renderUsersList(){
       if(editPanel.style.display === 'none'){
         const vals = Object.fromEntries(ALL_PERM_KEYS.map(k=>[k, effectivePerm(u, k)]));
         editPanel.innerHTML = `
-          <p style="font-size:.8rem;color:var(--ink-soft);margin:0 0 8px;">تخصيص صلاحيات "${escHtml(name)}" بس.</p>
+          <p style="font-size:.8rem;color:var(--ink-soft);margin:0 0 8px;">صلاحيات "${escHtml(name)}" بس: اختار نوع جاهز من "ابدأ من"، أو حدّد لكل شاشة مخفية ولا يشوفها ولا يعدّل فيها.</p>
           <div class="perm-sum" data-live-sum style="margin-bottom:8px;">${permSummaryHtml(k=>!!vals[k])}</div>
           <div class="perm-box">${permMatrixHtml(vals)}</div>
           <button class="primary" style="margin-top:8px;">حفظ صلاحياته</button>
@@ -9787,6 +9878,8 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
+  { id: 'n23', d: '30-Oct-2026', admin: true, text: '🔐 الصلاحيات اتعملت من جديد: كل شاشة قدامها 3 اختيارات واضحة (🚫 مخفي، 👁️ يشوف، ✏️ يعدّل) بدل الجدول، وفوقها أنواع جاهزة تبدأ منها بضغطة. واتضاف نوع جديد "🏠 افتقاد بس": يشوف شاشة الافتقاد ويسجّل فيها ومعاه التليفون والعنوان، ومش بيشوف أي شاشة تانية.' },
+  { id: 'n22', d: '30-Oct-2026', text: '👥 شاشة المستخدمين اتظبطت: كل مستخدم في كارت صغير مرتب (الصورة والاسم والنوع والاجتماعات)، ولما تدوس "تعديل" التفاصيل والأزرار بتفتح تحته بعرض الكارت كله بدل ما الكلام يتكسر كلمة كلمة.', admin: true },
   { id: 'n21', d: '30-Oct-2026', text: '📱 تفعيل الموبايل الجديد بقى ممكن بـQR: المدير يعمل الكود فيظهرله QR، والخادم يدوس "📷 امسح الـQR من موبايل المدير" في شاشة الدخول ويوجّه الكاميرا عليه، فيدخل على طول من غير ما يكتب حاجة. الكود العادي لسه شغال زي ما هو.' },
   { id: 'n20', d: '28-Oct-2026', text: 'اسم المطور اتصحح في كل البرنامج: Pinshti Solutions & Software' },
   { id: 'n19', d: '27-Oct-2026', text: 'تحت التاريخ بقت تظهر درجة الحرارة وإيموجي الجو (☀️ 🌤️ ☁️ 🌧️ 🌙)، وبتتحدث لوحدها كل نص ساعة. وبتعرض جو المدينة اللي إنت فيها لو سمحت للبرنامج يعرف مكانك، وإلا جو القاهرة.' },
