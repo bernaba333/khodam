@@ -1569,6 +1569,77 @@ html[data-theme="dark"] .afq-chips button.on{color:#86c4a2;border-color:#86c4a2;
 .msg-prev{white-space:pre-line;font-size:.84rem;line-height:1.6;background:#dcf8c6;color:#1b1b1b;border-radius:12px 12px 4px 12px;padding:8px 11px;box-shadow:0 1px 2px rgba(0,0,0,.15);}
 html[data-theme="dark"] .msg-prev{background:#005c4b;color:#e9edef;}
 .msg-btns{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;}
+/* ---- reports screen ---- */
+#customReportCard{border:1px solid rgba(201,162,39,.55);box-shadow:inset 0 0 0 5px var(--card), inset 0 0 0 6px rgba(201,162,39,.22), var(--shadow);}
+#customReportCard > .print-letterhead{display:none;}
+.rp-print-only{display:none;}
+.rp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding-bottom:10px;border-bottom:2px solid var(--gold-soft);}
+.rp-head h2{margin:0 0 2px;border:none !important;padding:0 !important;}
+.rp-sub{font-size:.8rem;color:var(--muted);}
+.rp-xl{white-space:nowrap;font-size:.8rem !important;padding:6px 12px !important;}
+.rp-step{display:flex;align-items:center;gap:8px;font-weight:800;font-size:.92rem;margin:16px 0 8px;color:var(--ink);}
+.rp-step .n{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#e9cf7a,var(--gold));color:#1b2440;display:inline-flex;align-items:center;justify-content:center;font-size:.78rem;}
+.rp-grp{font-size:.72rem;font-weight:700;color:var(--muted);margin:10px 2px 6px;}
+.rp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:8px;}
+.rp-tile{display:flex;gap:10px;align-items:center;text-align:start;border:1.5px solid var(--line);background:var(--cream);border-radius:14px;padding:10px 12px;font-family:inherit;color:var(--ink);cursor:pointer;transition:transform .15s, border-color .15s, box-shadow .15s;}
+.rp-tile:hover{border-color:var(--gold);transform:translateY(-1px);}
+.rp-tile .ic{font-size:1.3rem;width:42px;height:42px;border-radius:12px;background:var(--card);display:flex;align-items:center;justify-content:center;flex:none;box-shadow:0 1px 4px rgba(0,0,0,.1);}
+.rp-tile b{display:block;font-size:.88rem;}
+.rp-tile small{display:block;font-size:.7rem;color:var(--muted);line-height:1.45;}
+.rp-tile.on{border-color:var(--gold);background:var(--hi);box-shadow:0 0 0 3px rgba(201,162,39,.2);}
+.rp-tile.on .ic{background:linear-gradient(135deg,#e9cf7a,var(--gold));}
+@media(max-width:560px){
+  .rp-grid{grid-template-columns:1fr 1fr;}
+  .rp-grid{gap:6px;}
+  .rp-tile{gap:8px;padding:8px;}
+  .rp-tile .ic{width:32px;height:32px;font-size:1.05rem;border-radius:10px;}
+  .rp-tile b{font-size:.8rem;line-height:1.35;}
+  .rp-tile small{display:none;}
+  .rp-head{flex-direction:column;}
+}
+.rp-groups{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));}
+.rp-periods{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+.rp-periods button{border:1px solid var(--line);background:var(--cream);border-radius:999px;padding:5px 13px;font-family:inherit;font-size:.8rem;font-weight:600;color:var(--ink-soft);cursor:pointer;}
+.rp-periods button.on{background:var(--ink);color:var(--cream);border-color:var(--ink);}
+html[data-theme="dark"] .rp-periods button.on{background:var(--gold);color:#1a2334;border-color:var(--gold);}
+.rp-dates{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;}
+.rp-go{display:block;width:100%;margin-top:16px;padding:12px !important;font-size:1rem !important;}
+.rp-actions{display:flex;gap:8px;justify-content:flex-end;margin:20px 0 6px;padding-top:16px;border-top:1px dashed var(--line);scroll-margin-top:90px;}
+.rp-res-head{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin:4px 0 12px;}
+.rp-res-head h3{font-family:'Amiri',serif;margin:0;font-size:1.35rem;color:var(--ink);}
+.rp-meta{font-size:.76rem;color:var(--muted);}
+.rp-count{font-size:.74rem;font-weight:700;background:var(--cream-dark);color:var(--ink-soft);border-radius:999px;padding:3px 10px;white-space:nowrap;}
+.rp-table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;}
+.rp-table-wrap .report-table{font-size:.82rem;}
+.rp-table-wrap .report-table th{background:var(--cream-dark);color:var(--ink-soft);font-size:.76rem;white-space:nowrap;}
+.rp-table-wrap .report-table tbody tr:nth-child(even){background:rgba(201,162,39,.06);}
+.rp-table-wrap .report-table tbody tr:hover{background:var(--hi);}
+.rp-table-wrap .report-table tr:last-child td{border-bottom:none;}
+.rp-pc{white-space:nowrap;}
+.rp-pct{display:inline-block;width:52px;height:6px;border-radius:6px;background:var(--cream-dark);overflow:hidden;vertical-align:middle;margin-inline-end:6px;}
+.rp-pct i{display:block;height:100%;border-radius:6px;}
+.rp-rings{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-bottom:14px;}
+.rp-ring{border:1px solid var(--line);border-top:4px solid var(--gold);border-radius:14px;padding:12px 10px;text-align:center;background:var(--cream);}
+.rp-ring svg{display:block;margin:0 auto;}
+.rp-ring.g-anba-boula{border-top-color:var(--g-anba-boula);} .rp-ring.g-makhdomeen-had{border-top-color:var(--g-makhdomeen-had);} .rp-ring.g-makhdomeen-gomaa{border-top-color:var(--g-makhdomeen-gomaa);}
+.rp-ring .t{font-weight:800;margin-top:4px;}
+.rp-ring .s{font-size:.74rem;color:var(--text-2);margin-top:2px;}
+@media print{
+  #customReportCard > .print-letterhead{display:flex !important;}
+  .sticky-top-bar, .welcome-banner, .verse-ticker, #bottomNav, #chatFab{display:none !important;}
+  .no-print, .rp-go{display:none !important;}
+  .rp-print-only{display:block;}
+  #customReportCard{box-shadow:none !important;border:none !important;}
+  .rp-table-wrap{overflow:visible;border:1px solid #ccc;}
+  .rp-ring{break-inside:avoid;}
+  .rp-rings{grid-template-columns:repeat(3,1fr);}
+}
+@media(max-width:560px){
+  .rp-rings{grid-template-columns:1fr 1fr;gap:8px;}
+  .rp-ring{padding:10px 6px;}
+  .rp-ring svg{width:72px;height:72px;}
+  .rp-ring .s{font-size:.68rem;}
+}
 </style>
 </head>
 <body>
@@ -1941,47 +2012,7 @@ html[data-theme="dark"] .msg-prev{background:#005c4b;color:#e9edef;}
 
 <!-- REPORTS TAB -->
 <section class="panel" id="panel-reports">
-  <div class="card" id="reportsToolbar">
-    <h2>أدوات التقرير</h2>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;">
-      <button class="primary" id="printReportBtn">🖨️ طباعة التقرير</button>
-      <button class="primary" id="exportExcelBtn" style="background:var(--sage);">⬇️ تصدير Excel</button>
-    </div>
-    <div class="color-legend">
-      <span class="color-legend-label">دليل الألوان — نسبة الحضور:</span>
-      <div class="color-legend-bar"></div>
-      <div class="color-legend-marks">
-        <span>٠٪ ضعيف</span>
-        <span>٥٠٪ متوسط</span>
-        <span>١٠٠٪ ممتاز</span>
-      </div>
-    </div>
-  </div>
-  <div class="card" id="printArea">
-    <div class="print-letterhead">
-      <img id="printLogo1" src="" alt="شعار الكنيسة">
-      <div>
-        <div class="print-letterhead-title">اجتماع الانبا بولا والعائلة المقدسة</div>
-        <div class="print-letterhead-sub">سجل حضور الخدام والمخدومين</div>
-      </div>
-    </div>
-    <h2>نسبة ومتوسط الحضور لكل اجتماع</h2>
-    <div class="report-grid" id="reportHalos"></div>
-  </div>
-  <div class="card" id="followCard">
-    <h2>نسبة حضور كل فرد</h2>
-    <div class="follow-hint">❗ متابعة مين غايب ومحتاج سؤال اتنقلت لشاشة <a href="#" id="goAfeqadFromReports" style="font-weight:700;color:var(--wine);">🏠 الافتقاد</a>.</div>
-    <details class="follow-all">
-      <summary>الجدول الكامل لنسبة حضور كل فرد</summary>
-      <table class="report-table" id="servantReportTable">
-        <thead><tr><th>الاسم</th><th>الجمعة</th><th>الأحد</th></tr></thead>
-        <tbody id="servantReportBody"></tbody>
-      </table>
-    </details>
-    <div class="empty-note" id="servantReportEmpty" style="display:none;">أضف خدامًا وسجّل اجتماعات ليظهر التقرير</div>
-  </div>
-
-  <div class="card" id="customReportCard">
+  <div class="card rp-card" id="customReportCard">
     <div class="print-letterhead">
       <img id="printLogo2" src="" alt="شعار الكنيسة">
       <div>
@@ -1989,10 +2020,26 @@ html[data-theme="dark"] .msg-prev{background:#005c4b;color:#e9edef;}
         <div class="print-letterhead-sub">سجل حضور الخدام والمخدومين</div>
       </div>
     </div>
-    <h2>تقرير مخصص</h2>
-    <label style="display:block;margin-bottom:6px;">الاجتماعات</label>
-    <div class="group-grid" id="customReportGroups"></div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin:14px 0;">
+    <div class="rp-head no-print">
+      <div><h2>📑 التقارير</h2><div class="rp-sub">اختار التقرير والفترة، ويطلعلك جاهز للطباعة والـExcel</div></div>
+      <button class="ghost rp-xl" id="exportExcelBtn" title="ملف Excel فيه ملخص الاجتماعات ونسبة كل فرد">⬇️ Excel شامل</button>
+    </div>
+    <div class="rp-step no-print"><span class="n">١</span> اختار التقرير</div>
+    <div id="rpTiles" class="no-print"></div>
+    <select id="customReportType" hidden>
+      <option value="summary">ملخص كل اجتماع</option>
+      <option value="people">نسبة حضور كل فرد</option>
+      <option value="sessions">تفاصيل كل اجتماع</option>
+      <option value="absentmonth">اللي غابوا الشهر كله</option>
+      <option value="birthdays">أعياد الميلاد</option>
+      <option value="area">حسب المنطقة</option>
+      <option value="confessionfather">أب الاعتراف</option>
+      <option value="editlog">سجل الإضافة والتعديل</option>
+    </select>
+    <div class="rp-step no-print"><span class="n">٢</span> الاجتماعات والفترة</div>
+    <div class="group-grid rp-groups" id="customReportGroups"></div>
+    <div class="rp-periods no-print" id="rpPeriods"></div>
+    <div class="rp-dates" id="rpDates">
       <div id="customReportDateRangeBox" style="flex:1;min-width:140px;">
         <label style="display:block;margin-bottom:4px;">من تاريخ</label>
         <input type="date" id="customReportFrom">
@@ -2010,26 +2057,13 @@ html[data-theme="dark"] .msg-prev{background:#005c4b;color:#e9edef;}
           <option value="10">أكتوبر</option><option value="11">نوفمبر</option><option value="12">ديسمبر</option>
         </select>
       </div>
-      <div style="flex:1;min-width:180px;">
-        <label style="display:block;margin-bottom:4px;">نوع التقرير</label>
-        <select id="customReportType" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);font-family:'Cairo',sans-serif;">
-          <option value="summary">ملخص عام لكل اجتماع</option>
-          <option value="sessions">تفاصيل كل اجتماع (بالحاضرين)</option>
-          <option value="people">كشف بكل شخص ونسبة حضوره</option>
-          <option value="absentmonth">اللي غابوا الشهر كله</option>
-          <option value="birthdays">أعياد الميلاد في شهر معين</option>
-          <option value="area">تجميع حسب المنطقة (القريبين من بعض)</option>
-          <option value="editlog">سجل الإضافة والتعديل (مين عمل إيه)</option>
-          <option value="confessionfather">أب الاعتراف (مين بيعترف عند مين)</option>
-        </select>
-      </div>
     </div>
-    <button class="primary" id="generateReportBtn">إنشاء التقرير</button>
-    <div id="customReportPreview" style="margin-top:16px;"></div>
-    <div id="customReportActions" style="display:none;margin-top:14px;gap:10px;flex-wrap:wrap;">
-      <button class="primary" id="printCustomReportBtn">🖨️ طباعة هذا التقرير</button>
-      <button class="primary" id="exportCustomReportBtn" style="background:var(--sage);">⬇️ تصدير هذا التقرير Excel</button>
+    <button class="primary rp-go" id="generateReportBtn">✨ اعرض التقرير</button>
+    <div id="customReportActions" class="rp-actions" style="display:none;">
+      <button class="primary" id="printCustomReportBtn">🖨️ طباعة</button>
+      <button class="primary" id="exportCustomReportBtn" style="background:var(--sage);">⬇️ Excel</button>
     </div>
+    <div id="customReportPreview"></div>
   </div>
   <div class="print-footer" id="printFooter">
     <img id="printFooterLogo" src="" alt="PINSHTI">
@@ -3533,7 +3567,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '31-Oct-2026 G';
+const APP_VERSION = '31-Oct-2026 H';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -5775,61 +5809,10 @@ document.addEventListener('click', e=>{
   renderAttendBreakdown(GROUPS.filter(g=>visible.includes(g.id)));
 });
 
-document.getElementById('goAfeqadFromReports').addEventListener('click', e=>{ e.preventDefault(); const b = document.querySelector('nav.tabs button[data-tab="afeqad"]'); if(b){ afqSetFilter('need'); b.click(); window.scrollTo({ top:0 }); } });
 function renderReports(){
-  const halos = document.getElementById('reportHalos');
-  const visible = visibleGroupIds();
-  const visibleGroups = GROUPS.filter(g=>visible.includes(g.id));
-  halos.innerHTML = visibleGroups.map(g=>{
-    const { members, sessions, pct, avg, lastCount, lastOf, lastPct, lastDate, days } = groupAttendance(g.id);
-    const C = 2*Math.PI*34;
-    const split = (days.friday.sessions && days.sunday.sessions) ? `<div class="sub" style="margin-top:4px;">${['friday','sunday'].map(k=>`${k==='friday'?'الجمعة':'الأحد'}: <b style="color:${colorForPercent(days[k].pct)};">${days[k].pct}%</b> (${days[k].sessions} اجتماع)`).join(' · ')}</div>` : '';
-    const dash = (pct/100)*C;
-    const ringColor = colorForPercent(pct);
-    return `
-    <div class="halo-card">
-      <svg class="halo-svg" width="90" height="90" viewBox="0 0 90 90">
-        <circle cx="45" cy="45" r="34" fill="none" stroke="#efe6d0" stroke-width="8"/>
-        <circle cx="45" cy="45" r="34" fill="none" stroke="${ringColor}" stroke-width="8"
-          stroke-dasharray="${dash} ${C}" stroke-linecap="round" transform="rotate(-90 45 45)"/>
-        <text x="45" y="50" text-anchor="middle" font-family="Cairo" font-weight="700" font-size="18" fill="#1B2A4A">${pct}%</text>
-      </svg>
-      <h3>${g.name}</h3>
-      <div class="sub">${members.length} ${g.id==='anba-boula' ? 'خادم' : 'مخدوم'} · ${sessions.length} اجتماع</div>
-      ${sessions.length ? `<div class="sub" style="margin-top:4px;">متوسط الحضور: <b>${fmtAvg(avg)}</b> في الاجتماع${(days.friday.sessions && days.sunday.sessions) ? ` (الجمعة ${fmtAvg(days.friday.avg)} · الأحد ${fmtAvg(days.sunday.avg)})` : ''}</div>` : ''}
-      ${split}
-      ${lastDate ? `<div class="sub" style="margin-top:4px;">آخر اجتماع (${prettyDate(lastDate,false)}): <b style="color:${colorForPercent(lastPct)};">${lastCount} من ${lastOf} · ${lastPct}%</b></div>` : ''}
-    </div>`;
-  }).join('');
-
-  const body = document.getElementById('servantReportBody');
-  const emptyNote = document.getElementById('servantReportEmpty');
-  const visibleServants = activeServants().filter(s=>s.groups.some(g=>visible.includes(g)));
-  if(visibleServants.length===0){
-    body.innerHTML=''; emptyNote.style.display='block';
-    return;
-  }
-  emptyNote.style.display='none';
-  const rows = visibleServants.map(s=>{
-    const { possible, pct, days } = personAttendance(s, visible);
-    return {name:s.name, possible, pct, days};
-  }).sort((a,b)=> b.pct-a.pct || b.possible-a.possible);
-  const dayCell = d => d.possible ? `
-      <td>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <div class="bar-bg" style="max-width:80px;"><div class="bar-fill" style="width:${d.pct}%;background:${colorForPercent(d.pct)};"></div></div>
-          <span>${d.pct}%</span>
-        </div>
-        <div style="font-size:.72rem;color:var(--muted);">حضر ${d.attended} · غاب ${d.absent}</div>
-      </td>` : '<td style="color:var(--muted);">—</td>';
-
-  body.innerHTML = rows.map(r=>`
-    <tr>
-      <td>${escHtml(r.name)}</td>${dayCell(r.days.friday)}${dayCell(r.days.sunday)}
-    </tr>
-  `).join('');
+  rpRenderTiles();
+  updateReportFilterVisibility();
 }
-
 /* ---------- USERS & LOGIN ---------- */
 // Setup key — required only for the very first admin setup on a fresh copy. Only its hash is kept
 // here (PBKDF2 like the passwords, salt 'khodam-setup-key'), so reading the file doesn't reveal it.
@@ -6086,7 +6069,6 @@ function applyBranding(title, logo){
   document.querySelector('.halo-mark').src = logo;
   document.getElementById('loginLogoImg').src = logo;
   document.getElementById('loadErrorLogoImg').src = logo;
-  document.getElementById('printLogo1').src = logo;
   document.getElementById('printLogo2').src = logo;
   const preview = document.getElementById('brandingLogoPreview');
   if(preview) preview.src = logo;
@@ -7445,10 +7427,6 @@ document.getElementById('resetAllBtn').addEventListener('click', async ()=>{
 });
 
 /* ---------- PRINT & EXCEL EXPORT ---------- */
-document.getElementById('printReportBtn').addEventListener('click', ()=>{
-  renderReports();
-  setTimeout(()=>window.print(), 150);
-});
 
 document.getElementById('exportExcelBtn').addEventListener('click', async ()=>{
   if(typeof XLSX === 'undefined'){ alert('مكتبة تصدير الإكسل مش محمّلة. جرّب تفتح البرنامج على متصفح تاني أو حاول تاني بعد شوية.'); return; }
@@ -7795,13 +7773,92 @@ function visibleGroupIds(){
   return allowedGroupsFor(currentUser);
 }
 
-function updateReportFilterVisibility(){
-  const type = document.getElementById('customReportType').value;
-  const isBirthdays = type === 'birthdays' || type === 'absentmonth';   // both pick a month instead of dates
-  document.getElementById('customReportDateRangeBox').style.display = isBirthdays ? 'none' : 'block';
-  document.getElementById('customReportDateRangeBox2').style.display = isBirthdays ? 'none' : 'block';
-  document.getElementById('customReportMonthBox').style.display = isBirthdays ? 'block' : 'none';
+// report picker: tiles instead of a drop-down, quick periods instead of typing dates, and the
+// report redraws by itself when a filter changes once it has been shown
+const RP_TYPES = [
+  { k:'summary',  ic:'📊', t:'ملخص كل اجتماع',      d:'النسبة ومتوسط الحاضرين والجمعة والأحد وآخر اجتماع', grp:'الحضور', range:true },
+  { k:'people',   ic:'👤', t:'نسبة حضور كل فرد',     d:'حضر وغاب ونسبة الجمعة والأحد لكل واحد', grp:'الحضور', range:true },
+  { k:'sessions', ic:'📅', t:'تفاصيل كل اجتماع',     d:'كل اجتماع بأسماء اللي حضروا', grp:'الحضور', range:true },
+  { k:'absentmonth', ic:'🚫', t:'اللي غابوا الشهر كله', d:'مين ما حضرش ولا اجتماع في شهر', grp:'الحضور', month:true },
+  { k:'birthdays', ic:'🎂', t:'أعياد الميلاد',        d:'أعياد ميلاد شهر معيّن', grp:'الأفراد', month:true },
+  { k:'area',     ic:'📍', t:'حسب المنطقة',          d:'القريبين من بعض متجمّعين', grp:'الأفراد', perm:'addresses' },
+  { k:'confessionfather', ic:'⛪', t:'أب الاعتراف',  d:'مين بيعترف عند مين', grp:'الأفراد', perm:'otherDetails' },
+  { k:'editlog',  ic:'📝', t:'سجل الإضافة والتعديل', d:'مين أضاف وعدّل إيه', grp:'الإدارة', perm:'addedBy' }
+];
+const RP_PERIODS = [['year','السنة الخدمية دي'],['month','الشهر ده'],['prev','الشهر اللي فات'],['3m','آخر ٣ شهور'],['all','من الأول'],['custom','📅 تاريخ تاني']];
+let rpPeriod = 'year', rpShown = false, rpTimer = null, rpScrollAfter = false;
+const rpAllowed = t => !t.perm || !currentUser || can(t.perm);
+function rpApplyPeriod(k){
+  rpPeriod = k;
+  const now = new Date(), f = document.getElementById('customReportFrom'), t = document.getElementById('customReportTo');
+  if(k === 'year'){ f.value = (now.getMonth() >= 9 ? now.getFullYear() : now.getFullYear() - 1) + '-10-01'; t.value = ''; }   // the service year starts in October
+  else if(k === 'month'){ f.value = dateStr(new Date(now.getFullYear(), now.getMonth(), 1)); t.value = ''; }
+  else if(k === 'prev'){ f.value = dateStr(new Date(now.getFullYear(), now.getMonth()-1, 1)); t.value = dateStr(new Date(now.getFullYear(), now.getMonth(), 0)); }
+  else if(k === '3m'){ f.value = dateStr(new Date(now.getFullYear(), now.getMonth()-2, 1)); t.value = ''; }
+  else if(k === 'all'){ f.value = ''; t.value = ''; }
 }
+function rpRenderTiles(){
+  const box = document.getElementById('rpTiles'); if(!box) return;
+  const sel = document.getElementById('customReportType');
+  if(!rpAllowed(RP_TYPES.find(t=>t.k === sel.value) || {})) sel.value = 'summary';
+  box.innerHTML = [...new Set(RP_TYPES.map(t=>t.grp))].map(g=>{
+    const ts = RP_TYPES.filter(t=>t.grp === g && rpAllowed(t));
+    return ts.length ? `<div class="rp-grp">${g}</div><div class="rp-grid">${ts.map(t=>`<button type="button" class="rp-tile ${t.k === sel.value ? 'on' : ''}" data-rp="${t.k}">
+      <span class="ic">${t.ic}</span><span><b>${t.t}</b><small>${t.d}</small></span></button>`).join('')}</div>` : '';
+  }).join('');
+  document.getElementById('rpPeriods').innerHTML = RP_PERIODS.map(([k,t])=>`<button type="button" data-rp-period="${k}" class="${rpPeriod === k ? 'on' : ''}">${t}</button>`).join('');
+}
+function updateReportFilterVisibility(){
+  const def = RP_TYPES.find(t=>t.k === document.getElementById('customReportType').value) || {};
+  const custom = !!def.range && rpPeriod === 'custom';
+  document.getElementById('rpPeriods').style.display = def.range ? '' : 'none';
+  document.getElementById('customReportDateRangeBox').style.display = custom ? 'block' : 'none';
+  document.getElementById('customReportDateRangeBox2').style.display = custom ? 'block' : 'none';
+  document.getElementById('customReportMonthBox').style.display = def.month ? 'block' : 'none';
+  document.getElementById('rpDates').style.display = custom || def.month ? 'flex' : 'none';
+}
+function rpGenerateSoon(ms, scroll){
+  if(!rpShown && !scroll) return;
+  if(scroll) rpScrollAfter = true;
+  clearTimeout(rpTimer);
+  rpTimer = setTimeout(()=>document.getElementById('generateReportBtn').click(), ms || 0);
+}
+function rpPeriodLabel(type, from, to){
+  const def = RP_TYPES.find(t=>t.k === type) || {};
+  if(!def.range) return '';
+  if(!from && !to) return 'من أول ما اتسجّل لحد النهارده';
+  const p = RP_PERIODS.find(x=>x[0] === rpPeriod);
+  return (p && rpPeriod !== 'custom' ? p[1] + ' · ' : '') + `من ${from ? prettyDate(from) : 'الأول'} لـ ${to ? prettyDate(to) : 'النهارده'}`;
+}
+function rpRingCard(gid, a){
+  const C = 2*Math.PI*34, has = a.sessions.length > 0, pct = has ? a.pct : 0;
+  const both = a.days.friday.sessions && a.days.sunday.sessions;
+  return `<div class="rp-ring g-${gid}">
+    <svg viewBox="0 0 90 90" width="88" height="88" aria-hidden="true"><circle cx="45" cy="45" r="34" fill="none" style="stroke:var(--cream-dark);" stroke-width="8"/>
+      ${pct > 0 ? `<circle cx="45" cy="45" r="34" fill="none" style="stroke:${colorForPercent(pct)};" stroke-width="8" stroke-linecap="round" stroke-dasharray="${pct/100*C} ${C}" transform="rotate(-90 45 45)"/>` : ''}
+      <text x="45" y="51" text-anchor="middle" font-weight="800" font-size="18" style="fill:var(--ink);font-family:'Cairo',sans-serif;">${has ? pct + '%' : '—'}</text></svg>
+    <div class="t">${escHtml(groupName(gid))}</div>
+    <div class="s">${a.members.length} فرد · ${a.sessions.length} اجتماع</div>
+    ${has ? `<div class="s">متوسط الحاضرين <b>${fmtAvg(a.avg)}</b> في الاجتماع</div>` : ''}
+    ${both ? `<div class="s">الجمعة <b>${a.days.friday.pct}%</b> · الأحد <b>${a.days.sunday.pct}%</b></div>` : ''}
+    ${a.lastDate ? `<div class="s">آخر اجتماع ${escHtml(prettyDate(a.lastDate,false))}: <b style="color:${colorForPercent(a.lastPct)};">${a.lastCount} من ${a.lastOf} · ${a.lastPct}%</b></div>` : ''}
+  </div>`;
+}
+document.getElementById('customReportCard').addEventListener('click', e=>{
+  const t = e.target.closest('[data-rp],[data-rp-period]'); if(!t) return;
+  if(t.dataset.rp){
+    document.getElementById('customReportType').value = t.dataset.rp;
+    rpRenderTiles(); updateReportFilterVisibility(); rpGenerateSoon(0, true);
+  } else {
+    rpApplyPeriod(t.dataset.rpPeriod); rpRenderTiles(); updateReportFilterVisibility();
+    if(t.dataset.rpPeriod !== 'custom') rpGenerateSoon(150);
+  }
+});
+['customReportFrom','customReportTo','customReportMonth'].forEach(id=>document.getElementById(id).addEventListener('change', ()=>rpGenerateSoon(250)));
+document.getElementById('customReportGroups').addEventListener('change', ()=>rpGenerateSoon(250));
+document.getElementById('customReportMonth').value = String(new Date().getMonth() + 1);
+rpApplyPeriod('year');
+rpRenderTiles();
 document.getElementById('customReportType').addEventListener('change', updateReportFilterVisibility);
 updateReportFilterVisibility();
 
@@ -7842,24 +7899,23 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
   let title = '';
   let sections = []; // [{heading, columns, rows}]
   let chartConfig = null; // {kind, labels, datasets}
+  let extraHtml = '';   // shown above the tables (e.g. the summary's rings)
+  rpShown = true;
 
   if(type === 'summary'){
-    title = 'ملخص عام';
-    const columns = ['الاجتماع','عدد الأفراد','عدد الاجتماعات بالفترة','متوسط نسبة الحضور %','متوسط نسبة الغياب %'];
+    title = 'ملخص كل اجتماع';
+    const columns = ['الاجتماع','عدد الأفراد','عدد الاجتماعات','متوسط الحاضرين','نسبة الحضور %','الجمعة %','الأحد %','آخر اجتماع'];
     const rows = [];
-    const chartLabels = [], attendPct = [], absentPct = [];
+    let cards = '';
     selectedGroups.forEach(gid=>{
-      const { members, sessions, pct } = groupAttendance(gid, s=>inRange(s.date, from, to));
-      rows.push([groupName(gid), members.length, sessions.length, pct, 100-pct]);
-      chartLabels.push(groupName(gid));
-      attendPct.push(pct);
-      absentPct.push(100-pct);
+      const a = groupAttendance(gid, s=>inRange(s.date, from, to));
+      const has = a.sessions.length > 0, dayPct = d => d.sessions ? d.pct : '—';
+      rows.push([groupName(gid), a.members.length, a.sessions.length, has ? fmtAvg(a.avg) : '—', has ? a.pct : '—',
+        dayPct(a.days.friday), dayPct(a.days.sunday), a.lastDate ? `${prettyDate(a.lastDate,false)}: ${a.lastCount} من ${a.lastOf} (${a.lastPct}%)` : '—']);
+      cards += rpRingCard(gid, a);
     });
     sections.push({ heading: null, columns, rows });
-    chartConfig = { kind:'bar', labels: chartLabels, datasets: [
-      { name:'نسبة الحضور %', data: attendPct, color:'#3f6152' },
-      { name:'نسبة الغياب %', data: absentPct, color:'#7A2E2E' }
-    ]};
+    extraHtml = `<div class="rp-rings">${cards}</div>`;
   } else if(type === 'sessions'){
     title = 'تفاصيل الاجتماعات';
     const columns = ['الاجتماع','التاريخ','عدد الحاضرين','الحاضرون','سجّله'];
@@ -7983,8 +8039,12 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
     return;
   }
 
-  const dateSuffix = (type!=='birthdays' && type!=='absentmonth' && type!=='area' && type!=='editlog' && type!=='confessionfather' && (from||to)) ? ` (من ${from||'البداية'} إلى ${to||'النهاردة'})` : '';
-  let html = `<h3 style="font-family:'Amiri',serif;margin-bottom:8px;">${title}${dateSuffix}</h3>`;
+  const period = rpPeriodLabel(type, from, to);
+  const gNames = selectedGroups.map(groupName).join('، ');
+  let html = `<div class="rp-res-head"><div><h3>${escHtml(title)}</h3>
+    <div class="rp-meta">${period ? escHtml(period) + ' · ' : ''}${escHtml(gNames)}</div>
+    <div class="rp-meta rp-print-only">اتعمل يوم ${escHtml(prettyDate(todayStr()))}${currentUser ? ' بواسطة ' + escHtml(currentUser.name) : ''}</div></div>
+    <span class="rp-count no-print">${totalRows} ${totalRows === 1 ? 'سطر' : 'سطر'}</span></div>` + extraHtml;
   if(chartConfig){
     html += `<div style="max-width:100%;margin-bottom:20px;" id="customReportChart"></div>`;
   }
@@ -7994,14 +8054,24 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
     if(sec.rows.length === 0){
       html += `<div class="empty-note">لا يوجد نتائج${sec.heading ? ' لـ'+escHtml(sec.heading) : ''}</div>`;
     } else {
-      html += `<table class="report-table">
-        <thead><tr>${sec.columns.map(c=>`<th>${c}</th>`).join('')}</tr></thead>
-        <tbody>${sec.rows.map(r=>`<tr>${r.map(v=>`<td>${escHtml(v)}</td>`).join('')}</tr>`).join('')}</tbody>
-      </table>`;
+      // percentage columns get a small coloured bar next to the number
+      const cell = (v, i)=>{
+        const p = parseFloat(v);
+        if(/%/.test(sec.columns[i]) && v !== '—' && v !== '' && !isNaN(p)){
+          const r = Math.max(0, Math.min(100, Math.round(p)));
+          return `<td class="rp-pc"><span class="rp-pct"><i style="width:${r}%;background:${colorForPercent(r)};"></i></span><b>${r}%</b></td>`;
+        }
+        return `<td>${escHtml(v)}</td>`;
+      };
+      html += `<div class="rp-table-wrap"><table class="report-table">
+        <thead><tr>${sec.columns.map(c=>`<th>${c.replace(/ %$/,'')}</th>`).join('')}</tr></thead>
+        <tbody>${sec.rows.map(r=>`<tr>${r.map(cell).join('')}</tr>`).join('')}</tbody>
+      </table></div>`;
     }
   });
   preview.innerHTML = html;
   actions.style.display = 'flex';
+  if(rpScrollAfter){ rpScrollAfter = false; actions.scrollIntoView({ behavior:'smooth', block:'start' }); }
 
   if(chartConfig){
     const chartContainer = document.getElementById('customReportChart');
@@ -10206,7 +10276,6 @@ async function init(){
   if(halo){
     document.getElementById('loginLogoImg').src = halo.src;
     document.getElementById('loadErrorLogoImg').src = halo.src;
-    document.getElementById('printLogo1').src = halo.src;
     document.getElementById('printLogo2').src = halo.src;
   }
   const pinshtiLogo = document.querySelector('.app-footer img');
@@ -10758,6 +10827,7 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
+  { id: 'n32', d: '31-Oct-2026', text: '📑 شاشة التقارير اتعملت من جديد: تختار التقرير من كروت بأيقونات بدل القايمة، والفترة بدوسة (السنة الخدمية، الشهر ده، الشهر اللي فات، آخر ٣ شهور، من الأول، أو تاريخ تاني)، والتقرير بيطلع على طول وبيتحدّث لوحده لما تغيّر حاجة. النسب في الجداول بقى جنبها شريط ملوّن، و"ملخص كل اجتماع" بقى فيه دواير بالنسبة ومتوسط الحاضرين والجمعة والأحد وآخر اجتماع وبيتطبع كده. الكروت اللي كانت فوق اتشالت، و"نسبة حضور كل فرد" بقت تقرير بتختاره وتطبعه.' },
   { id: 'n31', d: '31-Oct-2026', text: '💬 في الإعدادات قسم جديد "الرسايل الجاهزة": كل رسالة البرنامج بيجهّزها (وحشتنا، بعد غياب طويل، ترحيب بجديد، سلامتك، تهنئة عيد الميلاد، تفكير المتكلم، كود التفعيل، والتوقيع) الأدمن والمشرفين يقدروا يعدّلوا نصها ويشوفوا شكلها قبل الحفظ، والتعديل بيتطبق عند الكل.' },
   { id: 'n30', d: '31-Oct-2026', text: '🏠 شاشة الافتقاد بقت داشبورد كاملة: فوق ملخص بنسبة الغايبين اللي اتسأل عليهم ومربعات (محتاجين سؤال، تحت الملاحظة، اتافتقدوا الشهر ده، عمرهم ما اتافتقدوا)، وتنبيهات بتتحدّث لوحدها (غايبين بقالهم أكتر من شهر، جداد حضروا مرة وماجوش، اللي جه ميعاد السؤال عليهم تاني، عيد ميلاد حد غايب). كل واحد قدامه 📞 و💬 و🏠، ولما ترجع من المكالمة أو الواتساب البرنامج بيسألك النتيجة (رد، ما ردش، وعد إنه هييجي…) ويسجّلها باسمك، وتقدر تقول "فكّرني بعد أسبوع". فيه رسايل واتساب جاهزة، وسجل بمين سأل على مين، وإحصائيات. متابعة الحضور اتنقلت من التقارير للافتقاد، والرئيسية بقى فيها ملخص بس، وزرار الافتقاد عليه رقم أحمر بعدد اللي محتاجين سؤال.' },
   { id: 'n29', d: '31-Oct-2026', text: '📋 تقرير جديد في "تقرير مخصص": "اللي غابوا الشهر كله". تختار الشهر والاجتماعات، فيطلعلك كل اجتماع لوحده بأسماء اللي ما حضروش ولا مرة في الشهر ده، ومعاهم التليفون وآخر مرة حضروا وآخر افتقاد. وتقدر تطبعه أو تنزّله Excel.' },
