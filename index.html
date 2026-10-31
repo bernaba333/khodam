@@ -462,6 +462,45 @@ html[data-theme="dark"] .kf-ok{color:#86c4a2;}
 .kf-note{font-size:.76rem;color:var(--notice-ink);background:var(--notice-bg);border-radius:8px;padding:3px 8px;margin-top:4px;display:inline-block;}
 @media(max-width:560px){ .kf-form{grid-template-columns:1fr;} .kf-seg button{font-size:.78rem;} }
 .follow-all{margin-top:16px;}
+/* small charts: stacked / colored columns with a tap readout, donut, and a details button */
+.sc-chart{margin-top:4px;}
+.sc-chart .ab-read-v b{font-size:.92rem;}
+.sc-more{margin-top:12px;}
+.sc-more > summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;padding:9px 12px;border:1.5px solid var(--gold-soft);border-radius:12px;background:var(--card);font-weight:700;font-size:.86rem;color:var(--ink);}
+.sc-more > summary::-webkit-details-marker{display:none;}
+.sc-more > summary::after{content:'▾';font-size:.8rem;color:var(--muted);transition:transform .2s;}
+.sc-more[open] > summary::after{transform:rotate(180deg);}
+.sc-more[open] > summary{background:var(--hi);margin-bottom:10px;}
+.sc-more .sc-close{display:none;}
+.sc-more[open] .sc-close{display:inline;}
+.sc-more[open] .sc-open{display:none;}
+.sc-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px;}
+.sc-tile{min-width:0;border:1px solid var(--line);border-radius:14px;padding:10px 6px;text-align:center;background:var(--card);}
+.sc-tile .t{font-size:.76rem;font-weight:700;color:var(--ink-soft);}
+.sc-tile .s{font-size:.7rem;color:var(--muted);}
+.sc-tile .n{font-size:1.5rem;font-weight:800;line-height:1.3;color:var(--ink);}
+.hb-chart{display:flex;flex-direction:column;gap:7px;margin-top:6px;}
+.hb-row{all:unset;box-sizing:border-box;display:grid;grid-template-columns:86px 1fr 62px;align-items:center;gap:8px;cursor:pointer;padding:3px 4px;border-radius:9px;font-family:'Cairo',sans-serif;}
+.hb-row:hover,.hb-row:focus-visible{background:var(--hi);}
+.hb-row[disabled]{cursor:default;}
+.hb-l{font-size:.8rem;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hb-t{position:relative;height:20px;border-radius:7px;background:var(--cream-dark);overflow:hidden;}
+.hb-t i{position:absolute;inset-block:0;inset-inline-start:0;border-radius:7px;}
+.hb-t b{position:absolute;inset-inline-start:8px;top:50%;transform:translateY(-50%);font-size:.74rem;color:var(--ink);text-shadow:0 0 3px var(--card);}
+.hb-m{font-size:.72rem;font-weight:700;color:#b23b3b;text-align:center;background:rgba(178,59,59,.1);border-radius:9px;padding:2px 4px;white-space:nowrap;}
+.hb-row[disabled] .hb-m{color:#2e7d4f;background:rgba(46,125,79,.12);}
+html[data-theme="dark"] .hb-m{color:#f08a84;}
+.hb-grow{transform-origin:right center;animation:hbGrow .6s cubic-bezier(.2,.8,.2,1) both;}
+@keyframes hbGrow{from{transform:scaleX(0);}to{transform:scaleX(1);}}
+@media (prefers-reduced-motion: reduce){ .hb-grow{animation:none;} }
+.sc-sub{font-size:.82rem;font-weight:800;color:var(--ink-soft);margin:12px 0 2px;}
+.mv-top{display:grid;grid-template-columns:minmax(0,190px) 1fr;gap:16px;align-items:center;}
+.mv-legend{display:flex;flex-direction:column;gap:8px;max-width:340px;}
+.mv-legend div{display:flex;align-items:center;gap:8px;font-size:.86rem;font-weight:600;}
+.mv-legend i{width:12px;height:12px;border-radius:4px;flex:none;}
+.mv-legend b{margin-inline-start:auto;font-size:1rem;}
+.mv-legend small{color:var(--muted);font-weight:500;}
+@media (max-width:520px){ .mv-top{grid-template-columns:1fr;} .mv-top svg{max-width:170px;margin:0 auto;} }
 .dc-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
 .dc-summary .dash-stat{padding:12px 8px;}
 .dc-summary .sub{font-size:.72rem;color:var(--muted);margin-top:2px;}
@@ -1764,7 +1803,7 @@ html[data-theme="dark"] .rp-periods button.on{background:var(--gold);color:#1a23
   </div>
 
   <div class="card">
-    <h2>آخر الاجتماعات المسجّلة</h2>
+    <h2>📅 الاجتماعات المسجّلة</h2>
     <div id="dashboardRecentSessions"></div>
   </div>
 
@@ -1861,6 +1900,10 @@ html[data-theme="dark"] .rp-periods button.on{background:var(--gold);color:#1a23
 
 <!-- MOVES TAB -->
 <section class="panel" id="panel-moves">
+  <div class="card" id="moveStatsCard">
+    <h2>📊 إحصائية النقل</h2>
+    <div id="moveStats"></div>
+  </div>
   <div class="card" id="moveCard">
     <h2>نقل اسم</h2>
     <p style="font-size:.85rem;color:var(--ink-soft);margin-top:0;">الاسم اللي هيتنقل هيختفي من قوائم الحضور والتقارير وأعياد الميلاد، بس هيفضل محفوظ هنا ببياناته وتاريخ حضوره. وتقدر ترجّعه في أي وقت.</p>
@@ -3567,7 +3610,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '31-Oct-2026 H';
+const APP_VERSION = '31-Oct-2026 I';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -5316,6 +5359,7 @@ function renderHistory(){
 }
 
 /* ---------- REPORTS TAB ---------- */
+let recentMoreOpen = false;
 function renderDashboard(){
   const visible = visibleGroupIds();
   const visibleGroups = GROUPS.filter(g=>visible.includes(g.id));
@@ -5370,12 +5414,33 @@ function renderDashboard(){
   if(allSessions.length === 0){
     recentEl.innerHTML = '<div class="empty-note">لسه معملتش أي تسجيل حضور</div>';
   } else {
-    recentEl.innerHTML = allSessions.slice(0,8).map(s=>`
+    // chart: how many came to each of the last meetings, split by meeting (colors), oldest on the left
+    const counts = {};
+    visibleGroups.forEach(g=>(DATA.sessions[g.id]||[]).forEach(sess=>{ (counts[sess.date] = counts[sess.date] || {})[g.id] = sess.present.length; }));
+    const last = allSessions.slice(0, 12).reverse();
+    const series = visibleGroups.map(g=>({ k:g.id, label:g.name, color:'var(--g-'+g.id+')' }));
+    const pts = last.map(s=>{ const [yy,mm,dd] = s.date.split('-'); return { label: prettyDate(s.date), short: `${+dd}/${+mm}`, v: Object.assign({}, counts[s.date]) }; });
+    const totals = allSessions.slice(0, 12).map(s=>s.count);
+    const avg = Math.round(totals.reduce((t,x)=>t+x,0) / totals.length);
+    const best = allSessions.slice(0, 12).reduce((a,b)=>b.count > a.count ? b : a);
+    const lastS = allSessions[0], prevS = allSessions[1];
+    const diff = prevS ? lastS.count - prevS.count : null;
+    const width = recentEl.clientWidth || recentEl.parentElement.clientWidth || 340;
+    recentEl.innerHTML = `<div class="sc-tiles">
+        <div class="sc-tile"><div class="t">آخر اجتماع</div><div class="n">${lastS.count}</div><div class="s">${diff === null ? 'حاضر' : (diff >= 0 ? '▲ ' + diff : '▼ ' + (-diff)) + ' عن اللي قبله'}</div></div>
+        <div class="sc-tile"><div class="t">المتوسط</div><div class="n">${avg}</div><div class="s">حاضر في آخر ${totals.length} اجتماع</div></div>
+        <div class="sc-tile"><div class="t">أعلى حضور</div><div class="n">${best.count}</div><div class="s">${prettyDate(best.date, false)}</div></div>
+      </div>
+      ${series.length > 1 ? `<div class="ab-legend">${series.map(sr=>`<span><i style="background:${sr.color};"></i>${sr.label}</span>`).join('')}</div>` : ''}
+      ${scChart('recent', pts, series, { stacked:true, unit:'حاضر', width })}
+      ${scMore('recentMore', '📋 اعرض تفاصيل الاجتماعات', '📋 اخفي التفاصيل', allSessions.slice(0,8).map(s=>`
       <div class="dash-list-row">
         <div>${prettyDate(s.date)}<div class="meta">${s.groups.join(' + ')}</div></div>
         <div class="meta">${s.count} حاضر${can('addedBy') && s.recordedBy.length ? ' · سجّله ' + escHtml(Array.from(new Set(s.recordedBy)).join('، ')) : ''}</div>
       </div>
-    `).join('');
+    `).join(''), recentMoreOpen)}`;
+    scStartRight(recentEl);
+    recentEl.querySelector('#recentMore').addEventListener('toggle', e=>{ recentMoreOpen = e.target.open; });
   }
 
   // ---- how complete everyone's data is (only for people who work on the servants' data) ----
@@ -5451,14 +5516,22 @@ function renderDataCompleteness(allPeople){
   const incomplete = rows.filter(r=>r.missing.length && (!dataCompleteField || r.missing.some(f=>f.key===dataCompleteField)))
     .sort((a,b)=>a.pct-b.pct || a.s.name.localeCompare(b.s.name,'ar'));
   const opts = ['<option value="">كل البيانات الناقصة</option>'].concat(DATA_FIELDS.map(f=>`<option value="${f.key}"${f.key===dataCompleteField?' selected':''}>ناقص: ${f.label}</option>`)).join('');
+  const fpts = DATA_FIELDS.map(f=>{ const x = fieldStat(f); return { label: `${f.label} · ${x.done} من ${n}`, short: f.label, v:{ p: x.pct }, color: colorForPercent(x.pct), key: f.key, miss: n - x.done }; });
+  // horizontal bars, weakest field on top; tap a bar to see who is missing it
+  const fchart = `<div class="hb-chart">${fpts.slice().sort((a,b)=>a.v.p-b.v.p).map((p,i)=>`<button type="button" class="hb-row${p.miss ? ' hb-need' : ''}" ${p.miss ? `data-field="${p.key}"` : 'disabled'} title="${p.miss ? 'دوس تشوف أسماء اللي ناقصهم ' + p.short : 'كامل'}">
+      <span class="hb-l">${p.short}</span>
+      <span class="hb-t"><i class="hb-grow" style="width:${Math.max(p.v.p, 2)}%;background:${p.color};animation-delay:${i*40}ms;"></i><b>${p.v.p}%</b></span>
+      <span class="hb-m">${p.miss ? 'ناقص ' + p.miss : '✓'}</span></button>`).join('')}</div>`;
   el.innerHTML = `
     ${groupPicker}
-    <div class="dc-summary">
-      <div class="dash-stat"><div class="num" style="color:${colorForPercent(overall)};">${overall}%</div><div class="label">نسبة اكتمال البيانات</div><div class="sub">${filledCells} خانة من ${n*F}</div></div>
-      <div class="dash-stat"><div class="num" style="color:#2e7d4f;">${completePct}%</div><div class="label">بياناتهم كاملة</div><div class="sub">${complete} من ${n}</div></div>
-      <div class="dash-stat"><div class="num" style="color:#b23b3b;">${100-completePct}%</div><div class="label">لسه ناقصهم حاجة</div><div class="sub">${n-complete} من ${n}</div></div>
+    <div class="ab-tiles">
+      <div class="ab-tile ab-both"><div class="t">نسبة اكتمال البيانات</div>${abRing(overall, colorForPercent(overall))}<div class="s">${filledCells} خانة من ${n*F}</div></div>
+      <div class="ab-tile"><div class="t">بياناتهم كاملة</div>${abRing(completePct, '#2e7d4f')}<div class="s">${complete} من ${n}</div></div>
+      <div class="ab-tile"><div class="t">لسه ناقصهم حاجة</div>${abRing(100-completePct, '#b23b3b')}<div class="s">${n-complete} من ${n}</div></div>
     </div>
-    <div class="dc-groups">${groupsHtml}</div>
+    <div class="sc-sub">كل خانة مكتوبة عند كام في المية <small style="font-weight:500;color:var(--muted);">· دوس على أي خانة تشوف مين ناقصه</small></div>
+    ${fchart}
+    ${scMore('dcMore', '📋 اعرض التفاصيل والأسماء', '📋 اخفي التفاصيل', `<div class="dc-groups">${groupsHtml}</div>
     ${(n-complete) ? '<p class="dc-hint">دوس على "ناقص" جنب أي خانة علشان تشوف أسماء اللي ناقصهم.</p>' : ''}
     ${(n-complete) ? `<details class="follow-all" id="dcDetails"${dataCompleteField||dataCompleteOpen?' open':''}>
       <summary>مين لسه بياناته ناقصة (${n-complete})</summary>
@@ -5470,19 +5543,24 @@ function renderDataCompleteness(allPeople){
           ${can('editServant') ? `<button type="button" class="ghost dc-edit" data-id="${r.s.id}">✏️ كمّل</button>` : ''}
         </div>
       </div>`).join('') : '<div class="empty-note">مفيش حد ناقصه البيان ده 🎉</div>'}
-    </details>` : '<div class="empty-note">كل البيانات كاملة 🎉</div>'}`;
+    </details>` : '<div class="empty-note">كل البيانات كاملة 🎉</div>'}`, dataCompleteMore || !!dataCompleteField)}`;
+  el.querySelector('#dcMore').addEventListener('toggle', e=>{ dataCompleteMore = e.target.open; });
   const sel = el.querySelector('#dcFieldFilter');
   if(sel) sel.addEventListener('change', ()=>{ dataCompleteField = sel.value; renderDataCompleteness(allPeople); });
   wireDcGroup(el, allPeople);
-  el.querySelectorAll('button.dc-need').forEach(b=>b.addEventListener('click', ()=>{
-    dataCompleteField = b.dataset.field; dataCompleteOpen = true; renderDataCompleteness(allPeople);
-    const d = el.querySelector('#dcDetails'); if(d) d.scrollIntoView({behavior:'smooth', block:'start'});
-  }));
+  wireDcNeed(el, allPeople);
   const det = el.querySelector('#dcDetails');
   if(det) det.addEventListener('toggle', ()=>{ dataCompleteOpen = det.open; });
   el.querySelectorAll('.dc-edit').forEach(b=>b.addEventListener('click', ()=>openMissingDataEdit(b.dataset.id)));
 }
 
+let dataCompleteMore = false;
+function wireDcNeed(root, allPeople){
+  root.querySelectorAll('button.dc-need, button.hb-need').forEach(b=>b.addEventListener('click', ()=>{
+    dataCompleteField = b.dataset.field; dataCompleteOpen = true; dataCompleteMore = true; renderDataCompleteness(allPeople);
+    const d = document.querySelector('#dataComplete #dcDetails'); if(d) d.scrollIntoView({behavior:'smooth', block:'start'});
+  }));
+}
 function wireDcGroup(el, allPeople){
   const gs = el.querySelector('#dcGroupFilter');
   if(gs) gs.addEventListener('change', ()=>{ dataCompleteGroup = gs.value; renderDataCompleteness(allPeople); });
@@ -5729,8 +5807,95 @@ function abRing(pct, color){
   const C = 2*Math.PI*34, dash = (pct||0)/100*C;
   return `<svg viewBox="0 0 90 90" style="display:block;margin:4px auto;width:100%;max-width:92px;height:auto;">
     <circle cx="45" cy="45" r="34" style="fill:none;stroke:var(--cream-dark);stroke-width:9;"/>
-    <circle cx="45" cy="45" r="34" stroke-dasharray="${dash} ${C}" stroke-linecap="round" transform="rotate(-90 45 45)" style="fill:none;stroke:${color};stroke-width:9;"/>
+    ${pct ? '' : '<!--'}<circle cx="45" cy="45" r="34" stroke-dasharray="${dash} ${C}" stroke-linecap="round" transform="rotate(-90 45 45)" style="fill:none;stroke:${color};stroke-width:9;"/>${pct ? '' : '-->'}
     <text x="45" y="51" text-anchor="middle" style="fill:var(--ink);font-family:'Cairo',sans-serif;font-weight:800;font-size:19px;">${pct}%</text></svg>`;
+}
+// Generic column chart with a tap readout. pts: [{label, short, v:{k:number}, color?}]
+// series: [{k,label,color}]. opts: { stacked, pct, unit, emptyNote }. The chart re-renders itself on tap.
+const SC_LAST = {};
+function scChart(key, pts, series, opts){
+  opts = opts || {};
+  SC_LAST[key] = { pts, series, opts, sel: SC_LAST[key] ? SC_LAST[key].sel : null };
+  const n = pts.length;
+  if(!n) return `<div class="empty-note">${opts.emptyNote || 'مفيش بيانات لسه'}</div>`;
+  const L = 10, R = 40, T = 24, B = 30, H = opts.H || 210;
+  const tot = p => series.reduce((t,sr)=>t + (p.v[sr.k] || 0), 0);
+  let max = opts.pct ? 100 : Math.max(1, ...pts.map(p=>opts.stacked ? tot(p) : Math.max(...series.map(sr=>p.v[sr.k] || 0))));
+  if(!opts.pct){ const raw = max / 4, mag = Math.pow(10, Math.floor(Math.log10(raw))); const step = [1,2,2.5,5,10].map(m=>m*mag).find(x=>x >= raw && (x >= 1 && x % 1 === 0)) || Math.ceil(raw); max = Math.max(4, step * 4); }
+  const cols = opts.stacked ? 1 : series.length;
+  const groupW = Math.max(n <= 5 ? 64 : (opts.minW || 36), cols * 14 + 12);
+  const width = opts.width || 320;
+  const W = Math.max(Math.max(280, width), L + R + n * groupW);
+  const pw = W - L - R, ph = H - T - B, gw = pw / n;
+  const bw = Math.min(n <= 5 ? 30 : 20, (gw - 10) / cols), gap = 3;
+  const y = v => T + ph - v / max * ph;
+  const sel = SC_LAST[key].sel == null || SC_LAST[key].sel >= n ? (opts.selFirst ? 0 : n - 1) : SC_LAST[key].sel;
+  let g = '';
+  [.25,.5,.75,1].forEach(f=>{
+    const v = max * f;
+    g += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" style="stroke:var(--line-soft);stroke-width:1;stroke-dasharray:2 5;"/>`;
+    g += `<text x="${W-R+8}" y="${y(v)+4}" text-anchor="start" style="fill:var(--faint);font-size:10px;">${Math.round(v)}${opts.pct ? '%' : ''}</text>`;
+  });
+  g += `<line x1="${L}" x2="${W-R}" y1="${y(0)}" y2="${y(0)}" style="stroke:var(--line);stroke-width:1.2;"/>`;
+  const bar = (bx, top, bot, w, fill, round, i, on) => {
+    const h = Math.max(0, bot - top); if(h <= 0) return '';
+    const r = round ? Math.min(w/2, 6, h) : 0;
+    const d = r ? `M${bx},${bot} V${top+r} Q${bx},${top} ${bx+r},${top} H${bx+w-r} Q${bx+w},${top} ${bx+w},${top+r} V${bot} Z` : `M${bx},${bot} V${top} H${bx+w} V${bot} Z`;
+    return `<path class="${opts.noAnim ? '' : 'ab-grow'}" d="${d}" style="fill:${fill};opacity:${on || n === 1 ? 1 : .78};animation-delay:${Math.min(i*35, 500)}ms;"/>`;
+  };
+  pts.forEach((p,i)=>{
+    const gx = L + i*gw, on = i === sel;
+    if(on) g += `<rect x="${gx+2}" y="${T-18}" width="${gw-4}" height="${ph+18+B-4}" rx="10" style="fill:var(--hi);stroke:var(--gold-soft);stroke-width:1;"/>`;
+    if(opts.stacked){
+      const x0 = gx + (gw - bw)/2; let acc = 0;
+      const vis = series.filter(sr=>(p.v[sr.k] || 0) > 0);
+      vis.forEach((sr,j)=>{ const v = p.v[sr.k]; g += bar(x0, y(acc + v) + (j ? 1 : 0), y(acc), bw, p.color || sr.color, j === vis.length - 1, i, on); acc += v; });
+      if(on || n <= 8) g += `<text x="${gx+gw/2}" y="${y(acc)-5}" text-anchor="middle" style="fill:var(--ink);font-size:${on ? 11.5 : 10}px;font-weight:800;">${acc}${opts.pct ? '%' : ''}</text>`;
+    } else {
+      const total = cols*bw + (cols-1)*gap, x0 = gx + (gw - total)/2;
+      series.forEach((sr,j)=>{
+        const v = p.v[sr.k]; if(v == null) return;
+        const bx = x0 + j*(bw+gap);
+        g += bar(bx, Math.min(y(v), y(0) - 3), y(0), bw, p.color || sr.color, true, i, on);
+        if(on || n <= 8) g += `<text x="${bx+bw/2}" y="${Math.min(y(v), y(0)-3)-5}" text-anchor="middle" style="fill:var(--ink);font-size:${bw >= 20 ? 11 : 9.5}px;font-weight:800;">${v}${opts.pct ? '%' : ''}</text>`;
+      });
+    }
+    g += `<text x="${gx+gw/2}" y="${H-10}" text-anchor="middle" style="fill:${on?'var(--ink)':'var(--muted)'};font-size:10.5px;font-weight:${on?800:500};">${p.short}</text>`;
+    g += `<rect data-sci="${i}" x="${gx}" y="0" width="${gw}" height="${H}" style="fill:transparent;cursor:pointer;"><title>${p.label}</title></rect>`;
+  });
+  const sp = pts[sel];
+  const read = opts.read ? opts.read(sp) : series.filter(sr=>!opts.stacked || sp.v[sr.k]).map(sr=>`<span><i style="background:${sp.color || sr.color};height:10px;width:10px;border-radius:3px;"></i>${sr.label} <b>${sp.v[sr.k] == null ? '—' : sp.v[sr.k] + (opts.pct ? '%' : '')}</b></span>`).join('')
+    + (opts.stacked && series.length > 1 ? `<span>الإجمالي <b>${tot(sp)}${opts.unit ? ' ' + opts.unit : ''}</b></span>` : '');
+  return `<div class="ab-chart sc-chart" data-sc="${key}"><div class="ab-scroll"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="direction:ltr;display:block;font-family:'Cairo',sans-serif;">${g}</svg></div>
+    <div class="ab-read"><div class="ab-read-t">${sp.label}</div><div class="ab-read-v">${read}</div></div></div>`;
+}
+// tap a column: redraw only that chart, keep its scroll position, no grow animation
+document.addEventListener('click', e=>{
+  const hit = e.target.closest && e.target.closest('[data-sci]'); if(!hit) return;
+  const box = hit.closest('.sc-chart'); if(!box) return;
+  const last = SC_LAST[box.dataset.sc]; if(!last) return;
+  last.sel = +hit.dataset.sci;
+  const sc = box.querySelector('.ab-scroll'), left = sc ? sc.scrollLeft : 0;
+  const tmp = document.createElement('div');
+  tmp.innerHTML = scChart(box.dataset.sc, last.pts, last.series, Object.assign({}, last.opts, { noAnim:true }));
+  SC_LAST[box.dataset.sc].opts = last.opts; SC_LAST[box.dataset.sc].sel = +hit.dataset.sci;
+  const nb = tmp.firstElementChild; box.replaceWith(nb);
+  const ns = nb.querySelector('.ab-scroll'); if(ns) ns.scrollLeft = left;
+  if(last.opts.onPick) last.opts.onPick(last.pts[+hit.dataset.sci], nb);
+});
+function scStartRight(el){ el.querySelectorAll('.sc-chart .ab-scroll').forEach(sc=>{ sc.scrollLeft = sc.scrollWidth; }); }
+// donut: parts [{v,color,label}], centre text
+function scDonut(parts, centerNum, centerLabel){
+  const total = parts.reduce((t,x)=>t+x.v,0), r = 38, C = 2*Math.PI*r;
+  let off = 0, arcs = '';
+  if(total) parts.forEach(x=>{ if(!x.v) return; const len = x.v/total*C; arcs += `<circle cx="50" cy="50" r="${r}" stroke-dasharray="${Math.max(0,len-1.5)} ${C}" stroke-dashoffset="${-off}" transform="rotate(-90 50 50)" style="fill:none;stroke:${x.color};stroke-width:14;"><title>${x.label}: ${x.v}</title></circle>`; off += len; });
+  return `<svg viewBox="0 0 100 100" style="display:block;width:100%;max-width:190px;height:auto;margin:0 auto;">
+    <circle cx="50" cy="50" r="${r}" style="fill:none;stroke:var(--cream-dark);stroke-width:14;"/>${arcs}
+    <text x="50" y="50" text-anchor="middle" style="fill:var(--ink);font-family:'Cairo',sans-serif;font-weight:800;font-size:20px;">${centerNum}</text>
+    <text x="50" y="64" text-anchor="middle" style="fill:var(--muted);font-family:'Cairo',sans-serif;font-size:8.5px;">${centerLabel}</text></svg>`;
+}
+function scMore(id, openLabel, closeLabel, inner, open){
+  return `<details class="sc-more" id="${id}"${open ? ' open' : ''}><summary><span class="sc-open">${openLabel}</span><span class="sc-close">${closeLabel}</span></summary>${inner}</details>`;
 }
 function renderAttendBreakdown(groups){
   const el = document.getElementById('dashboardChart');
@@ -8165,11 +8330,40 @@ function openMoveFor(id){
   if(tabBtn) tabBtn.click();
   selectMovePerson(id);
 }
+const MOVE_COLORS = { departed:'#8b7bb8', emigrated:'#3f7cc0', moved:'#c9973a' };
+function renderMoveStats(moved){
+  const el = document.getElementById('moveStats'); if(!el) return;
+  if(!moved.length){ el.innerHTML = '<div class="empty-note">مفيش أسماء منقولة لسه</div>'; return; }
+  const keys = Object.keys(MOVE_REASONS);
+  const cnt = k => moved.filter(s=>s.status === k).length;
+  const parts = keys.map(k=>({ k, v: cnt(k), color: MOVE_COLORS[k], label: MOVE_REASONS[k].title }));
+  const legend = parts.map(x=>`<div><i style="background:${x.color};"></i>${MOVE_REASONS[x.k].icon} ${x.label}<b>${x.v}</b><small>${Math.round(x.v/moved.length*100)}%</small></div>`).join('');
+  // per month, last 12 months up to the newest move
+  const dated = moved.filter(s=>s.statusDate).map(s=>s.statusDate.slice(0,7)).sort();
+  let chart = '';
+  if(dated.length){
+    const endD = new Date(), months = [];
+    for(let i = 11; i >= 0; i--){ const d = new Date(endD.getFullYear(), endD.getMonth() - i, 1); months.push(d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0')); }
+    const first = months.findIndex(m=>m >= dated[0]);
+    const ms = months.slice(first < 0 ? 0 : Math.min(first, 6));
+    const pts = ms.map(m=>{
+      const v = {}; keys.forEach(k=>{ v[k] = moved.filter(s=>s.status === k && (s.statusDate||'').slice(0,7) === m).length; });
+      return { label: `${AR_MONTHS[+m.slice(5,7)]} ${m.slice(0,4)}`, short: AR_MONTHS[+m.slice(5,7)], v };
+    });
+    const series = keys.map(k=>({ k, label: MOVE_REASONS[k].icon + ' ' + MOVE_REASONS[k].title, color: MOVE_COLORS[k] }));
+    chart = `<div class="sc-sub">النقل شهر بشهر</div>${scChart('moves', pts, series, { stacked:true, unit:'اسم', minW:50, width:(el.clientWidth || 340) })}`;
+  }
+  const noDate = moved.length - dated.length;
+  el.innerHTML = `<div class="mv-top"><div>${scDonut(parts, moved.length, 'اسم منقول')}</div><div class="mv-legend">${legend}</div></div>
+    ${chart}${noDate ? `<p class="dc-hint">${noDate} من غير تاريخ نقل، فمش ظاهرين في الرسم الشهري.</p>` : ''}`;
+  scStartRight(el);
+}
 function renderMovesPanel(){
   document.getElementById('moveCard').style.display = can('editMoves') ? 'block' : 'none';
   const term = (document.getElementById('movedSearch').value||'').trim();
   const moved = DATA.servants.filter(s=>s.status && personVisible(s));
   document.getElementById('movedCount').textContent = moved.length;
+  renderMoveStats(moved);
   const listEl = document.getElementById('movedList');
   const shown = term ? moved.filter(s=>s.name.includes(term) || (s.phone||'').includes(term) || (s.statusNote||'').includes(term)) : moved;
   if(moved.length === 0){ listEl.innerHTML = '<div class="empty-note">مفيش أسماء منقولة لسه</div>'; return; }
@@ -10827,6 +11021,7 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
+  { id: 'n33', d: '31-Oct-2026', text: '📊 رسوم بيانية جديدة: في الرئيسية كارت "الاجتماعات المسجّلة" بقى رسم بأعمدة ملونة بعدد الحاضرين في كل اجتماع (كل اجتماع بلونه) ومعاه آخر اجتماع والمتوسط وأعلى حضور، والقايمة بتظهر لما تدوس "اعرض تفاصيل الاجتماعات". و"اكتمال بيانات الأفراد" بقى دواير وشرايط ملونة لكل خانة (الأضعف فوق)، دوس على أي خانة يوريك أسماء اللي ناقصهم، والتفاصيل تحت زرار. وشاشة النقل بقى فوقها إحصائية: دايرة بالمنتقلين والمهاجرين واللي انتقلوا لمكان آخر، ورسم شهر بشهر، والأسماء تحتها زي ما هي.' },
   { id: 'n32', d: '31-Oct-2026', text: '📑 شاشة التقارير اتعملت من جديد: تختار التقرير من كروت بأيقونات بدل القايمة، والفترة بدوسة (السنة الخدمية، الشهر ده، الشهر اللي فات، آخر ٣ شهور، من الأول، أو تاريخ تاني)، والتقرير بيطلع على طول وبيتحدّث لوحده لما تغيّر حاجة. النسب في الجداول بقى جنبها شريط ملوّن، و"ملخص كل اجتماع" بقى فيه دواير بالنسبة ومتوسط الحاضرين والجمعة والأحد وآخر اجتماع وبيتطبع كده. الكروت اللي كانت فوق اتشالت، و"نسبة حضور كل فرد" بقت تقرير بتختاره وتطبعه.' },
   { id: 'n31', d: '31-Oct-2026', text: '💬 في الإعدادات قسم جديد "الرسايل الجاهزة": كل رسالة البرنامج بيجهّزها (وحشتنا، بعد غياب طويل، ترحيب بجديد، سلامتك، تهنئة عيد الميلاد، تفكير المتكلم، كود التفعيل، والتوقيع) الأدمن والمشرفين يقدروا يعدّلوا نصها ويشوفوا شكلها قبل الحفظ، والتعديل بيتطبق عند الكل.' },
   { id: 'n30', d: '31-Oct-2026', text: '🏠 شاشة الافتقاد بقت داشبورد كاملة: فوق ملخص بنسبة الغايبين اللي اتسأل عليهم ومربعات (محتاجين سؤال، تحت الملاحظة، اتافتقدوا الشهر ده، عمرهم ما اتافتقدوا)، وتنبيهات بتتحدّث لوحدها (غايبين بقالهم أكتر من شهر، جداد حضروا مرة وماجوش، اللي جه ميعاد السؤال عليهم تاني، عيد ميلاد حد غايب). كل واحد قدامه 📞 و💬 و🏠، ولما ترجع من المكالمة أو الواتساب البرنامج بيسألك النتيجة (رد، ما ردش، وعد إنه هييجي…) ويسجّلها باسمك، وتقدر تقول "فكّرني بعد أسبوع". فيه رسايل واتساب جاهزة، وسجل بمين سأل على مين، وإحصائيات. متابعة الحضور اتنقلت من التقارير للافتقاد، والرئيسية بقى فيها ملخص بس، وزرار الافتقاد عليه رقم أحمر بعدد اللي محتاجين سؤال.' },
