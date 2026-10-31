@@ -424,6 +424,9 @@ table.hist th{color:var(--ink-soft);font-weight:700;}
 .follow-stat .num{font-size:1.5rem;font-weight:700;line-height:1.2;}
 .follow-stat .label{font-size:.74rem;color:var(--ink-soft);}
 .follow-stat.active{border-color:var(--gold);box-shadow:var(--shadow);}
+.follow-total{grid-column:1/-1;font-size:.8rem;color:var(--ink-soft);}
+.follow-total b{color:var(--ink);font-size:.95rem;}
+.follow-stat .asked{font-size:.66rem;color:var(--muted);margin-top:2px;}
 .follow-stat.red .num{color:#b23b3b;} .follow-stat.amber .num{color:#b8860b;} .follow-stat.green .num{color:var(--sage);}
 html[data-theme="dark"] .follow-stat.red .num{color:#f08a84;} html[data-theme="dark"] .follow-stat.amber .num{color:#e8c25a;} html[data-theme="dark"] .follow-stat.green .num{color:#86c4a2;}
 .follow-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line);}
@@ -1410,6 +1413,162 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
   .pm-seg{width:100%;}
   .pm-seg button{flex:1 1 0;padding:6px 4px;}
 }
+/* ---- الافتقاد dashboard ---- */
+#panel-afeqad .card{border:1px solid rgba(201,162,39,.55);box-shadow:inset 0 0 0 5px var(--card), inset 0 0 0 6px rgba(201,162,39,.22), var(--shadow);}
+#panel-afeqad .card h2{display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom-color:rgba(201,162,39,.45);}
+#panel-afeqad .card h2 small{font-family:'Cairo',sans-serif;font-size:.72rem;color:var(--muted);font-weight:600;}
+.afq-chiprow{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+.afq-chiprow button{border:1px solid var(--line);background:var(--cream);border-radius:999px;padding:4px 13px;font-family:inherit;font-size:.8rem;font-weight:600;color:var(--ink-soft);cursor:pointer;}
+.afq-chiprow button.on{background:var(--ink);color:var(--cream);border-color:var(--ink);}
+html[data-theme="dark"] .afq-chiprow button.on{background:var(--gold);color:#1a2334;border-color:var(--gold);}
+.afq-hero{display:grid;grid-template-columns:120px 1fr;gap:12px;align-items:center;}
+.afq-ring{text-align:center;}
+.afq-ring-svg{width:108px;height:108px;display:block;margin:0 auto;}
+.afq-ring .t{font-size:.72rem;color:var(--text-2);line-height:1.35;margin-top:2px;}
+.afq-kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.afq-kpi{border-radius:14px;padding:8px 10px;border:2px solid var(--line);background:var(--cream);text-align:start;font-family:inherit;color:var(--ink);cursor:pointer;transition:.15s;}
+.afq-kpi:hover{border-color:var(--gold);}
+.afq-kpi.on{border-color:var(--gold);box-shadow:var(--shadow);}
+.afq-kpi .n{font-size:1.5rem;font-weight:800;line-height:1.1;}
+.afq-kpi .l{font-size:.76rem;color:var(--ink-soft);font-weight:700;}
+.afq-kpi .s{font-size:.66rem;color:var(--muted);}
+.afq-kpi.r{border-color:rgba(178,59,59,.45);background:linear-gradient(180deg,rgba(178,59,59,.08),var(--cream));}
+.afq-kpi.r .n{color:#b23b3b;} .afq-kpi.a .n{color:#b8860b;} .afq-kpi.g .n{color:var(--sage);}
+html[data-theme="dark"] .afq-kpi.r .n{color:#f08a84;} html[data-theme="dark"] .afq-kpi.a .n{color:#e8c25a;} html[data-theme="dark"] .afq-kpi.g .n{color:#86c4a2;}
+@media(min-width:700px){ .afq-hero{grid-template-columns:140px 1fr;} .afq-kpis{grid-template-columns:repeat(4,1fr);} }
+.afq-grid{display:flex;flex-direction:column;}
+@media(min-width:900px){ .afq-grid{display:grid;grid-template-columns:1.45fr 1fr;gap:18px;align-items:start;} .afq-grid .afq-main{grid-column:1;grid-row:1;} .afq-grid .afq-alerts{grid-column:2;grid-row:1;position:sticky;top:90px;} }
+.afq-al{display:flex;gap:10px;align-items:center;width:100%;text-align:start;border-radius:12px;padding:8px 10px;margin-bottom:7px;font-family:inherit;font-size:.8rem;color:var(--ink);border:1px solid var(--line);border-inline-start:4px solid var(--line);background:var(--card);cursor:pointer;}
+.afq-al:hover,.afq-al.on{background:var(--hi);}
+.afq-al .ic{font-size:1.2rem;flex:none;width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--cream-dark);}
+.afq-al .tx{flex:1;min-width:0;}
+.afq-al .tx b{display:block;}
+.afq-al .sub{display:block;font-size:.7rem;color:var(--muted);}
+.afq-al .go{font-size:.72rem;font-weight:700;color:var(--g-makhdomeen-had);white-space:nowrap;}
+.afq-al.r{border-inline-start-color:#b23b3b;} .afq-al.a{border-inline-start-color:#b8860b;} .afq-al.b{border-inline-start-color:var(--g-makhdomeen-had);} .afq-al.p{border-inline-start-color:#9b59b6;}
+.afq-main .kf-seg{flex-wrap:nowrap;}
+.afq-filterbar{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--hi);border:1px dashed var(--gold);border-radius:10px;padding:6px 10px;font-size:.78rem;margin-bottom:6px;}
+.afq-filterbar button{border:none;background:none;font-family:inherit;font-weight:700;color:var(--wine);cursor:pointer;white-space:nowrap;}
+html[data-theme="dark"] .afq-filterbar button{color:#f08a84;}
+.afq-row{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px dashed var(--line);}
+.afq-row:last-of-type{border-bottom:none;}
+.afq-row.just{background:var(--hi);border-radius:10px;}
+.afq-row .who{flex:1;min-width:0;}
+.afq-row .nm{font-weight:700;color:var(--ink);}
+.afq-row .why{font-size:.76rem;color:var(--text-2);margin-top:1px;}
+.afq-row .why b{color:var(--wine);}
+html[data-theme="dark"] .afq-row .why b{color:#f08a84;}
+.afq-row .afq-last{color:var(--muted);}
+.afq-warn{color:#b23b3b;font-weight:700;}
+html[data-theme="dark"] .afq-warn{color:#f08a84;}
+.afq-row .why b.afq-due{color:#b8860b;}
+.afq-note-line{font-size:.74rem;color:var(--text-2);font-style:italic;margin-top:1px;}
+.afq-lvl{width:4px;align-self:stretch;border-radius:4px;flex:none;background:transparent;}
+.afq-lvl.red{background:#b23b3b;} .afq-lvl.amber{background:#d4a017;} .afq-lvl.green{background:var(--sage);opacity:.45;}
+.follow-acts button.kf-act.afq-wa{background:#25D366;border-color:#25D366;}
+.tab-badge{position:absolute;top:2px;inset-inline-end:4px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#b23b3b;color:#fff;font-size:.66rem;font-weight:800;line-height:18px;text-align:center;box-shadow:0 0 0 2px var(--card);}
+nav.tabs button[data-tab="afeqad"], #bottomNav [data-go="afeqad"], #bottomNav [data-more], #moreSheet [data-go="afeqad"]{position:relative;}
+/* log */
+.afq-tl{position:relative;padding-inline-start:18px;}
+.afq-tl:before{content:"";position:absolute;inset-inline-start:5px;top:6px;bottom:6px;width:2px;background:var(--line);}
+.afq-tl-day{font-size:.74rem;font-weight:800;color:var(--muted);margin:10px 0 4px;}
+.afq-ti{position:relative;padding:4px 0 8px;padding-inline-end:26px;font-size:.8rem;}
+.afq-ti:before{content:"";position:absolute;inset-inline-start:-17px;top:9px;width:10px;height:10px;border-radius:50%;background:var(--gold);border:2px solid var(--card);}
+.afq-ti.miss:before{background:var(--faint);}
+.afq-ti .res{color:var(--sage);font-weight:700;}
+html[data-theme="dark"] .afq-ti .res{color:#86c4a2;}
+.afq-ti.miss .res{color:var(--muted);}
+.afq-ti .d{font-size:.7rem;color:var(--muted);}
+.afq-del{position:absolute;inset-inline-end:0;top:4px;border:none;background:none;color:var(--faint);cursor:pointer;font-size:.85rem;}
+/* stats */
+.afq-sub{font-weight:800;font-size:.86rem;margin:14px 0 6px;}
+.afq-sub small{font-weight:500;color:var(--muted);}
+.afq-bars{direction:ltr;display:flex;gap:8px;align-items:flex-end;height:150px;padding-top:18px;border-bottom:1.5px solid var(--line);}
+.afq-bar{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;position:relative;}
+.afq-bar .stack{display:flex;flex-direction:column;border-radius:8px 8px 0 0;overflow:visible;position:relative;min-height:2px;}
+.afq-bar .stack i{display:block;background:linear-gradient(var(--g-makhdomeen-had),rgba(47,93,138,.55));}
+.afq-bar .stack i:first-of-type{border-radius:8px 8px 0 0;}
+.afq-bar .stack i.miss{background:var(--faint);opacity:.6;}
+.afq-bar .v{position:absolute;top:-17px;left:0;right:0;text-align:center;font-size:.7rem;font-weight:800;}
+.afq-bar .l{position:absolute;bottom:-20px;left:-4px;right:-4px;text-align:center;font-size:.62rem;color:var(--muted);white-space:nowrap;}
+.afq-legend{display:flex;gap:14px;justify-content:center;font-size:.7rem;color:var(--muted);margin-top:24px;}
+.afq-legend i{display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--g-makhdomeen-had);margin-inline-end:4px;vertical-align:middle;}
+.afq-legend i.miss{background:var(--faint);}
+.afq-mini{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0 10px;}
+.afq-mini div{text-align:center;border-radius:12px;padding:8px 4px;background:var(--cream);border:1px solid var(--line);}
+.afq-mini b{display:block;font-size:1.25rem;font-weight:800;}
+.afq-mini b.r{color:#b23b3b;} .afq-mini b.g{color:var(--sage);}
+html[data-theme="dark"] .afq-mini b.r{color:#f08a84;} html[data-theme="dark"] .afq-mini b.g{color:#86c4a2;}
+.afq-mini small{font-size:.68rem;color:var(--ink-soft);font-weight:600;}
+.afq-res-sum{display:flex;flex-wrap:wrap;gap:6px;}
+.afq-res-sum span{font-size:.76rem;background:var(--cream);border:1px solid var(--line);border-radius:999px;padding:3px 10px;}
+.afq-lead{display:flex;align-items:center;gap:8px;font-size:.8rem;padding:3px 0;}
+.afq-lead .n{width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.afq-lead .bar{flex:1;height:9px;border-radius:9px;background:var(--cream-dark);overflow:hidden;}
+.afq-lead .bar i{display:block;height:100%;border-radius:9px;background:var(--gold);}
+.afq-dash-al{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--text-2);margin-bottom:12px;}
+#dashboardAfeqad .afq-open{width:100%;}
+/* bottom sheets: record a visit / pick a WhatsApp message */
+.afq-ov{position:fixed;inset:0;z-index:6000;background:rgba(10,15,30,.5);display:flex;align-items:flex-end;justify-content:center;animation:afqFade .15s;}
+@keyframes afqFade{from{opacity:0}to{opacity:1}}
+@keyframes afqUp{from{transform:translateY(40px)}to{transform:none}}
+.afq-sheet{background:var(--card);color:var(--ink);width:100%;max-width:520px;max-height:92vh;overflow:auto;border-radius:22px 22px 0 0;padding:12px 16px calc(18px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 30px rgba(0,0,0,.25);border:1px solid var(--line);animation:afqUp .2s;}
+@media(min-width:700px){ .afq-ov{align-items:center;} .afq-sheet{border-radius:20px;} }
+.afq-sheet .grab{width:44px;height:5px;border-radius:5px;background:var(--line);margin:0 auto 10px;}
+.afq-sheet h3{margin:0 0 2px;font-size:1.02rem;}
+.afq-sheet .q{font-size:.78rem;color:var(--muted);margin-bottom:8px;}
+.afq-lbl{font-size:.78rem;font-weight:700;color:var(--ink-soft);margin:10px 0 6px;}
+.afq-chips{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.afq-chips.sm{grid-template-columns:repeat(5,1fr);}
+.afq-chips button{border:1.5px solid var(--line);border-radius:12px;padding:8px 4px;font-family:inherit;font-size:.8rem;font-weight:700;text-align:center;background:var(--cream);color:var(--ink);cursor:pointer;}
+.afq-chips.sm button{padding:6px 2px;font-size:.74rem;}
+.afq-chips button.on{border-color:var(--sage);background:rgba(63,97,82,.13);color:var(--sage);}
+html[data-theme="dark"] .afq-chips button.on{color:#86c4a2;border-color:#86c4a2;}
+.afq-sheet .afq-other{margin-top:7px;}
+.afq-sheet textarea{width:100%;margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-family:inherit;font-size:16px;background:var(--input);color:var(--ink);resize:vertical;}
+.afq-date-row{display:flex;align-items:center;gap:10px;margin-top:10px;}
+.afq-date-row input{flex:1;}
+.afq-btns{display:flex;gap:8px;margin-top:14px;}
+.afq-btns button{flex:1;}
+.afq-btns .afq-save{flex:2;}
+.afq-tpl{display:flex;flex-direction:column;gap:7px;}
+.afq-tpl button{border:1px solid var(--line);border-radius:12px;padding:9px 11px;font-family:inherit;font-size:.8rem;text-align:start;background:var(--cream);color:var(--ink);cursor:pointer;}
+.afq-tpl button.sug{border-color:#25D366;box-shadow:0 0 0 1px #25D366 inset;}
+.afq-tpl button b{display:block;font-size:.84rem;margin-bottom:2px;}
+.afq-tpl button b small{color:#1d9e50;font-weight:700;}
+.afq-tpl button span{white-space:pre-line;color:var(--text-2);}
+.afq-acts .afq-al-t{display:none;}
+@media(max-width:600px){
+  .afq-row{flex-wrap:wrap;}
+  .afq-row .who{flex:1 1 calc(100% - 70px);}
+  .afq-acts{flex:1 1 100%;padding-inline-start:54px;}
+  .afq-acts a, .afq-acts button.kf-act{flex:1;height:34px;font-size:.8rem;font-weight:700;color:var(--ink);gap:2px;}
+  .afq-acts button.kf-act.afq-wa{color:#fff;}
+  .afq-acts .afq-al-t{display:inline;}
+}
+@media(max-width:520px){
+  .afq-hero{grid-template-columns:1fr;}
+  .afq-ring{display:flex;align-items:center;justify-content:center;gap:14px;}
+  .afq-ring-svg{margin:0;width:96px;height:96px;}
+  .afq-ring .t{font-size:.8rem;text-align:start;}
+}
+.afq-types{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:6px;}
+.afq-types span{font-size:.8rem;background:var(--cream);border:1px solid var(--line);border-radius:999px;padding:3px 12px;}
+.msg-item{border:1px solid var(--line);border-radius:14px;margin-bottom:8px;background:var(--card);overflow:hidden;}
+.msg-item.open{border-color:var(--gold);box-shadow:var(--shadow);}
+.msg-head{display:grid;grid-template-columns:1fr auto;gap:2px 10px;width:100%;text-align:start;border:none;background:none;padding:10px 12px;font-family:inherit;color:var(--ink);cursor:pointer;}
+.msg-head .t{font-weight:800;font-size:.9rem;}
+.msg-head .w{grid-column:1;font-size:.72rem;color:var(--muted);}
+.msg-head .chev{grid-column:2;grid-row:1/3;align-self:center;color:var(--muted);font-size:1.1rem;}
+.msg-edited{font-size:.68rem;font-weight:700;background:var(--gold-soft);color:var(--chip-ink);border-radius:999px;padding:1px 8px;margin-inline-start:4px;}
+.msg-body{padding:0 12px 12px;}
+.msg-vars{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:8px;font-size:.72rem;color:var(--muted);}
+.msg-vars button{border:1px dashed var(--gold);background:var(--hi);color:var(--ink);border-radius:999px;padding:2px 9px;font-family:inherit;font-size:.74rem;cursor:pointer;}
+.msg-ta{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-family:inherit;font-size:16px;line-height:1.6;background:var(--input);color:var(--ink);resize:vertical;}
+.msg-prev-l{font-size:.72rem;color:var(--muted);margin:8px 0 4px;}
+.msg-prev{white-space:pre-line;font-size:.84rem;line-height:1.6;background:#dcf8c6;color:#1b1b1b;border-radius:12px 12px 4px 12px;padding:8px 11px;box-shadow:0 1px 2px rgba(0,0,0,.15);}
+html[data-theme="dark"] .msg-prev{background:#005c4b;color:#e9edef;}
+.msg-btns{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;}
 </style>
 </head>
 <body>
@@ -1544,7 +1703,7 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
   </div>
 
   <div class="card">
-    <h2>محتاجين افتقاد</h2>
+    <h2>🏠 الافتقاد</h2>
     <div id="dashboardAfeqad"></div>
   </div>
 </section>
@@ -1766,12 +1925,7 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
 
 <!-- AFEQAD (VISITATION) TAB -->
 <section class="panel" id="panel-afeqad">
-  <div class="card">
-    <h2>الافتقاد</h2>
-    <p style="font-size:.85rem;color:var(--ink-soft);margin-top:0;">آخر مرة اتافتقد فيها كل شخص ونوع الافتقاد. مرتبين من الأقدم افتقادًا (أو اللي لسه ما اتافتقدوش) عشان يبانوا الأول.</p>
-    <input type="text" id="afeqadSearch" placeholder="🔍 دوّر على اسم..." style="margin-bottom:14px;">
-    <div id="afeqadList"></div>
-  </div>
+  <div id="afqBody"></div>
   <datalist id="visitTypeOptionsList"></datalist>
 </section>
 
@@ -1815,10 +1969,8 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
     <div class="report-grid" id="reportHalos"></div>
   </div>
   <div class="card" id="followCard">
-    <h2>متابعة الحضور</h2>
-    <div class="follow-hint">بيرتّب الناس حسب مين محتاج سؤال دلوقتي. النقط بتوري آخر ٦ اجتماعات (الأحدث على اليمين): ● حضر ○ غاب. دوس على أي مربع علشان تشوف أسماءه.</div>
-    <div class="follow-stats" id="followStats"></div>
-    <div id="followList"></div>
+    <h2>نسبة حضور كل فرد</h2>
+    <div class="follow-hint">❗ متابعة مين غايب ومحتاج سؤال اتنقلت لشاشة <a href="#" id="goAfeqadFromReports" style="font-weight:700;color:var(--wine);">🏠 الافتقاد</a>.</div>
     <details class="follow-all">
       <summary>الجدول الكامل لنسبة حضور كل فرد</summary>
       <table class="report-table" id="servantReportTable">
@@ -1864,6 +2016,7 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
           <option value="summary">ملخص عام لكل اجتماع</option>
           <option value="sessions">تفاصيل كل اجتماع (بالحاضرين)</option>
           <option value="people">كشف بكل شخص ونسبة حضوره</option>
+          <option value="absentmonth">اللي غابوا الشهر كله</option>
           <option value="birthdays">أعياد الميلاد في شهر معين</option>
           <option value="area">تجميع حسب المنطقة (القريبين من بعض)</option>
           <option value="editlog">سجل الإضافة والتعديل (مين عمل إيه)</option>
@@ -1914,6 +2067,11 @@ html[data-theme="dark"] #backupReminderBanner{background:#3a1f22 !important;bord
     <div class="empty-note" id="faceLoginStatus" style="margin-bottom:8px;"></div>
     <button class="primary" id="faceEnableBtn">فعّل الدخول بالوش على الجهاز ده</button>
     <button class="ghost" id="faceDisableBtn" style="display:none;">إلغاء الدخول بالوش على الجهاز ده</button>
+  </div>
+  <div class="card" id="msgsCard">
+    <h2>💬 الرسايل الجاهزة</h2>
+    <div class="follow-hint">كل رسالة البرنامج بيجهّزها للإرسال تقدر تعدّل نصها من هنا، والتعديل بيتطبق عند كل الخدام. الكلام اللي بين { } بيتبدّل لوحده وقت الإرسال (زي اسم الشخص).</div>
+    <div id="msgsList"></div>
   </div>
   <div class="card" id="notAdminNote" style="display:none;">
     <h2>الإعدادات</h2>
@@ -3347,6 +3505,7 @@ function refreshScreensAfterRemoteChange(){
   try{ if(document.getElementById('panel-moves').classList.contains('active') && !moveSelectedId) renderMovesPanel(); }catch(e){}
   try{ if(document.getElementById('panel-dashboard').classList.contains('active')) renderDashboard(); }catch(e){}
   try{ const kp = document.getElementById('panel-kfollow'); if(kp.classList.contains('active') && !kfOpenVisit && !kp.contains(document.activeElement)) renderKFollow(); }catch(e){}
+  try{ const ap = document.getElementById('panel-afeqad'); if(ap.classList.contains('active') && !document.getElementById('afqSheet') && !ap.contains(document.activeElement)) renderAfeqadList(); else updateAfqBadge(); }catch(e){}
 }
 async function pullRemoteData(){
   if(dataSaving || !window.storage.getWithRev) return;
@@ -3374,7 +3533,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '31-Oct-2026 C';
+const APP_VERSION = '31-Oct-2026 G';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -3599,13 +3758,13 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
     document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
     if(btn.dataset.tab === 'reports') renderReports();
     if(btn.dataset.tab === 'dashboard') renderDashboard();
-    if(btn.dataset.tab === 'afeqad'){ afeqadJustSaved = null; renderAfeqadList(); }
+    if(btn.dataset.tab === 'afeqad'){ afqJustSaved = null; renderAfeqadList(); }
     if(btn.dataset.tab === 'kfollow'){ kfJustSaved = null; renderKFollow(); }
     if(btn.dataset.tab === 'moves') renderMovesPanel();
     if(btn.dataset.tab === 'program') renderProgramPanel();
     if(btn.dataset.tab === 'tenmin') renderTenMinPanel();
     if(btn.dataset.tab === 'spirit') renderSpirit();
-    if(btn.dataset.tab === 'settings' && isAdmin()){ loadAuditLog(); if(!settingsWideMq.matches) settingsSection = ''; renderSettingsHub(); }
+    if(btn.dataset.tab === 'settings' && isSupervisorOrAdmin()){ if(isAdmin()) loadAuditLog(); if(!settingsWideMq.matches) settingsSection = ''; loadMsgTemplates().then(()=>{ if(settingsSection === 'msgs' || (!settingsSection && settingsWideMq.matches && !isAdmin())) renderMsgsCard(); }); renderSettingsHub(); }
   });
 });
 
@@ -3683,100 +3842,605 @@ function ensureAllHaveCodes(){
 }
 
 
-let afeqadSearchTerm = '';
-let afeqadSearchTimer = null;
-document.getElementById('afeqadSearch').addEventListener('input', (e)=>{
-  clearTimeout(afeqadSearchTimer);
-  afeqadSearchTimer = setTimeout(()=>{
-    afeqadSearchTerm = e.target.value.trim();
-    afeqadListLimit = LIST_PAGE;
-    renderAfeqadList();
-  }, 220);
-});
 // long lists show a page at a time: drawing 450 rows at once is slow on phones
 const LIST_PAGE = 60;
-let servantListLimit = LIST_PAGE, afeqadListLimit = LIST_PAGE;
+let servantListLimit = LIST_PAGE;
 function moreButtonHtml(shownCount, total, kind){
   if(shownCount >= total) return '';
   const next = Math.min(LIST_PAGE, total - shownCount);
   return `<div style="text-align:center;margin:14px 0;"><button class="ghost show-more" data-kind="${kind}">عرض ${next} كمان (باقي ${total - shownCount})</button></div>`;
 }
 
-let afeqadJustSaved = null;
-function renderAfeqadList(){
-  refreshAreaChurchDatalists();
-  const list = document.getElementById('afeqadList');
-  const visible = visibleGroupIds();
-  // servants of the servants' meeting are visited from the admin-only "متابعة الخدام" screen
-  let people = activeServants().filter(s=>!(s.groups||[]).includes(SERVANTS_GID) && (s.groups||[]).some(g=>visible.includes(g)));
-  if(afeqadSearchTerm){
-    people = people.filter(s=>s.name.includes(afeqadSearchTerm));
+/* ---------- READY-MADE MESSAGES ----------
+   Every text the app prepares for sending (WhatsApp follow-up, greetings, reminders, codes) comes
+   from here. Admins and supervisors edit them in الإعدادات › الرسايل الجاهزة; the edits are shared
+   (MSG_KEY) and an empty / untouched message falls back to the original text.
+   {name} marks are filled in when the message is sent. */
+const MSG_KEY = 'khodam_msg_templates';
+const MSG_DEFS = [
+  { k:'sign', t:'✍️ التوقيع', where:'بيتحط مكان {التوقيع} في آخر الرسايل', vars:[],
+    def:'اجتماع الأنبا بولا والعائلة المقدسة' },
+  { k:'miss', t:'🤍 وحشتنا', where:'الافتقاد ومتابعة الخدام (💬)', vars:['الاسم','التوقيع'],
+    def:'إزيك يا {الاسم} 🙏\nوحشتنا في الاجتماع، طمّنا عليك.\n{التوقيع}' },
+  { k:'long', t:'📖 بعد غياب طويل', where:'الافتقاد (💬)', vars:['الاسم','التوقيع'],
+    def:'يا {الاسم} بقالنا كتير ما شفناكش وإنت واحشنا جدًا 🤍\nربنا معاك ويطمّنا عليك… مستنيينك في الاجتماع الجاي ✨\n{التوقيع}' },
+  { k:'new', t:'🆕 ترحيب بجديد', where:'الافتقاد (💬)', vars:['الاسم','التوقيع'],
+    def:'نورتنا يا {الاسم} 🌸\nفرحنا بيك جدًا ومستنيينك تاني الأسبوع ده.\n{التوقيع}' },
+  { k:'sick', t:'🙏 سلامتك', where:'الافتقاد (💬)', vars:['الاسم','التوقيع'],
+    def:'سلامتك يا {الاسم} 🙏\nربنا يطمّنا عليك ويقوّيك، إحنا بنصلّيلك.\n{التوقيع}' },
+  { k:'bday', t:'🎂 تهنئة عيد الميلاد', where:'أعياد الميلاد في الرئيسية ومتابعة الخدام', vars:['الاسم','التوقيع'],
+    def:'كل سنة وانت طيب يا {الاسم} 🎂\nربنا يفرّح قلبك ويبارك سنتك الجديدة 🙏\n{التوقيع}' },
+  { k:'bdayAbsent', t:'🎂 تهنئة لحد غايب', where:'الافتقاد لما يكون عيد ميلاد حد غايب', vars:['الاسم','التوقيع'],
+    def:'كل سنة وانت طيب يا {الاسم} 🎂\nربنا يفرّح قلبك ويبارك سنتك الجديدة 🙏\nوحشتنا في الاجتماع 🤍\n{التوقيع}' },
+  { k:'speaker', t:'🎤 تفكير المتكلم', where:'البرنامج وفقرة العشر دقايق في الرئيسية (💬)', vars:['الاسم','المناسبة','الاجتماع','اليوم','التاريخ','العنوان','ك'],
+    help:'{ك} بتبقى "كِ" لو المتكلمة ست و"ك" لو راجل. {العنوان} بتطلع " بعنوان «...»" لو فيه عنوان، وفاضية لو مفيش.',
+    def:'سلام ونعمة يا {الاسم} 🌿\nيسعدنا ونتشرف نفكّر حضرتك بميعاد {المناسبة} معانا في {الاجتماع}، يوم {اليوم} {التاريخ}{العنوان}.\nوجود حضرتك وسطنا بركة كبيرة، ومنتظرين{ك} بكل محبة وشوق.\nربنا يبارك خدمت{ك} ويعوّض تعب محبت{ك} 🙏' },
+  { k:'activation', t:'🔑 كود تفعيل الموبايل', where:'تفعيل جهاز جديد (إرسال الكود على واتساب)', vars:['الكود','اللينك'],
+    def:'كود تفعيل برنامج الخدمة على موبايلك: {الكود}\nافتح البرنامج واكتبه، أو دوس على اللينك:\n{اللينك}\n(الكود بيشتغل ١٠ دقايق ومرة واحدة بس)' },
+  { k:'share', t:'📤 آخر سطر في المشاركة', where:'مشاركة القراءات والقصة ورسالة اليوم', vars:['اللينك'],
+    def:'— من برنامج الخدمة: {اللينك}' }
+];
+// sample values for the preview under each message
+const MSG_SAMPLE = { 'الاسم':'مينا', 'المناسبة':'كلمتك', 'الاجتماع':'اجتماع الجمعة', 'اليوم':'الجمعة', 'التاريخ':'7 نوفمبر', 'العنوان':' بعنوان «المحبة»', 'ك':'ك', 'الكود':'12345-67890', 'اللينك':'https://bernaba333.github.io/khodam/' };
+let MSG_CUSTOM = {};   // { key: text, _by, _at }
+function msgRaw(k){
+  const d = MSG_DEFS.find(x=>x.k === k);
+  const c = MSG_CUSTOM[k];
+  return typeof c === 'string' && c.trim() ? c : (d ? d.def : '');
+}
+function msgFill(t, vars){
+  return t.replace(/\{([^{}\n]{1,20})\}/g, (m, n)=>Object.prototype.hasOwnProperty.call(vars, n) ? vars[n] : m);
+}
+function msgText(k, vars){
+  const all = Object.assign({ 'التوقيع': msgRaw('sign') }, vars || {});
+  return msgFill(msgRaw(k), all);
+}
+async function loadMsgTemplates(){
+  try{
+    const r = await window.storage.get(MSG_KEY, true);
+    MSG_CUSTOM = r && r.value ? (JSON.parse(r.value) || {}) : {};
+  }catch(e){ MSG_CUSTOM = MSG_CUSTOM || {}; }
+}
+let msgOpen = '';
+function renderMsgsCard(){
+  const box = document.getElementById('msgsList'); if(!box) return;
+  const canEdit = isSupervisorOrAdmin();
+  const meta = MSG_CUSTOM._by ? `<div class="follow-hint">آخر تعديل: ${escHtml(MSG_CUSTOM._by)}${MSG_CUSTOM._at ? ' · ' + escHtml(new Date(MSG_CUSTOM._at).toLocaleString('ar-EG-u-nu-latn', { day:'numeric', month:'long', hour:'numeric', minute:'2-digit' })) : ''}</div>` : '';
+  box.innerHTML = meta + MSG_DEFS.map(d=>{
+    const edited = typeof MSG_CUSTOM[d.k] === 'string' && MSG_CUSTOM[d.k].trim() && MSG_CUSTOM[d.k] !== d.def;
+    const open = msgOpen === d.k;
+    return `<div class="msg-item ${open ? 'open' : ''}" data-k="${d.k}">
+      <button type="button" class="msg-head" data-msg-toggle="${d.k}">
+        <span class="t">${d.t}${edited ? ' <span class="msg-edited">✏️ متعدّلة</span>' : ''}</span>
+        <span class="w">${escHtml(d.where)}</span>
+        <span class="chev">${open ? '⌄' : '‹'}</span>
+      </button>
+      ${open ? `<div class="msg-body">
+        ${d.vars.length ? `<div class="msg-vars"><span>دوس تضيف:</span>${d.vars.map(v=>`<button type="button" data-msg-var="{${v}}">{${v}}</button>`).join('')}</div>` : ''}
+        ${d.help ? `<div class="follow-hint">${escHtml(d.help)}</div>` : ''}
+        <textarea class="msg-ta" rows="${Math.min(9, Math.max(2, msgRaw(d.k).split('\n').length + 1))}" ${canEdit ? '' : 'readonly'}>${escHtml(msgRaw(d.k))}</textarea>
+        <div class="msg-prev-l">شكلها لما تتبعت:</div>
+        <div class="msg-prev"></div>
+        ${canEdit ? `<div class="msg-btns"><button type="button" class="primary" data-msg-save="${d.k}">حفظ</button>${edited ? `<button type="button" class="ghost" data-msg-reset="${d.k}">رجّع الرسالة الأصلية</button>` : ''}<span class="saved-msg" id="msgSaved-${d.k}">تم الحفظ ✓</span></div>` : ''}
+      </div>` : ''}
+    </div>`;
+  }).join('');
+  const item = box.querySelector('.msg-item.open');
+  if(item){
+    const ta = item.querySelector('.msg-ta'), prev = item.querySelector('.msg-prev');
+    const k = item.dataset.k;
+    const draw = ()=>{ prev.textContent = msgFill(ta.value, Object.assign({ 'التوقيع': k === 'sign' ? ta.value : msgRaw('sign') }, MSG_SAMPLE)); };
+    ta.addEventListener('input', draw); draw();
   }
-  if(people.length === 0){
-    list.innerHTML = '<div class="empty-note">مفيش حد في الاجتماعات اللي تقدر تشوفها</div>';
+}
+async function saveMsgTemplate(k, text){
+  const d = MSG_DEFS.find(x=>x.k === k);
+  // read the latest copy first so two people editing different messages don't undo each other
+  await loadMsgTemplates();
+  const next = Object.assign({}, MSG_CUSTOM);
+  if(!text.trim() || text === d.def) delete next[k]; else next[k] = text;
+  next._by = currentUser ? currentUser.name : '—'; next._at = new Date().toISOString();
+  await window.storage.set(MSG_KEY, JSON.stringify(next), true);
+  MSG_CUSTOM = next;
+}
+document.getElementById('msgsList').addEventListener('click', async e=>{
+  const t = e.target.closest('[data-msg-toggle],[data-msg-var],[data-msg-save],[data-msg-reset]'); if(!t) return;
+  const d = t.dataset;
+  if(d.msgToggle){ msgOpen = msgOpen === d.msgToggle ? '' : d.msgToggle; renderMsgsCard(); return; }
+  const item = t.closest('.msg-item'), ta = item && item.querySelector('.msg-ta');
+  if(d.msgVar && ta && !ta.readOnly){
+    const a = ta.selectionStart ?? ta.value.length, b = ta.selectionEnd ?? a;
+    ta.value = ta.value.slice(0, a) + d.msgVar + ta.value.slice(b);
+    ta.focus(); ta.selectionStart = ta.selectionEnd = a + d.msgVar.length;
+    ta.dispatchEvent(new Event('input'));
     return;
   }
-  // oldest/never-visited first, so the people most in need of a visit show up top
-  people = people.slice().sort((a,b)=>{
-    const ad = a.lastVisitDate || '';
-    const bd = b.lastVisitDate || '';
-    if(!ad && !bd) return a.name.localeCompare(b.name,'ar');
-    if(!ad) return -1;
-    if(!bd) return 1;
-    return ad.localeCompare(bd);
+  if(!isSupervisorOrAdmin()) return;
+  try{
+    if(d.msgSave){ await saveMsgTemplate(d.msgSave, ta.value); renderMsgsCard(); flashSaved('msgSaved-' + d.msgSave); }
+    else if(d.msgReset){
+      if(!confirm('ترجّع الرسالة دي لنصّها الأصلي؟')) return;
+      await saveMsgTemplate(d.msgReset, ''); renderMsgsCard(); flashSaved('msgSaved-' + d.msgReset);
+    }
+  }catch(err){ alert('تعذّر الحفظ، حاول تاني.'); }
+});
+
+/* ---------- AFEQAD (VISITATION) DASHBOARD ---------- */
+// One place for following up absent people: a summary, alerts that update by themselves, the list
+// with call / WhatsApp / record buttons, the log of who asked about whom, and stats.
+// The servants' meeting is followed up from the admin-only "متابعة الخدام" screen.
+const AFQ_RESULTS = [
+  { k:'ok',    t:'✅ رد وطمّنا' },
+  { k:'noans', t:'📵 ما ردش' },
+  { k:'come',  t:'🙏 وعد إنه هييجي' },
+  { k:'sick',  t:'🤒 تعبان / عنده ظرف' },
+  { k:'away',  t:'✈️ مسافر' },
+  { k:'visit', t:'🏠 محتاج زيارة' }
+];
+const AFQ_TYPES = [['📞','مكالمة تليفونية'],['💬','واتساب'],['🏠','زيارة منزلية'],['⛪','زيارة في الكنيسة']];
+const afqResultText = k => (AFQ_RESULTS.find(r=>r.k===k)||{}).t || '';
+const afqTypeIcon = t => /واتس/.test(t||'') ? '💬' : (/تليفون|مكالم|اتصال/.test(t||'') ? '📞' : (/كنيسة/.test(t||'') ? '⛪' : (/مستشفى/.test(t||'') ? '🏥' : '🏠')));
+// a call nobody answered stays in the log but doesn't count as "asked about"
+const afqCounts = v => !!v && v.result !== 'noans';
+let afq = { gid:'', seg:'need', filter:'need', search:'', limit:30, logLimit:40, logMine:false };
+let afqPending = null, afqPendingTimer = null;   // the call / WhatsApp the user just left for
+let afqJustSaved = null, afqLast = null, afqBadgeN = 0;
+function afqDaysAgo(iso){
+  if(!iso) return Infinity;
+  return Math.round((new Date(todayStr()+'T00:00:00') - new Date(String(iso).slice(0,10)+'T00:00:00')) / 86400000);
+}
+function afqAddDays(n){ const d = new Date(); d.setDate(d.getDate() + n); return dateStr(d); }
+function afqFirst(s){ return (s.name||'').trim().split(/\s+/)[0] || ''; }
+function afqModel(gid){
+  const all = visibleGroupIds().filter(g=>g!==SERVANTS_GID);
+  const gids = gid && all.includes(gid) ? [gid] : all;
+  const people = activeServants().filter(s=>!(s.groups||[]).includes(SERVANTS_GID) && (s.groups||[]).some(g=>gids.includes(g)));
+  const today = todayStr(), month = today.slice(0,7);
+  const pmD = new Date(); pmD.setDate(1); pmD.setMonth(pmD.getMonth()-1);
+  const prevMonth = dateStr(pmD).slice(0,7);
+  const rows = people.map(s=>{
+    const f = personFollowInfo(s, gids);
+    const vs = visitsOf(s), last = vs[0] || null, ok = vs.find(afqCounts) || null;
+    const since = f && f.streak > 0 && f.firstMissed;
+    const asked = !!(since && ok && ok.date >= f.firstMissed);
+    const tried = !!(since && last && last.date >= f.firstMissed);
+    const remind = last && last.remind && last.remind <= today && f && f.level !== 'green' ? last.remind : '';
+    return { s, f, vs, last, ok, asked, tried, remind };
   });
-  // the person just recorded stays on top for a moment, so the save is visible
-  const justI = afeqadJustSaved ? people.findIndex(s=>s.id===afeqadJustSaved) : -1;
-  if(justI > 0) people.unshift(people.splice(justI,1)[0]);
-  const totalPeople = people.length;
-  people = people.slice(0, afeqadListLimit);
-  list.innerHTML = people.map(s=>`
-    <div class="servant-row" data-id="${s.id}">
-      <div>
-        <div class="servant-name">${escHtml(s.name)}${s.id===afeqadJustSaved ? ' <span class="kf-ok" style="font-size:.78rem;">✓ اتسجل الافتقاد</span>' : ''}</div>
-        ${s.lastVisitDate ? `<div style="font-size:.78rem;color:var(--muted);margin-top:2px;">🏠 آخر افتقاد: ${escHtml(s.lastVisitDate)}${s.lastVisitType?' — '+escHtml(s.lastVisitType):''}</div>` : '<div class="meta" style="font-size:.78rem;color:var(--wine);margin-top:2px;">⚠️ لسه ما اتافتقدش</div>'}
-      </div>
-      <div class="row-actions">
-        ${can('editAfeqad') ? `<button class="ghost record-visit">تسجيل افتقاد</button>` : ''}
+  const byId = new Map(rows.map(r=>[r.s.id, r]));
+  const inMonth = (r, mo)=>r.vs.some(v=>afqCounts(v) && String(v.date).slice(0,7) === mo);
+  const m = { gids, rows, byId,
+    red: rows.filter(r=>r.f && r.f.level === 'red'),
+    amber: rows.filter(r=>r.f && r.f.level === 'amber'),
+    absent: rows.filter(r=>r.f && r.f.streak > 0),
+    month: rows.filter(r=>inMonth(r, month)),
+    prevMonth: rows.filter(r=>inMonth(r, prevMonth)).length,
+    never: rows.filter(r=>!r.vs.some(afqCounts)),
+    remind: rows.filter(r=>r.remind) };
+  m.redNotAsked = m.red.filter(r=>!r.asked);
+  m.absentAsked = m.absent.filter(r=>r.asked);
+  // ---- alerts ----
+  const names = list=>{ const n = list.slice(0,2).map(r=>escHtml(r.s.name)).join('، '); return list.length > 2 ? `${n} +${list.length-2}` : n; };
+  const A = [];
+  const homeSince = r=>r.vs.some(v=>afqCounts(v) && /زيارة/.test(v.type||'') && v.date >= r.f.firstMissed);
+  const long = m.red.filter(r=>afqDaysAgo(r.f.firstMissed) >= 30).sort((a,b)=>b.f.streak - a.f.streak);
+  if(long.length) A.push({ k:'long', ic:'⛔', cls:'r', ids: long.map(r=>r.s.id),
+    title: `${long.length} بقالهم أكتر من شهر مش بييجوا`,
+    sub: `${names(long)} · ${long.filter(homeSince).length ? `${long.filter(homeSince).length} اتزاروا في البيت، والباقي` : 'محتاجين'} زيارة مش تليفون بس` });
+  if(m.remind.length) A.push({ k:'remind', ic:'⏰', cls:'a', ids: m.remind.map(r=>r.s.id),
+    title: `${m.remind.length} جه ميعاد السؤال عليهم تاني`, sub: `${names(m.remind)} · إنت طلبت تفتكرهم` });
+  const stale = m.red.filter(r=>r.tried && !r.remind && afqDaysAgo(r.last.date) >= 14);
+  if(stale.length) A.push({ k:'stale', ic:'📞', cls:'a', ids: stale.map(r=>r.s.id),
+    title: `${stale.length} اتسأل عليهم من أكتر من أسبوعين ولسه غايبين`, sub: `${names(stale)} · جرّب زيارة أو حد قريب منهم` });
+  const fresh = m.rows.filter(r=>r.f && r.f.attended === 1 && r.f.total <= 6 && r.f.streak >= 1 && !r.tried);
+  if(fresh.length) A.push({ k:'new', ic:'🆕', cls:'b', ids: fresh.map(r=>r.s.id),
+    title: `${fresh.length} ${fresh.length === 1 ? 'جديد حضر مرة وماجاش' : 'جداد حضروا مرة وماجوش'} تاني`, sub: `${names(fresh)} · أول أسابيع هي أهم وقت للسؤال` });
+  const bd = upcomingBirthdays(3, false).map(u=>({ u, r: byId.get(u.s.id) })).filter(x=>x.r && x.r.f && x.r.f.level !== 'green');
+  if(bd.length) A.push({ k:'bday', ic:'🎂', cls:'p', ids: bd.map(x=>x.r.s.id),
+    title: bd.length === 1 ? `عيد ميلاد ${escHtml(afqFirst(bd[0].r.s))} ${bd[0].u.diffDays === 0 ? 'النهارده' : (bd[0].u.diffDays === 1 ? 'بكرة' : 'بعد '+bd[0].u.diffDays+' أيام')} وهو غايب` : `${bd.length} غايبين عيد ميلادهم قرّب`,
+    sub: 'فرصة حلوة تسأل عليهم بتهنئة 💬' });
+  m.alerts = A;
+  m.badge = new Set([...m.redNotAsked, ...m.remind].map(r=>r.s.id)).size;
+  return m;
+}
+function afqPaintBadge(){
+  // when الافتقاد sits under "المزيد" in the phone's bottom bar, the number shows on المزيد too
+  const sel = 'nav.tabs button[data-tab="afeqad"], #bottomNav [data-go="afeqad"], #moreSheet [data-go="afeqad"]' + (document.querySelector('#moreSheet [data-go="afeqad"]') ? ', #bottomNav [data-more]' : '');
+  document.querySelectorAll(sel).forEach(b=>{
+    let el = b.querySelector('.tab-badge');
+    if(!afqBadgeN){ if(el) el.remove(); return; }
+    if(!el){ el = document.createElement('span'); el.className = 'tab-badge'; b.appendChild(el); }
+    el.textContent = afqBadgeN > 99 ? '99+' : afqBadgeN;
+    if(b.dataset.tab === 'afeqad') b.title = `${TAB_SHORT.afeqad} · ${afqBadgeN} محتاجين سؤال`;
+  });
+}
+function updateAfqBadge(m){
+  try{
+    if(!currentUser || !can('tabAfeqad')) afqBadgeN = 0;
+    else afqBadgeN = (m && !afq.gid ? m : afqModel('')).badge;
+  }catch(e){ afqBadgeN = 0; }
+  afqPaintBadge();
+}
+function afqRing(pct){
+  const C = 2*Math.PI*40, d = pct/100*C;
+  return `<svg viewBox="0 0 100 100" class="afq-ring-svg" aria-hidden="true"><circle cx="50" cy="50" r="40" fill="none" style="stroke:var(--cream-dark);" stroke-width="11"/>
+    <circle cx="50" cy="50" r="40" fill="none" style="stroke:${pct >= 75 ? 'var(--sage)' : (pct >= 50 ? '#b8860b' : '#b23b3b')};" stroke-width="11" stroke-linecap="round" stroke-dasharray="${d} ${C}" transform="rotate(-90 50 50)"/>
+    <text x="50" y="52" text-anchor="middle" font-weight="800" font-size="22" style="fill:var(--ink);">${pct}%</text>
+    <text x="50" y="68" text-anchor="middle" font-size="9.5" style="fill:var(--muted);">اتسأل عليهم</text></svg>`;
+}
+function afqWhy(r){
+  const f = r.f;
+  if(!f) return 'لسه ماعدّاش عليه اجتماع من ساعة ما اتضاف';
+  let why;
+  if(f.level === 'red') why = `<b>غايب ${f.streak === 2 ? 'آخر اجتماعين' : 'آخر '+f.streak+' اجتماعات'}</b> (من ${escHtml(prettyDate(f.firstMissed,false))})`;
+  else if(f.streak === 1) why = '<b>غاب آخر اجتماع</b>';
+  else if(f.level === 'amber') why = `<b>حضر ${f.recent} من آخر ${f.recentOf}</b>`;
+  else why = `منتظم · حضر ${f.recent} من آخر ${f.recentOf}`;
+  if(f.attended <= 1 && f.total <= 6) why += ' · 🆕 جديد';
+  why += f.lastSeen ? ` · آخر حضور ${escHtml(prettyDate(f.lastSeen,false))}` : ' · ما حضرش ولا مرة';
+  return why;
+}
+function afqLastLine(r){
+  const L = r.last, parts = [];
+  if(r.f && r.f.streak > 0) parts.push(r.asked ? '<span class="kf-ok">✓ اتسأل عليه</span>' : (r.tried ? '<span class="afq-warn">📵 اتحاول ومحدش رد</span>' : '<span class="afq-warn">⚠️ محدش سأل عليه</span>'));
+  if(!L){
+    if(!parts.length) parts.push('<span class="afq-warn">⚠️ عمره ما اتافتقد</span>');
+    return parts.join(' · ');
+  }
+  let t = `${afqTypeIcon(L.type)} آخر سؤال ${escHtml(prettyDate(L.date,false))}`;
+  if(L.result) t += ' — ' + escHtml(afqResultText(L.result).replace(/^\S+\s/,''));
+  if(L.by) t += ` (${escHtml(L.by)})`;
+  parts.push(t);
+  if(L.remind) parts.push(L.remind <= todayStr() ? '<b class="afq-due">⏰ جه ميعاد السؤال تاني</b>' : `⏰ يتسأل تاني ${escHtml(prettyDate(L.remind,false))}`);
+  return parts.join(' · ') + (L.note ? `<div class="afq-note-line">📝 ${escHtml(L.note)}</div>` : '');
+}
+function afqRowHtml(r, multi){
+  const s = r.s, f = r.f;
+  const phones = can('phones');
+  const tel = phones && s.phone ? String(s.phone).replace(/[^\d+]/g,'') : '';
+  const wa = phones && waNumber(s.phone);
+  const lvl = f ? f.level : '';
+  const chip = multi && f ? ` <span class="chip g-${f.gid}">${escHtml(groupName(f.gid))}</span>` : '';
+  return `<div class="afq-row ${s.id === afqJustSaved ? 'just' : ''}" data-id="${s.id}">
+    <span class="afq-lvl ${lvl}"></span>
+    ${avatarHtml(s, 40)}
+    <div class="who">
+      <div class="nm">${escHtml(s.name)}${chip}${s.id === afqJustSaved ? ' <span class="kf-ok" style="font-size:.74rem;">✓ اتسجل</span>' : ''}</div>
+      <div class="why">${afqWhy(r)}</div>
+      <div class="why afq-last">${afqLastLine(r)}</div>
+      ${f && f.dots.length ? `<div class="follow-dots" title="آخر الاجتماعات (الأحدث على اليمين)">${f.dots.map(d=>`<span class="${d?'':'off'}"></span>`).join('')}</div>` : ''}
+    </div>
+    <div class="follow-acts afq-acts">
+      ${tel ? `<a href="tel:${tel}" data-afq-tel="${s.id}" title="اتصال">📞<span class="afq-al-t"> اتصال</span></a>` : ''}
+      ${wa ? `<button type="button" class="kf-act afq-wa" data-afq-wa="${s.id}" title="رسالة واتساب">💬<span class="afq-al-t"> واتساب</span></button>` : ''}
+      ${can('editAfeqad') ? `<button type="button" class="kf-act" data-afq-rec="${s.id}" title="تسجيل افتقاد">🏠<span class="afq-al-t"> سجّل</span></button>` : ''}
+    </div>
+  </div>`;
+}
+const AFQ_FILTERS = {
+  need:  { seg:'need', label:'' },
+  red:   { seg:'need', label:'🔴 محتاجين سؤال (غايبين ورا بعض)' },
+  amber: { seg:'need', label:'🟠 تحت الملاحظة' },
+  all:   { seg:'all',  label:'' },
+  month: { seg:'all',  label:'✅ اتافتقدوا الشهر ده' },
+  never: { seg:'all',  label:'⚪ عمرهم ما اتافتقدوا' }
+};
+function afqListRows(m){
+  const f = afq.filter, name = (a,b)=>a.s.name.localeCompare(b.s.name,'ar');
+  let list;
+  if(f.startsWith('alert:')){
+    const al = m.alerts.find(a=>a.k === f.slice(6));
+    list = al ? al.ids.map(id=>m.byId.get(id)).filter(Boolean) : [];
+  } else if(f === 'red' || f === 'amber' || f === 'need'){
+    list = f === 'need' ? [...m.remind, ...m.red, ...m.amber].filter((r,i,a)=>a.indexOf(r) === i) : m[f].slice();
+    // whose time to ask again came, then nobody asked yet, then the longest absence
+    const rank = r=>(r.remind ? 0 : 4) + (r.f.level === 'red' ? 0 : 2) + (r.asked ? 1 : 0);
+    list.sort((a,b)=>rank(a) - rank(b) || b.f.streak - a.f.streak || name(a,b));
+  } else if(f === 'month'){
+    list = m.month.slice().sort((a,b)=>String(b.ok.date).localeCompare(String(a.ok.date)) || name(a,b));
+  } else if(f === 'never'){
+    list = m.never.slice().sort(name);
+  } else {
+    // everyone, the longest time since they were asked about first
+    list = m.rows.slice().sort((a,b)=>{
+      const ad = a.ok ? a.ok.date : '', bd = b.ok ? b.ok.date : '';
+      if(ad !== bd) return !ad ? -1 : (!bd ? 1 : ad.localeCompare(bd));
+      return name(a,b);
+    });
+  }
+  if(afq.search) list = list.filter(r=>r.s.name.includes(afq.search));
+  const j = afqJustSaved ? list.findIndex(r=>r.s.id === afqJustSaved) : -1;
+  if(j > 0) list.unshift(list.splice(j,1)[0]);
+  return list;
+}
+function afqListHtml(m){
+  const list = afqListRows(m), multi = m.gids.length > 1;
+  const al = afq.filter.startsWith('alert:') ? m.alerts.find(a=>a.k === afq.filter.slice(6)) : null;
+  const label = al ? `${al.ic} ${al.title}` : (AFQ_FILTERS[afq.filter] || {}).label;
+  let html = label ? `<div class="afq-filterbar"><span>بتعرض: <b>${label}</b> (${list.length})</span><button type="button" data-afq-clear>✕ رجّع</button></div>` : '';
+  if(!list.length){
+    const empty = afq.search ? 'مفيش اسم بالشكل ده' : (afq.filter === 'need' ? 'الحمد لله، مفيش حد غايب ومحتاج سؤال دلوقتي 🙏' : 'مفيش حد هنا');
+    return html + `<div class="empty-note">${empty}</div>`;
+  }
+  html += list.slice(0, afq.limit).map(r=>afqRowHtml(r, multi)).join('');
+  if(list.length > afq.limit) html += `<button type="button" class="ghost follow-more" data-afq-more>اعرض ${Math.min(30, list.length - afq.limit)} كمان (باقي ${list.length - afq.limit})</button>`;
+  return html;
+}
+function afqLogHtml(m){
+  const me = currentUser ? currentUser.name : '';
+  let items = [];
+  m.rows.forEach(r=>r.vs.forEach(v=>items.push({ s:r.s, v })));
+  if(afq.logMine) items = items.filter(x=>x.v.by === me);
+  items.sort((a,b)=>String(b.v.date).localeCompare(String(a.v.date)) || String(b.v.at||'').localeCompare(String(a.v.at||'')));
+  const seg = `<div class="afq-chiprow"><button type="button" data-afq-mine="0" class="${afq.logMine?'':'on'}">كله</button><button type="button" data-afq-mine="1" class="${afq.logMine?'on':''}">👤 اللي أنا سجّلته</button></div>`;
+  if(!items.length) return seg + '<div class="empty-note">لسه مفيش افتقاد متسجّل هنا</div>';
+  let html = seg + '<div class="afq-tl">', lastDay = '';
+  items.slice(0, afq.logLimit).forEach(({s, v})=>{
+    if(v.date !== lastDay){ lastDay = v.date; const d = afqDaysAgo(v.date); html += `<div class="afq-tl-day">${d === 0 ? 'النهارده' : (d === 1 ? 'امبارح' : escHtml(prettyDate(v.date,false)))}</div>`; }
+    const canDel = v.at && can('editAfeqad') && (isAdmin() || v.by === me);
+    html += `<div class="afq-ti ${afqCounts(v) ? '' : 'miss'}">
+      <div><b>${escHtml(v.by || '—')}</b> ${afqTypeIcon(v.type)} ${escHtml(v.type || 'افتقاد')} — <b>${escHtml(s.name)}</b>${v.result ? ` · <span class="res">${escHtml(afqResultText(v.result))}</span>` : ''}</div>
+      ${v.note ? `<div class="afq-note-line">📝 ${escHtml(v.note)}</div>` : ''}
+      ${v.remind ? `<div class="d">⏰ يتسأل تاني ${escHtml(prettyDate(v.remind,false))}</div>` : ''}
+      ${canDel ? `<button type="button" class="afq-del" data-afq-del="${s.id}" data-at="${escHtml(v.at)}" title="امسح التسجيل ده">✕</button>` : ''}
+    </div>`;
+  });
+  html += '</div>';
+  if(items.length > afq.logLimit) html += `<button type="button" class="ghost follow-more" data-afq-logmore>اعرض أقدم (${items.length - afq.logLimit})</button>`;
+  return html;
+}
+function afqStatsHtml(m){
+  const all = [];
+  m.rows.forEach(r=>r.vs.forEach(v=>all.push(v)));
+  if(!all.length) return '<div class="empty-note">لسه مفيش افتقاد متسجّل علشان تطلع إحصائيات</div>';
+  // the last 8 weeks, each ending today minus 7*i days; oldest on the left
+  const weeks = [];
+  for(let i=7; i>=0; i--){
+    const end = afqAddDays(-7*i), start = afqAddDays(-7*i - 6);
+    const vs = all.filter(v=>v.date >= start && v.date <= end);
+    weeks.push({ end, ok: vs.filter(afqCounts).length, miss: vs.length - vs.filter(afqCounts).length });
+  }
+  const max = Math.max(1, ...weeks.map(w=>w.ok + w.miss));
+  const bars = weeks.map(w=>{
+    const d = new Date(w.end+'T00:00:00');
+    return `<div class="afq-bar"><div class="stack" style="height:${Math.round((w.ok+w.miss)/max*100)}%;">
+      <span class="v">${w.ok + w.miss || ''}</span>
+      ${w.miss ? `<i class="miss" style="flex:${w.miss};"></i>` : ''}${w.ok ? `<i style="flex:${w.ok};"></i>` : ''}
+    </div><div class="l">${d.getDate()}/${d.getMonth()+1}</div></div>`;
+  }).join('');
+  const month = todayStr().slice(0,7);
+  const mv = all.filter(v=>String(v.date).slice(0,7) === month);
+  const byType = {};
+  mv.forEach(v=>{ const k = afqTypeIcon(v.type); byType[k] = (byType[k]||0) + 1; });
+  const byRes = {};
+  mv.filter(v=>v.result).forEach(v=>{ byRes[v.result] = (byRes[v.result]||0) + 1; });
+  const byWho = {};
+  mv.filter(afqCounts).forEach(v=>{ const k = v.by || '—'; byWho[k] = (byWho[k]||0) + 1; });
+  const who = Object.entries(byWho).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const wmax = Math.max(1, ...who.map(x=>x[1]));
+  const cover = m.rows.length ? Math.round(m.rows.filter(r=>r.ok && afqDaysAgo(r.ok.date) <= 90).length / m.rows.length * 100) : 0;
+  return `<div class="afq-sub">📊 الافتقاد أسبوع بأسبوع <small>(آخر ٨ أسابيع، كل عمود بينتهي في اليوم المكتوب)</small></div>
+    <div class="afq-bars">${bars}</div>
+    <div class="afq-legend"><span><i></i>اتسأل عليه</span><span><i class="miss"></i>ما ردش</span></div>
+    <div class="afq-mini">
+      <div><b>${mv.length}</b><small>تسجيل الشهر ده</small></div>
+      <div><b>${cover}%</b><small>اتافتقدوا في آخر ٣ شهور</small></div>
+      <div><b>${m.month.length}</b><small>فرد اتسأل عليه الشهر ده</small></div>
+    </div>
+    ${Object.keys(byType).length ? `<div class="afq-types">${Object.entries(byType).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<span>${k} <b>${n}</b></span>`).join('')}</div>` : ''}
+    ${Object.keys(byRes).length ? `<div class="afq-sub">النتايج الشهر ده</div><div class="afq-res-sum">${AFQ_RESULTS.filter(r=>byRes[r.k]).map(r=>`<span>${r.t} <b>${byRes[r.k]}</b></span>`).join('')}</div>` : ''}
+    ${who.length ? `<div class="afq-sub">🙌 مين افتقد الشهر ده</div>${who.map(([n,c])=>`<div class="afq-lead"><span class="n">${escHtml(n)}</span><div class="bar"><i style="width:${Math.round(c/wmax*100)}%;"></i></div><b>${c}</b></div>`).join('')}` : ''}`;
+}
+function renderAfeqadList(){
+  const box = document.getElementById('afqBody'); if(!box) return;
+  refreshAreaChurchDatalists();
+  const vis = visibleGroupIds().filter(g=>g!==SERVANTS_GID);
+  if(afq.gid && !vis.includes(afq.gid)) afq.gid = '';
+  const m = afqModel(afq.gid);
+  afqLast = m;
+  updateAfqBadge(m);
+  if(!m.rows.length){
+    box.innerHTML = '<div class="card"><h2>🏠 الافتقاد</h2><div class="empty-note">مفيش حد في الاجتماعات اللي تقدر تشوفها</div></div>';
+    return;
+  }
+  const groups = GROUPS.filter(g=>vis.includes(g.id));
+  const pct = m.absent.length ? Math.round(m.absentAsked.length / m.absent.length * 100) : 100;
+  const diff = m.month.length - m.prevMonth;
+  const kpi = (k, cls, n, label, sub)=>`<button type="button" class="afq-kpi ${cls} ${afq.filter===k?'on':''}" data-afq-f="${k}"><div class="n">${n}</div><div class="l">${label}</div><div class="s">${sub}</div></button>`;
+  const seg = [['need','❗ محتاجين سؤال', m.red.length + m.amber.length],['all','📋 الكل',0],['log','📜 السجل',0],['stats','📊 إحصائيات',0]];
+  box.innerHTML = `
+  <div class="card afq-head">
+    <h2>🏠 الافتقاد <small>${m.rows.length} فرد</small></h2>
+    ${groups.length > 1 ? `<div class="afq-chiprow">${[['','كل الاجتماعات'], ...groups.map(g=>[g.id, g.name])].map(([id,n])=>`<button type="button" data-afq-g="${id}" class="${afq.gid===id?'on':''}">${escHtml(n)}</button>`).join('')}</div>` : ''}
+    <div class="afq-hero">
+      <div class="afq-ring">${afqRing(pct)}<div class="t">${m.absent.length ? `${m.absentAsked.length} من ${m.absent.length} غايب<br>اتسأل عليهم` : 'مفيش غايبين<br>دلوقتي 🙏'}</div></div>
+      <div class="afq-kpis">
+        ${kpi('red', 'r', m.red.length, 'محتاجين سؤال', m.redNotAsked.length ? `${m.redNotAsked.length} منهم محدش سأل` : 'كلهم اتسأل عليهم ✓')}
+        ${kpi('amber', 'a', m.amber.length, 'تحت الملاحظة', 'غاب مرة / حضوره قلّ')}
+        ${kpi('month', 'g', m.month.length, 'اتافتقدوا الشهر ده', diff > 0 ? `↑ ${diff} عن الشهر اللي فات` : (diff < 0 ? `↓ ${-diff} عن الشهر اللي فات` : 'زي الشهر اللي فات'))}
+        ${kpi('never', '', m.never.length, 'عمرهم ما اتافتقدوا', 'من أول ما اتسجّلوا')}
       </div>
     </div>
-    <div class="edit-panel" data-visit-edit-for="${s.id}" style="display:none;padding:10px 0;"></div>
-  `).join('') + moreButtonHtml(people.length, totalPeople, 'afeqad');
-  const moreA = list.querySelector('.show-more[data-kind="afeqad"]');
-  if(moreA) moreA.addEventListener('click', ()=>{ afeqadListLimit += LIST_PAGE; renderAfeqadList(); });
-
-  list.querySelectorAll('.record-visit').forEach(btn=>{
-    btn.addEventListener('click', (e)=>{
-      const id = e.target.closest('.servant-row').dataset.id;
-      const s = DATA.servants.find(x=>x.id===id);
-      const editPanel = list.querySelector(`.edit-panel[data-visit-edit-for="${id}"]`);
-      if(editPanel.style.display === 'none'){
-        editPanel.innerHTML = `
-          <label style="display:block;margin-bottom:4px;">تاريخ الافتقاد</label>
-          <input type="date" class="visit-date" value="${todayStr()}" style="margin-bottom:10px;">
-          ${s.lastVisitDate ? `<div style="font-size:.78rem;color:var(--muted);margin:-4px 0 10px;">آخر افتقاد كان ${escHtml(s.lastVisitDate)}${s.lastVisitType?' — '+escHtml(s.lastVisitType):''}</div>` : ''}
-          <label style="display:block;margin-bottom:4px;">نوع الافتقاد</label>
-          <input type="text" class="visit-type" list="visitTypeOptionsList" value="" placeholder="اختار من القائمة أو اكتب نوع جديد" style="margin-bottom:10px;">
-          <button class="primary" data-save-visit="${id}">حفظ</button>`;
-        editPanel.style.display = 'block';
-        editPanel.querySelector('[data-save-visit]').addEventListener('click', async ()=>{
-          const date = editPanel.querySelector('.visit-date').value;
-          const type = editPanel.querySelector('.visit-type').value.trim();
-          if(!date){ alert('اختار تاريخ الافتقاد.'); return; }
-          s.visits = (s.visits && s.visits.length ? s.visits : visitsOf(s)).concat({ date, type, by: currentUser ? currentUser.name : '—', at: new Date().toISOString() });
-          const newest = visitsOf(s)[0];   // recording an older visit doesn't hide a newer one
-          s.lastVisitDate = newest.date; s.lastVisitType = newest.type || '';
-          s.lastEditedBy = currentUser ? currentUser.name : '—';
-          s.lastEditedAt = new Date().toLocaleString('ar-EG-u-nu-latn');
-          afeqadJustSaved = id;
-          await saveData();
-          renderAfeqadList();
-        });
-      } else {
-        editPanel.style.display = 'none';
-      }
-    });
+  </div>
+  <div class="afq-grid">
+    <div class="card afq-alerts">
+      <h2>🔔 تنبيهات <small>بتتحدّث لوحدها</small></h2>
+      ${m.alerts.length ? m.alerts.map(a=>`<button type="button" class="afq-al ${a.cls} ${afq.filter==='alert:'+a.k?'on':''}" data-afq-alert="${a.k}">
+        <span class="ic">${a.ic}</span><span class="tx"><b>${a.title}</b><span class="sub">${a.sub}</span></span><span class="go">اعرض ‹</span></button>`).join('')
+        : '<div class="empty-note">الحمد لله، مفيش تنبيهات دلوقتي 🙏</div>'}
+    </div>
+    <div class="card afq-main">
+      <div class="kf-seg">${seg.map(([k,t,n])=>`<button type="button" data-afq-seg="${k}" class="${afq.seg===k?'on':''}">${t}${n ? `<span class="n">${n}</span>` : ''}</button>`).join('')}</div>
+      ${afq.seg === 'all' ? `<input type="text" id="afqSearch" placeholder="🔍 دوّر على اسم..." value="${escHtml(afq.search)}" style="margin-bottom:10px;">` : ''}
+      ${afq.seg === 'need' || afq.seg === 'all' ? '<div class="follow-hint">النقط بتوري آخر ٦ اجتماعات (الأحدث على اليمين): ● حضر ○ غاب. 📞 و💬 بعد ما ترجع منهم بيسألك النتيجة علشان تتسجّل.</div>' : ''}
+      <div id="afqList">${afq.seg === 'log' ? afqLogHtml(m) : (afq.seg === 'stats' ? afqStatsHtml(m) : afqListHtml(m))}</div>
+    </div>
+  </div>`;
+  const se = document.getElementById('afqSearch');
+  if(se){
+    let t = null;
+    se.addEventListener('input', ()=>{ clearTimeout(t); t = setTimeout(()=>{ afq.search = se.value.trim(); afq.limit = 30; document.getElementById('afqList').innerHTML = afqListHtml(afqLast); }, 220); });
+  }
+}
+function afqSetFilter(k){
+  afq.filter = k; afq.limit = 30; afqJustSaved = null;
+  afq.seg = k.startsWith('alert:') ? 'need' : AFQ_FILTERS[k].seg;
+  if(afq.seg !== 'all') afq.search = '';
+  renderAfeqadList();
+  const main = document.querySelector('#afqBody .afq-main');
+  if(main && window.innerWidth < 900) main.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+document.getElementById('afqBody').addEventListener('click', e=>{
+  const t = e.target.closest('[data-afq-g],[data-afq-f],[data-afq-alert],[data-afq-seg],[data-afq-clear],[data-afq-more],[data-afq-logmore],[data-afq-mine],[data-afq-tel],[data-afq-wa],[data-afq-rec],[data-afq-del]');
+  if(!t) return;
+  const d = t.dataset;
+  if(d.afqG !== undefined){ afq.gid = d.afqG; afq.limit = 30; renderAfeqadList(); }
+  else if(d.afqF) afqSetFilter(afq.filter === d.afqF ? AFQ_FILTERS[d.afqF].seg : d.afqF);
+  else if(d.afqAlert) afqSetFilter(afq.filter === 'alert:'+d.afqAlert ? 'need' : 'alert:'+d.afqAlert);
+  else if(d.afqSeg){ afq.seg = d.afqSeg; if(d.afqSeg === 'need' || d.afqSeg === 'all') afq.filter = d.afqSeg; afq.limit = 30; afq.logLimit = 40; afqJustSaved = null; renderAfeqadList(); }
+  else if(d.afqClear !== undefined) afqSetFilter(AFQ_FILTERS[afq.filter] ? AFQ_FILTERS[afq.filter].seg : 'need');
+  else if(d.afqMore !== undefined){ afq.limit += 30; document.getElementById('afqList').innerHTML = afqListHtml(afqLast); }
+  else if(d.afqLogmore !== undefined){ afq.logLimit += 40; document.getElementById('afqList').innerHTML = afqLogHtml(afqLast); }
+  else if(d.afqMine !== undefined){ afq.logMine = d.afqMine === '1'; afq.logLimit = 40; document.getElementById('afqList').innerHTML = afqLogHtml(afqLast); }
+  else if(d.afqTel) afqStartContact(d.afqTel, 'مكالمة تليفونية');   // the tel: link itself opens the dialer
+  else if(d.afqWa) afqOpenWa(d.afqWa);
+  else if(d.afqRec) afqOpenSheet(d.afqRec, '', false);
+  else if(d.afqDel) afqDeleteVisit(d.afqDel, d.at);
+});
+// after a call / WhatsApp the user comes back to the app: ask how it went so it gets recorded
+function afqStartContact(id, type){
+  if(!can('editAfeqad')) return;
+  afqPending = { id, type, hidden:false };
+  clearTimeout(afqPendingTimer);
+  // on a computer the dialer may open in another app and this page never hides: ask after a bit
+  afqPendingTimer = setTimeout(()=>{ if(afqPending && !afqPending.hidden) afqAskResult(); }, 6000);
+}
+function afqAskResult(){
+  const p = afqPending; afqPending = null; clearTimeout(afqPendingTimer);
+  if(p) afqOpenSheet(p.id, p.type, true);
+}
+document.addEventListener('visibilitychange', ()=>{
+  if(!afqPending) return;
+  if(document.hidden){ afqPending.hidden = true; return; }
+  if(afqPending.hidden) setTimeout(afqAskResult, 350);
+});
+function afqCloseSheet(){ const el = document.getElementById('afqSheet'); if(el) el.remove(); }
+function afqSheetShell(inner){
+  afqCloseSheet();
+  const ov = document.createElement('div');
+  ov.id = 'afqSheet'; ov.className = 'afq-ov';
+  ov.innerHTML = `<div class="afq-sheet" role="dialog" aria-modal="true"><div class="grab"></div>${inner}</div>`;
+  ov.addEventListener('click', e=>{ if(e.target === ov) afqCloseSheet(); });
+  document.body.appendChild(ov);
+  return ov;
+}
+function afqOpenWa(id){
+  const s = DATA.servants.find(x=>x.id===id); if(!s) return;
+  const num = waNumber(s.phone); if(!num) return;
+  const r = afqLast && afqLast.byId.get(id), f = r && r.f, first = afqFirst(s);
+  const bd = upcomingBirthdays(3, false).some(u=>u.s.id === id);
+  const nm = { 'الاسم': first };
+  const T = [
+    { k:'miss',  t:'🤍 وحشتنا',        x: msgText('miss', nm) },
+    { k:'long',  t:'📖 بعد غياب طويل', x: msgText('long', nm) },
+    { k:'new',   t:'🆕 ترحيب بجديد',   x: msgText('new', nm) },
+    { k:'sick',  t:'🙏 سلامتك',        x: msgText('sick', nm) },
+    { k:'blank', t:'✍️ من غير رسالة',  x:'' }
+  ];
+  if(bd) T.unshift({ k:'bday', t:'🎂 تهنئة بعيد الميلاد', x: msgText('bdayAbsent', nm) });
+  const pick = bd ? 'bday' : (f && f.attended <= 1 && f.total <= 6 ? 'new' : (f && f.streak >= 4 ? 'long' : 'miss'));
+  const ov = afqSheetShell(`<h3>💬 رسالة واتساب لـ${escHtml(s.name)}</h3><div class="q">اختار الرسالة، وهتتفتح في واتساب وتقدر تعدّلها قبل ما تبعت</div>
+    <div class="afq-tpl">${T.map(o=>`<button type="button" data-k="${o.k}" class="${o.k===pick?'sug':''}"><b>${o.t}${o.k===pick?' <small>· مقترحة</small>':''}</b>${o.x ? `<span>${escHtml(o.x)}</span>` : ''}</button>`).join('')}</div>
+    <div class="afq-btns"><button type="button" class="ghost afq-cancel">إلغاء</button></div>`);
+  ov.querySelector('.afq-cancel').addEventListener('click', afqCloseSheet);
+  ov.querySelectorAll('.afq-tpl button').forEach(b=>b.addEventListener('click', ()=>{
+    const o = T.find(x=>x.k === b.dataset.k);
+    const url = waUrl(num, o.x);
+    afqCloseSheet();
+    afqStartContact(id, 'واتساب');
+    if(IS_ANDROID || IS_IOS) window.location.href = url; else window.open(url, '_blank', 'noopener');
+  }));
+}
+function afqOpenSheet(id, type, after){
+  const s = DATA.servants.find(x=>x.id===id); if(!s || !can('editAfeqad')) return;
+  const sel = { type: type || '', result:'', remind:'' };
+  const other = type && !AFQ_TYPES.some(x=>x[1]===type) ? type : '';
+  const title = after ? (type === 'واتساب' ? `بعتّ لـ${escHtml(s.name)} على واتساب؟` : `رجعت من المكالمة مع ${escHtml(s.name)}؟`) : `تسجيل افتقاد لـ${escHtml(s.name)}`;
+  const ov = afqSheetShell(`<h3>${title}</h3><div class="q">سجّل النتيجة بدوسة، وبتتحفظ في سجل الافتقاد باسمك</div>
+    <div class="afq-lbl">اتسأل عليه إزاي</div>
+    <div class="afq-chips" data-g="type">${AFQ_TYPES.map(([i,t])=>`<button type="button" data-v="${t}" class="${t===sel.type?'on':''}">${i} ${t}</button>`).join('')}</div>
+    <input type="text" class="afq-other" list="visitTypeOptionsList" placeholder="أو اكتب نوع تاني (زيارة في المستشفى…)" value="${escHtml(other)}">
+    <div class="afq-lbl">النتيجة</div>
+    <div class="afq-chips res" data-g="result">${AFQ_RESULTS.map(r=>`<button type="button" data-v="${r.k}">${r.t}</button>`).join('')}</div>
+    <textarea class="afq-note" rows="2" placeholder="📝 ملاحظة (اختياري)… مثلاً: عنده امتحانات لحد ١٥ نوفمبر"></textarea>
+    <div class="afq-lbl">⏰ فكّرني أسأل عليه تاني بعد</div>
+    <div class="afq-chips sm" data-g="remind">${[['','لأ'],['3','٣ أيام'],['7','أسبوع'],['14','أسبوعين'],['30','شهر']].map(([v,t])=>`<button type="button" data-v="${v}" class="${v===''?'on':''}">${t}</button>`).join('')}</div>
+    <div class="afq-date-row"><label>التاريخ</label><input type="date" class="afq-date" value="${todayStr()}" max="${todayStr()}"></div>
+    <div class="afq-btns"><button type="button" class="primary afq-save">حفظ ✓</button><button type="button" class="ghost afq-cancel">${after ? 'ما اتكلمناش' : 'إلغاء'}</button></div>`);
+  const pickIn = (g, v)=>{ sel[g] = v; ov.querySelectorAll(`[data-g="${g}"] button`).forEach(b=>b.classList.toggle('on', b.dataset.v === v)); };
+  let remindTouched = false;
+  ov.querySelectorAll('.afq-chips').forEach(c=>c.addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    const g = c.dataset.g;
+    pickIn(g, g === 'result' && sel.result === b.dataset.v ? '' : b.dataset.v);
+    if(g === 'type') ov.querySelector('.afq-other').value = '';
+    if(g === 'remind') remindTouched = true;
+    // nobody answered / promised to come: suggest asking again, unless a choice was already made
+    if(g === 'result' && !remindTouched) pickIn('remind', sel.result === 'noans' ? '3' : (sel.result === 'come' || sel.result === 'visit' ? '7' : ''));
+  }));
+  ov.querySelector('.afq-other').addEventListener('input', e=>{ if(e.target.value.trim()) pickIn('type', ''); });
+  ov.querySelector('.afq-cancel').addEventListener('click', afqCloseSheet);
+  ov.querySelector('.afq-save').addEventListener('click', async ()=>{
+    const typeVal = ov.querySelector('.afq-other').value.trim() || sel.type;
+    const date = ov.querySelector('.afq-date').value;
+    if(!typeVal){ alert('اختار اتسأل عليه إزاي (تليفون، واتساب، زيارة…).'); return; }
+    if(!date){ alert('اختار التاريخ.'); return; }
+    const note = ov.querySelector('.afq-note').value.trim();
+    const rec = { date, type: typeVal, by: currentUser ? currentUser.name : '—', at: new Date().toISOString() };
+    if(sel.result) rec.result = sel.result;
+    if(note) rec.note = note;
+    if(sel.remind) rec.remind = afqAddDays(+sel.remind);
+    s.visits = (s.visits && s.visits.length ? s.visits : visitsOf(s)).concat(rec);
+    const ok = visitsOf(s).find(afqCounts);   // a call nobody answered doesn't move "آخر افتقاد"
+    if(ok){ s.lastVisitDate = ok.date; s.lastVisitType = ok.type || ''; }
+    s.lastEditedBy = currentUser ? currentUser.name : '—';
+    s.lastEditedAt = new Date().toLocaleString('ar-EG-u-nu-latn');
+    afqJustSaved = id;
+    afqCloseSheet();
+    await saveData();
+    if(document.getElementById('panel-afeqad').classList.contains('active')) renderAfeqadList(); else updateAfqBadge();
   });
+}
+async function afqDeleteVisit(id, at){
+  const s = DATA.servants.find(x=>x.id===id); if(!s || !Array.isArray(s.visits)) return;
+  const v = s.visits.find(x=>x.at === at); if(!v) return;
+  if(!confirm(`تمسح تسجيل "${v.type || 'افتقاد'}" لـ${s.name} يوم ${prettyDate(v.date,false)}؟`)) return;
+  s.visits = s.visits.filter(x=>x !== v);
+  const ok = visitsOf(s).find(afqCounts);
+  s.lastVisitDate = ok ? ok.date : ''; s.lastVisitType = ok ? (ok.type || '') : '';
+  s.lastEditedBy = currentUser ? currentUser.name : '—';
+  s.lastEditedAt = new Date().toLocaleString('ar-EG-u-nu-latn');
+  await saveData();
+  renderAfeqadList();
+}
+// main dashboard: only a summary; everything else lives in the الافتقاد screen
+function renderDashAfeqad(){
+  const el = document.getElementById('dashboardAfeqad'); if(!el) return;
+  const card = el.closest('.card');
+  if(!can('tabAfeqad')){ if(card) card.style.display = 'none'; updateAfqBadge(); return; }
+  if(card) card.style.display = '';
+  const m = afqModel('');
+  updateAfqBadge(m);
+  if(!m.rows.length){ el.innerHTML = '<div class="empty-note">مفيش حد في الاجتماعات اللي تقدر تشوفها</div>'; return; }
+  const pct = m.absent.length ? Math.round(m.absentAsked.length / m.absent.length * 100) : 100;
+  el.innerHTML = `<div class="afq-mini">
+      <div><b class="r">${m.red.length}</b><small>محتاجين سؤال</small></div>
+      <div><b class="g">${pct}%</b><small>من الغايبين اتسأل عليهم</small></div>
+      <div><b>${m.month.length}</b><small>اتافتقدوا الشهر ده</small></div>
+    </div>
+    ${m.alerts.length ? `<div class="afq-dash-al">${m.alerts.slice(0,3).map(a=>`<span>${a.ic} ${a.title}</span>`).join('')}</div>` : '<div class="afq-dash-al"><span>🙏 مفيش تنبيهات دلوقتي</span></div>'}
+    <button type="button" class="primary afq-open">افتح الافتقاد ‹</button>`;
+  el.querySelector('.afq-open').addEventListener('click', ()=>{ const b = document.querySelector('nav.tabs button[data-tab="afeqad"]'); if(b){ b.click(); window.scrollTo({ top:0 }); } });
 }
 
 function buildGroupGrid(container, checkedIds=[], availableGroups=GROUPS){
@@ -4690,31 +5354,8 @@ function renderDashboard(){
   // ---- upcoming birthdays (next 30 days) ----
   renderDashboardBirthdays();
 
-  // ---- people most in need of a visit ----
-  const afeqadEl = document.getElementById('dashboardAfeqad');
-  if(afeqadEl){
-    const sorted = visibleServants.slice().sort((a,b)=>{
-      const ad = a.lastVisitDate || '';
-      const bd = b.lastVisitDate || '';
-      if(!ad && !bd) return a.name.localeCompare(b.name,'ar');
-      if(!ad) return -1;
-      if(!bd) return 1;
-      return ad.localeCompare(bd);
-    });
-    const needsVisit = sorted.filter(s=>!s.lastVisitDate);
-    const oldestVisited = sorted.filter(s=>s.lastVisitDate).slice(0,8-needsVisit.length);
-    const shown = [...needsVisit.slice(0,8), ...oldestVisited].slice(0,8);
-    if(shown.length === 0){
-      afeqadEl.innerHTML = '<div class="empty-note">مفيش حد في الاجتماعات اللي تقدر تشوفها</div>';
-    } else {
-      afeqadEl.innerHTML = shown.map(s=>`
-        <div class="dash-list-row">
-          <div>${escHtml(s.name)}</div>
-          <div class="meta">${s.lastVisitDate ? `آخر افتقاد: ${escHtml(s.lastVisitDate)}` : '⚠️ لسه ما اتافتقدش'}</div>
-        </div>
-      `).join('');
-    }
-  }
+  // ---- visitation: a summary only, the rest is in the الافتقاد screen ----
+  renderDashAfeqad();
 }
 
 // Which personal-data fields are filled for each person (spouse/children are left out: not everyone has them).
@@ -4924,8 +5565,10 @@ function personFollowInfo(s, gids){
     const firstMissed = streak > 0 ? sess[marks.length-streak].date : '';
     let level = 'green';
     if(streak >= 2) level = 'red';
-    else if(streak === 1 || (last4.length >= 4 && recent < 3)) level = 'amber';
-    const info = { gid, streak, recent, recentOf: last4.length, lastSeen, firstMissed, level, dots: marks.slice(-6) };
+    // amber: missed the last one, or came to less than 3 of every 4 lately (also when there
+    // are only 2 or 3 meetings so far, e.g. someone new who came once out of 3)
+    else if(streak === 1 || (last4.length >= 2 && recent / last4.length < .75)) level = 'amber';
+    const info = { gid, streak, recent, recentOf: last4.length, lastSeen, firstMissed, level, dots: marks.slice(-6), total: marks.length, attended: marks.filter(Boolean).length };
     const rank = l => ({red:2, amber:1, green:0})[l];
     if(!worst || rank(info.level) > rank(worst.level) || (info.level === worst.level && info.streak > worst.streak)) worst = info;
   });
@@ -4934,8 +5577,7 @@ function personFollowInfo(s, gids){
 function followWaLink(s){
   const num = waNumber(s.phone); if(!num) return '';
   const first = (s.name||'').trim().split(/\s+/)[0];
-  const text = `إزيك يا ${first} 🙏\nوحشتنا في الاجتماع، طمّنا عليك.\nاجتماع الأنبا بولا والعائلة المقدسة`;
-  return waUrl(num, text);
+  return waUrl(num, msgText('miss', { 'الاسم': first }));
 }
 const reportFollowUI = { stats:'followStats', list:'followList', get filter(){ return followFilter; }, set filter(v){ followFilter = v; }, get showAll(){ return followShowAll; }, set showAll(v){ followShowAll = v; } };
 function renderFollowUp(people, visible, ui){
@@ -4943,17 +5585,24 @@ function renderFollowUp(people, visible, ui){
   const statsEl = document.getElementById(ui.stats);
   const listEl = document.getElementById(ui.list);
   if(!statsEl || !listEl) return;
-  const items = people.map(s=>({ s, f: personFollowInfo(s, visible) })).filter(x=>x.f);
+  const inGroups = people.filter(s=>s.groups.some(g=>visible.includes(g)));
+  const items = inGroups.map(s=>({ s, f: personFollowInfo(s, visible) })).filter(x=>x.f);
+  const notYet = inGroups.length - items.length;   // added after the last meeting: nothing to judge yet
   const by = { red: [], amber: [], green: [] };
   items.forEach(x=>by[x.f.level].push(x));
   by.red.sort((a,b)=> b.f.streak - a.f.streak || a.s.name.localeCompare(b.s.name,'ar'));
   by.amber.sort((a,b)=> (a.f.recent/a.f.recentOf) - (b.f.recent/b.f.recentOf) || a.s.name.localeCompare(b.s.name,'ar'));
   by.green.sort((a,b)=> a.s.name.localeCompare(b.s.name,'ar'));
   const labels = { red:'غايبين ورا بعض', amber:'تحت الملاحظة', green:'منتظمين' };
-  statsEl.innerHTML = ['red','amber','green'].map(k=>`
+  // asked about since they started missing (a visit / call recorded on or after their first absence)
+  const askedFor = x => x.f.streak > 0 && x.s.lastVisitDate && x.f.firstMissed && x.s.lastVisitDate >= x.f.firstMissed;
+  statsEl.innerHTML = `<div class="follow-total">إجمالي <b>${inGroups.length}</b> فرد${notYet ? ` · منهم ${notYet} جداد لسه ماعدّاش عليهم اجتماع` : ''}</div>` + ['red','amber','green'].map(k=>{
+    const asked = k === 'green' ? 0 : by[k].filter(askedFor).length;
+    return `
     <button type="button" class="follow-stat ${k} ${ui.filter===k?'active':''}" data-k="${k}">
       <div class="num">${by[k].length}</div><div class="label">${labels[k]}</div>
-    </button>`).join('');
+      ${asked ? `<div class="asked">🏠 ${asked} اتسأل عليهم</div>` : ''}
+    </button>`; }).join('');
   statsEl.querySelectorAll('.follow-stat').forEach(b=>b.addEventListener('click', ()=>{
     ui.filter = b.dataset.k; ui.showAll = false; renderFollowUp(people, visible, ui);
   }));
@@ -5126,6 +5775,7 @@ document.addEventListener('click', e=>{
   renderAttendBreakdown(GROUPS.filter(g=>visible.includes(g.id)));
 });
 
+document.getElementById('goAfeqadFromReports').addEventListener('click', e=>{ e.preventDefault(); const b = document.querySelector('nav.tabs button[data-tab="afeqad"]'); if(b){ afqSetFilter('need'); b.click(); window.scrollTo({ top:0 }); } });
 function renderReports(){
   const halos = document.getElementById('reportHalos');
   const visible = visibleGroupIds();
@@ -5157,12 +5807,9 @@ function renderReports(){
   const visibleServants = activeServants().filter(s=>s.groups.some(g=>visible.includes(g)));
   if(visibleServants.length===0){
     body.innerHTML=''; emptyNote.style.display='block';
-    document.getElementById('followStats').innerHTML=''; document.getElementById('followList').innerHTML='';
     return;
   }
   emptyNote.style.display='none';
-  // the servants' meeting is followed up from the admin-only "متابعة الخدام" screen
-  renderFollowUp(visibleServants, visible.filter(g=>g!==SERVANTS_GID));
   const rows = visibleServants.map(s=>{
     const { possible, pct, days } = personAttendance(s, visible);
     return {name:s.name, possible, pct, days};
@@ -6102,6 +6749,7 @@ function placePersonalSettings(){
 const SETTINGS_SECTIONS = [
   { k:'users', ic:'👥', bg:'var(--g-makhdomeen-had-soft)', t:'المستخدمين والصلاحيات', cards:['usersCard','permissionsCard'] },
   { k:'look', ic:'🎨', bg:'var(--g-anba-boula-soft)', t:'الشكل واسم الاجتماع', s:'الألوان · الاسم · الشعار · الآيات', cards:['themeCard','myPhotoCard','faceLoginCard','brandingCard'] },
+  { k:'msgs', ic:'💬', bg:'rgba(37,211,102,.16)', t:'الرسايل الجاهزة', s:'واتساب · التهنئة · التفكير · الأكواد', cards:['msgsCard'] },
   { k:'audit', ic:'📝', bg:'var(--cream-dark)', t:'سجل التعديلات', s:'مين عدّل إيه وإمتى', cards:['auditCard'] },
   { k:'data', ic:'💾', bg:'var(--g-makhdomeen-gomaa-soft)', t:'النسخ الاحتياطي والبيانات', cards:['fullBackupCard','bulkDataCard'] },
   { k:'reset', ic:'🧨', bg:'rgba(179,38,30,.14)', t:'تصفير البرنامج', s:'للتجربة بس · مفيش تراجع', cards:['resetCard'], danger:true },
@@ -6121,14 +6769,18 @@ function settingsSubtitle(sec){
 }
 function renderSettingsHub(){
   const hub = document.getElementById('settingsHub');
-  const sel = settingsSection || (settingsWideMq.matches ? 'users' : '');
-  hub.innerHTML = SETTINGS_SECTIONS.map(sec=>`<button type="button" class="set-tile${sec.danger ? ' set-danger' : ''}${sec.k === sel ? ' on' : ''}" data-k="${sec.k}">
+  // supervisors get only the ready-made messages; everything else is the admin's
+  const secs = SETTINGS_SECTIONS.filter(x=>isAdmin() || x.k === 'msgs');
+  if(settingsSection && !secs.some(x=>x.k === settingsSection)) settingsSection = '';
+  const sel = settingsSection || (settingsWideMq.matches ? secs[0].k : '');
+  hub.innerHTML = secs.map(sec=>`<button type="button" class="set-tile${sec.danger ? ' set-danger' : ''}${sec.k === sel ? ' on' : ''}" data-k="${sec.k}">
       <span class="set-ic" style="background:${sec.bg}">${sec.ic}</span>
       <span><div class="set-t">${sec.t}</div><div class="set-s">${escHtml(settingsSubtitle(sec))}</div></span>
       <span class="set-chev">‹</span></button>`).join('');
   hub.querySelectorAll('.set-tile').forEach(b=>b.addEventListener('click', ()=>openSettingsSection(b.dataset.k)));
   document.getElementById('settingsSplit').classList.toggle('picked', !!settingsSection);
-  const cur = SETTINGS_SECTIONS.find(x=>x.k === sel);
+  const cur = secs.find(x=>x.k === sel);
+  if(sel === 'msgs') renderMsgsCard();
   document.getElementById('settingsTitle').textContent = cur ? cur.ic + ' ' + cur.t : '';
   document.querySelectorAll('#settingsPane > .card').forEach(c=>c.classList.toggle('set-off', !cur || !cur.cards.includes(c.id)));
 }
@@ -6219,6 +6871,7 @@ function applyUserUI(){
   if(document.getElementById('panel-afeqad').classList.contains('active')) renderAfeqadList();
   if(document.getElementById('panel-kfollow').classList.contains('active')) renderKFollow();
   if(document.getElementById('panel-moves').classList.contains('active')) renderMovesPanel();
+  updateAfqBadge();
   setTimeout(maybeShowBirthdayPopup, 600);
 }
 
@@ -6350,9 +7003,9 @@ function applyTabGating(){
   document.querySelectorAll('nav.tabs button').forEach(btn=>{
     const permKey = tabMap[btn.dataset.tab];
     if(btn.dataset.tab === 'spirit'){ btn.style.display = ''; return; } // everyone
-    if(!permKey){ // settings: admin only
-      btn.style.display = isAdmin() ? '' : 'none';
-      if(!isAdmin() && btn.classList.contains('active')) activeHidden = true;
+    if(!permKey){ // settings: admin (supervisors see only the ready-made messages there)
+      btn.style.display = isSupervisorOrAdmin() ? '' : 'none';
+      if(!isSupervisorOrAdmin() && btn.classList.contains('active')) activeHidden = true;
       return;
     }
     const allowed = can(permKey);
@@ -6699,7 +7352,7 @@ function openDeviceActivation(){
       qrBox.style.opacity = '';
       try{ const q = qrcode(0, 'M'); q.addData(link); q.make(); qrBox.innerHTML = q.createSvgTag({ cellSize:4, margin:2, scalable:true, alt:'QR تفعيل الجهاز' }); qrBox.style.display = ''; }
       catch(e){ qrBox.innerHTML = ''; qrBox.style.display = 'none'; }
-      const text = `كود تفعيل برنامج الخدمة على موبايلك: ${shown}\nافتح البرنامج واكتبه، أو دوس على اللينك:\n${link}\n(الكود بيشتغل ١٠ دقايق ومرة واحدة بس)`;
+      const text = msgText('activation', { 'الكود': shown, 'اللينك': link });
       $('.act-wa').href = 'https://wa.me/?text=' + encodeURIComponent(text);
       $('.act-copy').onclick = ()=>{ try{ navigator.clipboard.writeText(text); note.textContent = 'اتنسخ ✓'; }catch(e){} };
       $('.act-out').style.display = 'block';
@@ -7144,7 +7797,7 @@ function visibleGroupIds(){
 
 function updateReportFilterVisibility(){
   const type = document.getElementById('customReportType').value;
-  const isBirthdays = type === 'birthdays';
+  const isBirthdays = type === 'birthdays' || type === 'absentmonth';   // both pick a month instead of dates
   document.getElementById('customReportDateRangeBox').style.display = isBirthdays ? 'none' : 'block';
   document.getElementById('customReportDateRangeBox2').style.display = isBirthdays ? 'none' : 'block';
   document.getElementById('customReportMonthBox').style.display = isBirthdays ? 'block' : 'none';
@@ -7243,6 +7896,27 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
       rows.push([s.name, ph(s), ...dc(days.friday), ...dc(days.sunday)]);
     });
     sections.push({ heading: null, columns, rows });
+  } else if(type === 'absentmonth'){
+    // the latest such month: picking November in October means last year's November
+    const month = parseInt(document.getElementById('customReportMonth').value, 10);
+    const now = new Date();
+    const year = month > now.getMonth()+1 ? now.getFullYear()-1 : now.getFullYear();
+    const ym = `${year}-${String(month).padStart(2,'0')}`;
+    title = `اللي غابوا كل اجتماعات شهر ${AR_MONTHS[month]} ${year}`;
+    const columns = ['الاسم','التليفون','غاب','آخر حضور','آخر افتقاد'];
+    selectedGroups.filter(gid=>isAdmin() || gid !== SERVANTS_GID).forEach(gid=>{
+      const all = (DATA.sessions[gid]||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
+      const monthSess = all.filter(x=>x.date.slice(0,7) === ym);
+      const rows = [];
+      if(monthSess.length) sortByName(activeServants().filter(s=>s.groups.includes(gid))).forEach(s=>{
+        const mine = monthSess.filter(x=>memberAtSession(s, gid, x));
+        if(!mine.length || mine.some(x=>(x.present||[]).includes(s.id))) return;
+        const seen = all.filter(x=>(x.present||[]).includes(s.id)).pop();
+        const short = d => { const [yy,mm,dd] = d.split('-'); return `${+dd} ${AR_MONTHS[+mm]}${+yy !== year ? ' ' + yy : ''}`; };
+        rows.push([s.name, ph(s), `${mine.length} من ${mine.length}`, seen ? short(seen.date) : 'ما حضرش ولا مرة', s.lastVisitDate ? short(s.lastVisitDate) : 'لسه']);
+      });
+      sections.push({ heading: `${groupName(gid)} — ${monthSess.length ? rows.length + ' فرد من ' + monthSess.length + ' اجتماع' : 'مفيش اجتماعات متسجّلة في الشهر ده'}`, columns, rows });
+    });
   } else if(type === 'birthdays'){
     const month = parseInt(document.getElementById('customReportMonth').value, 10);
     const monthNames = ['','يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
@@ -7304,12 +7978,12 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
   lastCustomReport = { type, title, sections };
 
   if(totalRows === 0){
-    preview.innerHTML = '<div class="empty-note">مفيش بيانات مطابقة للفلاتر دي</div>';
+    preview.innerHTML = `<div class="empty-note">${type === 'absentmonth' ? 'الحمد لله، مفيش حد غاب الشهر ده كله 🙏' : 'مفيش بيانات مطابقة للفلاتر دي'}</div>`;
     actions.style.display = 'none';
     return;
   }
 
-  const dateSuffix = (type!=='birthdays' && type!=='area' && type!=='editlog' && type!=='confessionfather' && (from||to)) ? ` (من ${from||'البداية'} إلى ${to||'النهاردة'})` : '';
+  const dateSuffix = (type!=='birthdays' && type!=='absentmonth' && type!=='area' && type!=='editlog' && type!=='confessionfather' && (from||to)) ? ` (من ${from||'البداية'} إلى ${to||'النهاردة'})` : '';
   let html = `<h3 style="font-family:'Amiri',serif;margin-bottom:8px;">${title}${dateSuffix}</h3>`;
   if(chartConfig){
     html += `<div style="max-width:100%;margin-bottom:20px;" id="customReportChart"></div>`;
@@ -7535,8 +8209,7 @@ document.addEventListener('click', e=>{
 function waBirthdayLink(s){
   const num = waNumber(s.phone); if(!num) return '';
   const first = (s.name||'').trim().split(/\s+/)[0];
-  const text = `كل سنة وانت طيب يا ${first} 🎂\nربنا يفرّح قلبك ويبارك سنتك الجديدة 🙏\nاجتماع الأنبا بولا والعائلة المقدسة`;
-  return waUrl(num, text);
+  return waUrl(num, msgText('bday', { 'الاسم': first }));
 }
 function birthdayRowHtml(u){
   const link = can('phones') ? waBirthdayLink(u.s) : '';
@@ -8442,10 +9115,8 @@ function speakerIsFemale(name){
 }
 function speakerReminderText(name, day, d, title){
   const f = speakerIsFemale(name), k = f ? 'كِ' : 'ك';
-  return `سلام ونعمة يا ${name} 🌿\n`
-    + `يسعدنا ونتشرف نفكّر حضرتك بميعاد ${cfg.talkWord(k)} معانا في ${PROG_DAYS[day].meeting}، يوم ${PROG_DAYS[day].label} ${d.getDate()} ${PROG_MONTHS[d.getMonth()]}${title ? ` بعنوان «${title}»` : ''}.\n`
-    + `وجود حضرتك وسطنا بركة كبيرة، ومنتظرين${k} بكل محبة وشوق.\n`
-    + `ربنا يبارك خدمت${k} ويعوّض تعب محبت${k} 🙏`;
+  return msgText('speaker', { 'الاسم': name, 'ك': k, 'المناسبة': cfg.talkWord(k), 'الاجتماع': PROG_DAYS[day].meeting,
+    'اليوم': PROG_DAYS[day].label, 'التاريخ': `${d.getDate()} ${PROG_MONTHS[d.getMonth()]}`, 'العنوان': title ? ` بعنوان «${title}»` : '' });
 }
 function renderDashboardNext(){
   const card = document.getElementById(cfg.dashCard), el = document.getElementById(cfg.dashBody);
@@ -9391,6 +10062,7 @@ function buildBottomNav(){
   sheet.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click', ()=>go(b.dataset.go)));
   const more = bar.querySelector('[data-more]');
   if(more) more.addEventListener('click', ()=>sheet.classList.add('open'));
+  afqPaintBadge();
 }
 document.querySelectorAll('nav.tabs button[data-tab]').forEach(b=>b.addEventListener('click', ()=>setTimeout(buildBottomNav, 0)));
 function applyTheme(pref){
@@ -9545,6 +10217,7 @@ async function init(){
   await loadLastBackup();
   await loadBrandingAndApply();
   await loadVersesAndApply();
+  await loadMsgTemplates();
   loadProgram();
 
   if(!dataResult.confirmed || !usersResult.confirmed){
@@ -10085,6 +10758,10 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
+  { id: 'n31', d: '31-Oct-2026', text: '💬 في الإعدادات قسم جديد "الرسايل الجاهزة": كل رسالة البرنامج بيجهّزها (وحشتنا، بعد غياب طويل، ترحيب بجديد، سلامتك، تهنئة عيد الميلاد، تفكير المتكلم، كود التفعيل، والتوقيع) الأدمن والمشرفين يقدروا يعدّلوا نصها ويشوفوا شكلها قبل الحفظ، والتعديل بيتطبق عند الكل.' },
+  { id: 'n30', d: '31-Oct-2026', text: '🏠 شاشة الافتقاد بقت داشبورد كاملة: فوق ملخص بنسبة الغايبين اللي اتسأل عليهم ومربعات (محتاجين سؤال، تحت الملاحظة، اتافتقدوا الشهر ده، عمرهم ما اتافتقدوا)، وتنبيهات بتتحدّث لوحدها (غايبين بقالهم أكتر من شهر، جداد حضروا مرة وماجوش، اللي جه ميعاد السؤال عليهم تاني، عيد ميلاد حد غايب). كل واحد قدامه 📞 و💬 و🏠، ولما ترجع من المكالمة أو الواتساب البرنامج بيسألك النتيجة (رد، ما ردش، وعد إنه هييجي…) ويسجّلها باسمك، وتقدر تقول "فكّرني بعد أسبوع". فيه رسايل واتساب جاهزة، وسجل بمين سأل على مين، وإحصائيات. متابعة الحضور اتنقلت من التقارير للافتقاد، والرئيسية بقى فيها ملخص بس، وزرار الافتقاد عليه رقم أحمر بعدد اللي محتاجين سؤال.' },
+  { id: 'n29', d: '31-Oct-2026', text: '📋 تقرير جديد في "تقرير مخصص": "اللي غابوا الشهر كله". تختار الشهر والاجتماعات، فيطلعلك كل اجتماع لوحده بأسماء اللي ما حضروش ولا مرة في الشهر ده، ومعاهم التليفون وآخر مرة حضروا وآخر افتقاد. وتقدر تطبعه أو تنزّله Excel.' },
+  { id: 'n28', d: '31-Oct-2026', text: '🔧 متابعة الحضور في التقارير: فوق المربعات بقى مكتوب الإجمالي، واللي اتضافوا بعد آخر اجتماع بيتقالك عددهم بدل ما يختفوا من الحساب. واللي حضر قليل في أول اجتماعين تلاتة (زي واحد جديد حضر مرة من 3) بقى "تحت الملاحظة" مش "منتظم". وتحت كل مربع مكتوب كام واحد منهم اتسأل عليه.' },
   { id: 'n27', d: '31-Oct-2026', text: '🔧 تصليح في حساب نسب الحضور (التقارير ومتابعة الحضور والرئيسية): اللي اتكتب في البرنامج متأخر بس كان حاضر قبل كده، كان بيتحسبله الحضور بس من غير الغياب فنسبته بتطلع أعلى من الحقيقة، دلوقتي بيتحسب من أول مرة حضر. واللي اتنقل أو هاجر بقى محسوب في الاجتماعات اللي قبل نقله، فالنسب القديمة مبقتش بتتغير. ومربع "نسبة الحضور" في نظرة عامة بقى نفس رقم "مع بعض".' },
   { id: 'n26', d: '31-Oct-2026', text: '📊 نسبة الحضور في الرئيسية بقت رسم بياني بأعمدة ملونة: عمود للخدام وعمود للمخدومين وعمود ليهم مع بعض، اجتماع باجتماع أو شهر بشهر. دوس على أي اجتماع في الرسم يظهرلك أرقامه، و"لغاية دلوقتي" بقت دواير. والجدول لسه موجود تحت "📋 الأرقام بالتفصيل".' },
   { id: 'n25', d: '31-Oct-2026', text: '📊 كارت "نسبة الحضور" في الرئيسية اتعمل من جديد: بيوريك نسبة حضور الخدام والمخدومين كل واحد لوحده ومع بعض، وتختار تشوفها اجتماع باجتماع أو شهر بشهر أو لغاية دلوقتي، والجمعة بس أو الأحد بس أو الكل. والناس اللي بتتضاف جديد مش بتغيّر النسب القديمة.' },
@@ -10427,7 +11104,7 @@ function spSetScale(v){ v = Math.min(1.8, Math.max(0.85, Math.round(v*100)/100))
 function spNotesKey(){ return 'khodam_snote_' + encodeURIComponent(currentUser ? currentUser.name : '').slice(0, 300); }
 function spAppLink(){ return location.origin + location.pathname; }
 async function spShare(title, text){
-  const body = title + '\n\n' + text + '\n\n— من برنامج الخدمة: ' + spAppLink();
+  const body = title + '\n\n' + text + '\n\n' + msgText('share', { 'اللينك': spAppLink() });
   try{
     if(navigator.share){ await navigator.share({ title, text: body }); return; }
   }catch(e){ if(e && e.name === 'AbortError') return; }
