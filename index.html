@@ -1136,12 +1136,29 @@ html[data-theme="dark"] .ab-seg button.on{background:var(--gold);color:#1B2A4A;}
 .ab-table td.ab-both{background:var(--hi);}
 .ab-none{color:var(--faint);}
 .ab-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
-.ab-tile{border:1px solid var(--line);border-radius:14px;padding:12px 8px;text-align:center;background:var(--card);}
+.ab-tile{min-width:0;border:1px solid var(--line);border-radius:14px;padding:10px 6px;text-align:center;background:var(--card);}
 .ab-tile.ab-both{border:1.5px solid var(--gold);background:var(--hi);}
 .ab-tile .t{font-size:.78rem;font-weight:700;color:var(--ink-soft);}
 .ab-tile .n{font-size:1.7rem;font-weight:800;line-height:1.25;}
 .ab-tile .s{font-size:.7rem;color:var(--muted);}
-.ab-more{margin-top:10px;width:100%;}
+.ab-more{margin-top:6px;width:100%;}
+.ab-scroll{overflow-x:auto;direction:ltr;scrollbar-width:thin;}
+.ab-grow{transform-box:fill-box;transform-origin:50% 100%;animation:abGrow .6s cubic-bezier(.2,.8,.2,1) both;}
+@keyframes abGrow{from{transform:scaleY(0);}to{transform:scaleY(1);}}
+@media (prefers-reduced-motion: reduce){ .ab-grow{animation:none;} }
+.ab-legend i{height:10px !important;width:10px !important;border-radius:3px !important;}
+.ab-legend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:.78rem;font-weight:600;color:var(--ink-soft);margin-bottom:4px;}
+.ab-legend span{display:inline-flex;align-items:center;gap:6px;}
+.ab-legend i,.ab-read i{display:inline-block;width:16px;height:3px;border-radius:2px;}
+.ab-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-inline-end:5px;vertical-align:middle;}
+.ab-read{border:1px solid var(--line);border-radius:12px;padding:8px 10px;background:var(--hi);margin-top:4px;}
+.ab-read-t{font-size:.78rem;font-weight:700;margin-bottom:4px;}
+.ab-read-v{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.8rem;}
+.ab-read-v span{display:inline-flex;align-items:center;gap:6px;}
+.ab-read-v b{font-size:.95rem;}
+.ab-details{margin-top:12px;}
+.ab-details summary{cursor:pointer;font-size:.84rem;font-weight:700;color:var(--ink-soft);padding:6px 0;}
+.ab-details .ab-table{margin-top:6px;}
 .dash-stat .ic{font-size:1.1rem;display:block;margin-bottom:2px;}
 .dash-stat.g-anba-boula{border-top:4px solid var(--g-anba-boula);} .dash-stat.g-makhdomeen-had{border-top:4px solid var(--g-makhdomeen-had);} .dash-stat.g-makhdomeen-gomaa{border-top:4px solid var(--g-makhdomeen-gomaa);}
 .show-all-toggle{display:block;margin:10px auto 0;}
@@ -2735,9 +2752,28 @@ const activeServants = () => DATA.servants.filter(s=>!s.status);
 const SERVANTS_GID = 'anba-boula';
 const SERV_DAYS = { both:'الجمعة والأحد', friday:'الجمعة بس', sunday:'الأحد بس' };
 function sessDay(date){ const d = new Date(date+'T00:00:00').getDay(); return d===5 ? 'friday' : (d===0 ? 'sunday' : ''); }
+// first meeting of each group each person was marked present at: "personId|gid" -> date.
+// Rebuilt at most twice a second, so one screen render always uses one consistent copy.
+let _firstSeen = null, _firstSeenAt = 0;
+function firstSeenIn(id, gid){
+  if(!_firstSeen || Date.now() - _firstSeenAt > 500){
+    _firstSeen = new Map(); _firstSeenAt = Date.now();
+    Object.entries(DATA.sessions||{}).forEach(([g, list])=>(list||[]).forEach(x=>(x.present||[]).forEach(pid=>{
+      const key = pid + '|' + g, cur = _firstSeen.get(key);
+      if(!cur || x.date < cur) _firstSeen.set(key, x.date);
+    })));
+  }
+  return _firstSeen.get(id + '|' + gid) || '';
+}
 function expectedAt(s, gid, sess){
-  // someone added later isn't counted absent for the meetings before they joined (unless marked present)
-  if(s.addedAt && sess.date < s.addedAt && !(sess.present||[]).includes(s.id)) return false;
+  // someone added later isn't counted absent for the meetings before they joined. If they were
+  // already marked present before the day they were added (e.g. typed in later or imported from
+  // Excel), they really came from that first attendance on, so their absences after it count too;
+  // otherwise only their good days would be counted and the percentage would go up by itself.
+  if(s.addedAt && sess.date < s.addedAt && !(sess.present||[]).includes(s.id)){
+    const first = firstSeenIn(s.id, gid);
+    if(!first || sess.date < first) return false;
+  }
   if(gid !== SERVANTS_GID || !s.servDays || s.servDays === 'both') return true;
   return sessDay(sess.date) === s.servDays;
 }
@@ -2762,18 +2798,21 @@ function personAttendance(s, gids, sessFilter){
   const pct = possible>0 ? Math.round((attended/possible)*100) : 0;
   return { attended, possible, pct, days };
 }
-// Attendance of a whole meeting (group). Only people who are currently active members of the
-// group are counted, both on top and on the bottom, so people who moved, left or were removed
-// from the group no longer push the percentage up. Each meeting only counts the members expected
-// that day. pct = all attendances / all possible attendances; days splits it into Friday and Sunday.
+// Attendance of a whole meeting (group). Each meeting counts the people who were members that
+// day (see memberAtSession), both on top and on the bottom: people added later don't count
+// before they joined, and people who moved / emigrated still count for the meetings before they
+// left, so adding or moving people never changes old percentages. Each meeting only counts the
+// members expected that day. pct = all attendances / all possible attendances; days splits it into Friday and Sunday.
 function groupAttendance(gid, sessFilter){
   const members = activeServants().filter(s=>s.groups.includes(gid));
+  const everyone = DATA.servants.filter(s=>s.groups.includes(gid));
   let sessions = (DATA.sessions[gid]||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
   if(sessFilter) sessions = sessions.filter(sessFilter);
   const days = { friday:{ present:0, possible:0, sessions:0 }, sunday:{ present:0, possible:0, sessions:0 } };
   let total = 0, possible = 0, lastCount = 0, lastOf = 0;
   sessions.forEach(sess=>{
-    const ids = new Set(members.filter(s=>expectedAt(s, gid, sess)).map(s=>s.id));
+    // people who moved / emigrated still count for the meetings before they left
+    const ids = new Set(everyone.filter(s=>memberAtSession(s, gid, sess)).map(s=>s.id));
     const n = sess.present.filter(id=>ids.has(id)).length;
     total += n; possible += ids.size; lastCount = n; lastOf = ids.size;
     const d = days[sessDay(sess.date)];
@@ -3335,7 +3374,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '31-Oct-2026 A';
+const APP_VERSION = '31-Oct-2026 C';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -4589,15 +4628,8 @@ function renderDashboard(){
   const allDatesSet = new Set();
   visibleGroups.forEach(g=>{ (DATA.sessions[g.id]||[]).forEach(sess=>allDatesSet.add(sess.date)); });
   const totalSessions = allDatesSet.size;
-  let overallPctSum = 0, overallPctCount = 0;
-  visibleGroups.forEach(g=>{
-    const { members, sessions, pct } = groupAttendance(g.id);
-    if(sessions.length>0 && members.length>0){
-      overallPctSum += pct;
-      overallPctCount++;
-    }
-  });
-  const overallPct = overallPctCount>0 ? Math.round(overallPctSum/overallPctCount) : 0;
+  // same number as "مع بعض · لغاية دلوقتي" in the attendance card: everyone's attendances / everyone expected
+  const overallPct = (()=>{ let p = 0, e = 0; attendByDate(visibleGroups).forEach(r=>{ p += r.serv.p + r.mak.p; e += r.serv.e + r.mak.e; }); return e ? Math.round(p/e*100) : 0; })();
   const neverVisitedCount = visibleServants.filter(s=>!s.lastVisitDate).length;
 
   const statsEl = document.getElementById('dashboardStats');
@@ -4965,7 +4997,58 @@ function renderFollowUp(people, visible, ui){
   if(ui.onVisit) listEl.querySelectorAll('[data-visit]').forEach(b=>b.addEventListener('click', ()=>ui.onVisit(b.dataset.visit)));
 }
 
-let abView = 'session', abDay = '', abShowAll = false;
+let abView = 'session', abDay = '', abShowAll = false, abSel = null, abTableOpen = false;
+const AB_SERIES = [
+  { k:'serv', label:'الخدام',    color:'var(--g-anba-boula)',     w:2.5 },
+  { k:'mak',  label:'المخدومين', color:'var(--g-makhdomeen-had)', w:2.5 },
+  { k:'both', label:'مع بعض',    color:'var(--ink)',              w:3.5 }
+];
+// column chart: one group of soft rounded columns per meeting / month, oldest on the left.
+// Tapping a group highlights it and shows its numbers; the newest one is picked at first.
+let abAnimate = true;
+function abBarChart(pts, series, width){
+  const n = pts.length, k = series.length;
+  const L = 10, R = 42, T = 26, B = 30, H = 230;   // % axis on the right, next to the newest
+  const groupW = Math.max(n <= 4 ? 70 : 38, k * 11 + 12);
+  const W = Math.max(Math.max(280, width), L + R + n * groupW);
+  const pw = W - L - R, ph = H - T - B, gw = pw / n;
+  const bw = Math.min(n <= 4 ? 26 : 16, (gw - 10) / k), gap = Math.min(4, bw * .25);
+  const y = v => T + ph - v/100*ph;
+  const sel = abSel === null || abSel >= n ? n-1 : abSel;
+  let g = '<defs>' + series.map(sr=>`<linearGradient id="abg-${sr.k}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:${sr.color};stop-opacity:1"/><stop offset="1" style="stop-color:${sr.color};stop-opacity:.55"/></linearGradient>`).join('') + '</defs>';
+  [25,50,75,100].forEach(v=>{
+    g += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" style="stroke:var(--line-soft);stroke-width:1;stroke-dasharray:2 5;"/>`;
+    g += `<text x="${W-R+8}" y="${y(v)+4}" text-anchor="start" style="fill:var(--faint);font-size:10px;">${v}%</text>`;
+  });
+  g += `<line x1="${L}" x2="${W-R}" y1="${y(0)}" y2="${y(0)}" style="stroke:var(--line);stroke-width:1.2;"/>`;
+  pts.forEach((p,i)=>{
+    const gx = L + i*gw, on = i === sel;
+    if(on) g += `<rect x="${gx+2}" y="${T-20}" width="${gw-4}" height="${ph+20+B-4}" rx="10" style="fill:var(--hi);stroke:var(--gold-soft);stroke-width:1;"/>`;
+    const total = k*bw + (k-1)*gap, x0 = gx + (gw - total)/2;
+    series.forEach((sr,j)=>{
+      const v = p[sr.k]; if(v === null) return;
+      const h = Math.max(3, v/100*ph), bx = x0 + j*(bw+gap), r = Math.min(bw/2, 6);
+      // rounded top, flat bottom
+      const d = `M${bx},${y(0)} V${y(0)-h+r} Q${bx},${y(0)-h} ${bx+r},${y(0)-h} H${bx+bw-r} Q${bx+bw},${y(0)-h} ${bx+bw},${y(0)-h+r} V${y(0)} Z`;
+      g += `<path class="${abAnimate ? 'ab-grow' : ''}" d="${d}" style="fill:url(#abg-${sr.k});opacity:${on || n === 1 ? 1 : .8};animation-delay:${Math.min(i*40, 600)}ms;"/>`;
+      if(on || n <= 4) g += `<text x="${bx+bw/2}" y="${y(0)-h-5}" text-anchor="middle" style="fill:var(--ink);font-size:${bw >= 20 ? 11 : 9.5}px;font-weight:800;">${v}</text>`;
+    });
+    g += `<text x="${gx+gw/2}" y="${H-10}" text-anchor="middle" style="fill:${on?'var(--ink)':'var(--muted)'};font-size:10.5px;font-weight:${on?800:500};">${p.short}</text>`;
+    g += `<rect data-abi="${i}" x="${gx}" y="0" width="${gw}" height="${H}" style="fill:transparent;cursor:pointer;"><title>${p.label}</title></rect>`;
+  });
+  abAnimate = false;
+  const sp = pts[sel];
+  const read = series.map(sr=>`<span><i style="background:${sr.color};"></i>${sr.label} <b>${sp[sr.k] === null ? '—' : sp[sr.k]+'%'}</b></span>`).join('');
+  return `<div class="ab-chart"><div class="ab-scroll"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="direction:ltr;display:block;font-family:'Cairo',sans-serif;">${g}</svg></div>
+    <div class="ab-read"><div class="ab-read-t">${sp.label}</div><div class="ab-read-v">${read}</div></div></div>`;
+}
+function abRing(pct, color){
+  const C = 2*Math.PI*34, dash = (pct||0)/100*C;
+  return `<svg viewBox="0 0 90 90" style="display:block;margin:4px auto;width:100%;max-width:92px;height:auto;">
+    <circle cx="45" cy="45" r="34" style="fill:none;stroke:var(--cream-dark);stroke-width:9;"/>
+    <circle cx="45" cy="45" r="34" stroke-dasharray="${dash} ${C}" stroke-linecap="round" transform="rotate(-90 45 45)" style="fill:none;stroke:${color};stroke-width:9;"/>
+    <text x="45" y="51" text-anchor="middle" style="fill:var(--ink);font-family:'Cairo',sans-serif;font-weight:800;font-size:19px;">${pct}%</text></svg>`;
+}
 function renderAttendBreakdown(groups){
   const el = document.getElementById('dashboardChart');
   if(!el) return;
@@ -4994,38 +5077,51 @@ function renderAttendBreakdown(groups){
   const line = (label, r, meetings) => `<tr><td>${label}</td>${hasServ ? cell(r.serv, r.serv.n || meetings) : ''}${hasMak ? cell(r.mak, r.mak.n || meetings) : ''}${hasServ && hasMak ? cell(both(r), meetings, 'ab-both') : ''}</tr>`;
   if(abView === 'total'){
     const t = sum(rows), b = both(t);
-    const tile = (title, x, meetings, cls) => {
+    const tile = (sr, x, meetings, cls) => {
       const pct = pctOf(x);
-      return `<div class="ab-tile ${cls||''}"><div class="t">${title}</div>${pct === null ? '<div class="n ab-none">—</div>' :
-        `<div class="n" style="color:${colorForPercent(pct)};">${pct}%</div><div class="s">في المتوسط ${Math.round(x.p/Math.max(1,meetings))} من ${Math.round(x.e/Math.max(1,meetings))}</div>`}</div>`;
+      return `<div class="ab-tile ${cls||''}"><div class="t"><i class="ab-dot" style="background:${sr.color};"></i>${sr.label}</div>${pct === null ? '<div class="n ab-none">—</div>' :
+        `${abRing(pct, sr.color)}<div class="s">في المتوسط ${Math.round(x.p/Math.max(1,meetings))} من ${Math.round(x.e/Math.max(1,meetings))}</div>`}</div>`;
     };
-    el.innerHTML = `<div class="ab-tiles">${hasServ ? tile('الخدام', t.serv, t.serv.n) : ''}${hasMak ? tile('المخدومين', t.mak, t.mak.n) : ''}${hasServ && hasMak ? tile('مع بعض', b, t.meetings, 'ab-both') : ''}</div>
+    el.innerHTML = `<div class="ab-tiles">${hasServ ? tile(AB_SERIES[0], t.serv, t.serv.n) : ''}${hasMak ? tile(AB_SERIES[1], t.mak, t.mak.n) : ''}${hasServ && hasMak ? tile(AB_SERIES[2], b, t.meetings, 'ab-both') : ''}</div>
       <p class="dc-hint" style="margin-top:8px;">من أول ${prettyDate(rows[rows.length-1].date)} لغاية ${prettyDate(rows[0].date)} · ${rows.length} اجتماع</p>`;
     return;
   }
-  let body;
+  let body, pts, moreBtn = '';
+  const pt = (label, short, r) => ({ label, short, serv: hasServ ? pctOf(r.serv) : null, mak: hasMak ? pctOf(r.mak) : null, both: hasServ && hasMak ? pctOf(both(r)) : null });
   if(abView === 'month'){
     const months = {};
     rows.forEach(r=>{ (months[r.date.slice(0,7)] = months[r.date.slice(0,7)] || []).push(r); });
-    body = Object.keys(months).sort().reverse().map(m=>{
+    const keys = Object.keys(months).sort().reverse();
+    body = keys.map(m=>{
       const t = sum(months[m]);
       return line(`${AR_MONTHS[+m.slice(5,7)]} ${m.slice(0,4)}<div class="meta">${t.meetings} اجتماع · العدد متوسط</div>`, t, t.meetings);
     }).join('');
+    pts = keys.slice().reverse().map(m=>pt(`${AR_MONTHS[+m.slice(5,7)]} ${m.slice(0,4)} · ${months[m].length} اجتماع`, AR_MONTHS[+m.slice(5,7)], sum(months[m])));
   } else {
     const LIMIT = 10;
     const shown = abShowAll ? rows : rows.slice(0, LIMIT);
     body = shown.map(r=>line(prettyDate(r.date, false), r, 1)).join('');
-    if(rows.length > LIMIT && !abShowAll) body += `<tr><td colspan="4"><button type="button" class="ghost ab-more">اعرض كل الاجتماعات (${rows.length})</button></td></tr>`;
+    if(rows.length > LIMIT && !abShowAll) moreBtn = `<button type="button" class="ghost ab-more">اعرض كل الاجتماعات (${rows.length})</button>`;
+    pts = shown.slice().reverse().map(r=>{ const [yy,mm,dd] = r.date.split('-'); return pt(prettyDate(r.date), `${+dd}/${+mm}`, r); });
   }
-  el.innerHTML = `<table class="ab-table"><thead><tr><th>${abView === 'month' ? 'الشهر' : 'الاجتماع'}</th>${cols}</tr></thead><tbody>${body}</tbody></table>`;
+  const series = AB_SERIES.filter(sr=>pts.some(p=>p[sr.k] !== null));
+  const width = (el.clientWidth || el.parentElement.clientWidth || 340);
+  el.innerHTML = `<div class="ab-legend">${series.map(sr=>`<span><i style="background:${sr.color};${sr.k==='both'?'height:4px;':''}"></i>${sr.label}</span>`).join('')}</div>
+    ${abBarChart(pts, series, width)}${moreBtn}
+    <details class="ab-details"${abTableOpen ? ' open' : ''}><summary>📋 الأرقام بالتفصيل</summary>
+    <table class="ab-table"><thead><tr><th>${abView === 'month' ? 'الشهر' : 'الاجتماع'}</th>${cols}</tr></thead><tbody>${body}</tbody></table></details>`;
   const more = el.querySelector('.ab-more');
-  if(more) more.addEventListener('click', ()=>{ abShowAll = true; renderAttendBreakdown(groups); });
+  if(more) more.addEventListener('click', ()=>{ abShowAll = true; abSel = null; abAnimate = true; renderAttendBreakdown(groups); });
+  // wide charts scroll sideways; start at the newest meeting (on the right)
+  const sc = el.querySelector('.ab-scroll'); if(sc) sc.scrollLeft = sc.scrollWidth;
+  el.querySelector('.ab-details').addEventListener('toggle', e=>{ abTableOpen = e.target.open; });
+  el.querySelectorAll('[data-abi]').forEach(r=>r.addEventListener('click', ()=>{ abSel = +r.dataset.abi; renderAttendBreakdown(groups); }));
 }
 document.addEventListener('click', e=>{
   const b = e.target.closest('#abView button, #abDay button');
   if(!b) return;
   if(b.closest('#abView')) abView = b.dataset.v; else abDay = b.dataset.v;
-  abShowAll = false;
+  abShowAll = false; abSel = null; abAnimate = true;
   const visible = visibleGroupIds();
   renderAttendBreakdown(GROUPS.filter(g=>visible.includes(g.id)));
 });
@@ -9989,6 +10085,8 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
+  { id: 'n27', d: '31-Oct-2026', text: '🔧 تصليح في حساب نسب الحضور (التقارير ومتابعة الحضور والرئيسية): اللي اتكتب في البرنامج متأخر بس كان حاضر قبل كده، كان بيتحسبله الحضور بس من غير الغياب فنسبته بتطلع أعلى من الحقيقة، دلوقتي بيتحسب من أول مرة حضر. واللي اتنقل أو هاجر بقى محسوب في الاجتماعات اللي قبل نقله، فالنسب القديمة مبقتش بتتغير. ومربع "نسبة الحضور" في نظرة عامة بقى نفس رقم "مع بعض".' },
+  { id: 'n26', d: '31-Oct-2026', text: '📊 نسبة الحضور في الرئيسية بقت رسم بياني بأعمدة ملونة: عمود للخدام وعمود للمخدومين وعمود ليهم مع بعض، اجتماع باجتماع أو شهر بشهر. دوس على أي اجتماع في الرسم يظهرلك أرقامه، و"لغاية دلوقتي" بقت دواير. والجدول لسه موجود تحت "📋 الأرقام بالتفصيل".' },
   { id: 'n25', d: '31-Oct-2026', text: '📊 كارت "نسبة الحضور" في الرئيسية اتعمل من جديد: بيوريك نسبة حضور الخدام والمخدومين كل واحد لوحده ومع بعض، وتختار تشوفها اجتماع باجتماع أو شهر بشهر أو لغاية دلوقتي، والجمعة بس أو الأحد بس أو الكل. والناس اللي بتتضاف جديد مش بتغيّر النسب القديمة.' },
   { id: 'n24', d: '30-Oct-2026', text: '📊 في التقارير بقى يظهر متوسط الحضور: كام فرد في المتوسط بيحضر كل اجتماع.' },
   { id: 'n23', d: '30-Oct-2026', admin: true, text: '🔐 الصلاحيات اتعملت من جديد: كل شاشة قدامها 3 اختيارات واضحة (🚫 مخفي، 👁️ يشوف، ✏️ يعدّل) بدل الجدول، وفوقها أنواع جاهزة تبدأ منها بضغطة. واتضاف نوع جديد "🏠 افتقاد بس": يشوف شاشة الافتقاد ويسجّل فيها ومعاه التليفون والعنوان، ومش بيشوف أي شاشة تانية.' },
