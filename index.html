@@ -440,6 +440,13 @@ html[data-theme="dark"] .follow-row .why b{color:#f08a84;}
 .follow-dots span{width:10px;height:10px;border-radius:50%;background:var(--sage);}
 .follow-dots span.off{background:transparent;border:2px solid #b23b3b;width:6px;height:6px;}
 .follow-acts{display:flex;gap:6px;flex:none;}
+.maploc-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+.maploc-btns .ghost,.maploc-btns a{padding:6px 12px;font-size:.8rem;border-radius:10px;}
+.maploc-btns a{border:1px solid var(--line);text-decoration:none;color:var(--ink);background:var(--card);}
+.maploc-msg,.afq-here-msg{font-size:.76rem;color:var(--muted);margin-top:4px;}
+.afq-here{width:100%;margin-top:10px;font-size:.85rem;}
+.map-link{color:inherit;text-decoration:underline dotted;text-underline-offset:3px;}
+.map-link:hover{color:var(--ink);}
 .follow-acts a{display:inline-flex;align-items:center;justify-content:center;min-width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--card);text-decoration:none;font-size:1.05rem;}
 .follow-more{display:block;width:100%;margin-top:8px;}
 .kf-lock{font-size:.72rem;background:var(--gold-soft);color:var(--chip-ink);border-radius:999px;padding:2px 10px;margin-inline-start:8px;vertical-align:middle;font-family:'Cairo',sans-serif;font-weight:600;}
@@ -1963,6 +1970,8 @@ html[data-theme="dark"] .rp-periods button.on{background:var(--gold);color:#1a23
       </div>
       <label>العنوان بالتفصيل</label>
       <div style="margin:6px 0 12px;"><input type="text" id="newServantAddress" placeholder="الشارع، رقم العمارة، الدور..."></div>
+      <label>📌 مكان البيت على الخريطة (اختياري)</label>
+      <div style="margin:6px 0 12px;" id="newServantMapLocBox"></div>
       <label>تاريخ الميلاد</label>
       <div style="margin:6px 0 12px;" id="newServantBirthBox"></div>
       <label>أب الاعتراف</label>
@@ -3610,7 +3619,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '03-Nov-2026 A';
+const APP_VERSION = '04-Nov-2026 B';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -3696,7 +3705,7 @@ async function flushAudit(){
   if(!ok){ pendingAudit = batch.concat(pendingAudit); setTimeout(flushAudit, 8000); }
   else if(pendingAudit.length) flushAudit();
 }
-const FIELD_LABELS = { name:'الاسم', phone:'التليفون', birthDate:'تاريخ الميلاد', area:'المنطقة', address:'العنوان', groups:'الاجتماعات',
+const FIELD_LABELS = { name:'الاسم', phone:'التليفون', birthDate:'تاريخ الميلاد', area:'المنطقة', address:'العنوان', mapLoc:'مكان البيت على الخريطة', groups:'الاجتماعات',
   church:'الكنيسة', confessionFather:'أب الاعتراف', occupation:'الوظيفة', workplace:'مكان العمل', spouseName:'اسم الزوج/الزوجة', children:'الأبناء',
   status:'الحالة', statusDate:'تاريخ النقل', statusNote:'ملاحظة النقل', lastVisitDate:'تاريخ آخر افتقاد', lastVisitType:'نوع الافتقاد', visits:'سجل الافتقاد', bdGreet:'تهنئة عيد الميلاد', servDays:'مطلوب يحضر اجتماع الخدام' };
 const AUDIT_IGNORE = new Set(['id','photo','photoVer','personCode','code','lastEditedBy','lastEditedAt','statusBy','addedBy','addedAt']);
@@ -4190,6 +4199,7 @@ function afqRowHtml(r, multi){
     <div class="follow-acts afq-acts">
       ${tel ? `<a href="tel:${tel}" data-afq-tel="${s.id}" title="اتصال">📞<span class="afq-al-t"> اتصال</span></a>` : ''}
       ${wa ? `<button type="button" class="kf-act afq-wa" data-afq-wa="${s.id}" title="رسالة واتساب">💬<span class="afq-al-t"> واتساب</span></button>` : ''}
+      ${mapsUrl(s) ? `<a href="${mapsUrl(s)}" target="_blank" rel="noopener" title="العنوان على جوجل ماب">📍<span class="afq-al-t"> الخريطة</span></a>` : ''}
       ${can('editAfeqad') ? `<button type="button" class="kf-act" data-afq-rec="${s.id}" title="تسجيل افتقاد">🏠<span class="afq-al-t"> سجّل</span></button>` : ''}
     </div>
   </div>`;
@@ -4452,6 +4462,7 @@ function afqOpenSheet(id, type, after){
     <textarea class="afq-note" rows="2" placeholder="📝 ملاحظة (اختياري)… مثلاً: عنده امتحانات لحد ١٥ نوفمبر"></textarea>
     <div class="afq-lbl">⏰ فكّرني أسأل عليه تاني بعد</div>
     <div class="afq-chips sm" data-g="remind">${[['','لأ'],['3','٣ أيام'],['7','أسبوع'],['14','أسبوعين'],['30','شهر']].map(([v,t])=>`<button type="button" data-v="${v}" class="${v===''?'on':''}">${t}</button>`).join('')}</div>
+    ${can('addresses') ? `<button type="button" class="ghost afq-here">📌 ${s.mapLoc ? 'أنا عند البيت، حدّث مكانه على الخريطة' : 'أنا عند البيت، احفظ مكانه على الخريطة'}</button><div class="afq-here-msg"></div>` : ''}
     <div class="afq-date-row"><label>التاريخ</label><input type="date" class="afq-date" value="${todayStr()}" max="${todayStr()}"></div>
     <div class="afq-btns"><button type="button" class="primary afq-save">حفظ ✓</button><button type="button" class="ghost afq-cancel">${after ? 'ما اتكلمناش' : 'إلغاء'}</button></div>`);
   const pickIn = (g, v)=>{ sel[g] = v; ov.querySelectorAll(`[data-g="${g}"] button`).forEach(b=>b.classList.toggle('on', b.dataset.v === v)); };
@@ -4467,6 +4478,19 @@ function afqOpenSheet(id, type, after){
   }));
   ov.querySelector('.afq-other').addEventListener('input', e=>{ if(e.target.value.trim()) pickIn('type', ''); });
   ov.querySelector('.afq-cancel').addEventListener('click', afqCloseSheet);
+  let hereLoc = '';
+  const hereBtn = ov.querySelector('.afq-here');
+  if(hereBtn) hereBtn.addEventListener('click', async ()=>{
+    const msg = ov.querySelector('.afq-here-msg');
+    hereBtn.disabled = true; msg.textContent = '⏳ بنحدد مكانك…';
+    try{
+      const r = await getHereLoc();
+      hereLoc = r.value;
+      msg.innerHTML = '✓ مكان البيت هيتحفظ مع الافتقاد' + (r.acc ? ` (بدقة حوالي ${r.acc} متر)` : '') + ` · <a href="${escHtml(mapLocUrl(r.value))}" target="_blank" rel="noopener">اتأكد على الخريطة</a>`;
+      if(!sel.type) pickIn('type', (AFQ_TYPES.find(x=>/زيارة/.test(x[1])) || [])[1] || '');
+    }catch(err){ msg.textContent = '⚠️ ' + err.message; }
+    hereBtn.disabled = false;
+  });
   ov.querySelector('.afq-save').addEventListener('click', async ()=>{
     const typeVal = ov.querySelector('.afq-other').value.trim() || sel.type;
     const date = ov.querySelector('.afq-date').value;
@@ -4477,6 +4501,7 @@ function afqOpenSheet(id, type, after){
     if(sel.result) rec.result = sel.result;
     if(note) rec.note = note;
     if(sel.remind) rec.remind = afqAddDays(+sel.remind);
+    if(hereLoc) s.mapLoc = hereLoc;
     s.visits = (s.visits && s.visits.length ? s.visits : visitsOf(s)).concat(rec);
     const ok = visitsOf(s).find(afqCounts);   // a call nobody answered doesn't move "آخر افتقاد"
     if(ok){ s.lastVisitDate = ok.date; s.lastVisitType = ok.type || ''; }
@@ -4542,6 +4567,7 @@ document.getElementById('newServantGroups').addEventListener('change', ()=>
   syncServDaysBox(document.getElementById('newServantGroups'), document.getElementById('newServantDaysBox')));
 
 document.getElementById('newServantBirthBox').innerHTML = birthFieldHtml('', '');
+document.getElementById('newServantMapLocBox').innerHTML = mapLocFieldHtml('');
 document.getElementById('newServantMoreToggle').addEventListener('click', ()=>{
   const box = document.getElementById('newServantMore');
   box.style.display = box.style.display === 'none' ? 'block' : 'none';
@@ -4601,6 +4627,8 @@ document.getElementById('addServantBtn').addEventListener('click', async ()=>{
   const phone = phoneInput.value.trim();
   const address = document.getElementById('newServantAddress').value.trim();
   const area = document.getElementById('newServantArea').value.trim();
+  const locRes = readMapLoc(document.getElementById('newServantMapLocBox'));
+  if(locRes.error){ alert(locRes.error); return; }
   const birthRes = readBirthField(document.querySelector('#newServantBirthBox .birth-field'));
   if(birthRes.error){ alert(birthRes.error); return; }
   const birthDate = birthRes.value;
@@ -4618,6 +4646,7 @@ document.getElementById('addServantBtn').addEventListener('click', async ()=>{
     name, phone, area, address, birthDate, confessionFather, church,
     spouseName, occupation, workplace, children,
     photo: pendingNewServantPhoto,
+    ...(locRes.value ? { mapLoc: locRes.value } : {}),
     groups: checked, addedBy: currentUser ? currentUser.name : '—', addedAt: todayStr(),
     ...(checked.includes(SERVANTS_GID) && servDays !== 'both' ? { servDays } : {})
   });
@@ -4625,6 +4654,7 @@ document.getElementById('addServantBtn').addEventListener('click', async ()=>{
   phoneInput.value = '';
   document.getElementById('newServantArea').value = '';
   document.getElementById('newServantAddress').value = '';
+  document.getElementById('newServantMapLocBox').innerHTML = mapLocFieldHtml('');
   resetBirthField(document.querySelector('#newServantBirthBox .birth-field'));
   document.getElementById('newServantConfession').value = '';
   document.getElementById('newServantChurch').value = '';
@@ -5014,8 +5044,8 @@ function renderServantList(){
         <div class="servant-name">${escHtml(s.name)} ${s.personCode ? `<span class="chip" style="background:var(--ink);color:#fdf8ec;font-size:.65rem;">${escHtml(s.personCode)}</span>` : ''}</div>
         ${(s.phone && can('phones')) ? `<div style="font-size:.78rem;color:var(--muted);margin-top:2px;">📞 ${escHtml(s.phone)}</div>` : ''}
         ${(s.birthDate && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">🎂 ${escHtml(s.birthDate)}</div>` : ''}
-        ${(s.area && can('addresses')) ? `<div style="font-size:.78rem;color:var(--muted);">🗺️ ${escHtml(s.area)}</div>` : ''}
-        ${(s.address && can('addresses')) ? `<div style="font-size:.78rem;color:var(--muted);">📍 ${escHtml(s.address)}</div>` : ''}
+        ${(s.area && can('addresses')) ? `<div style="font-size:.78rem;color:var(--muted);">🗺️ ${s.address ? escHtml(s.area) : `<a class="map-link" href="${mapsUrl(s)}" target="_blank" rel="noopener" title="افتح على جوجل ماب">${escHtml(s.area)}</a>`}</div>` : ''}
+        ${((s.address || s.mapLoc) && can('addresses')) ? `<div style="font-size:.78rem;color:var(--muted);">📍 <a class="map-link" href="${mapsUrl(s)}" target="_blank" rel="noopener" title="افتح على جوجل ماب">${s.address ? escHtml(s.address) : 'مكان البيت على الخريطة'}</a>${s.mapLoc && s.address ? ' <span title="مكان البيت متحدد بالظبط على الخريطة">📌</span>' : ''}</div>` : ''}
         ${(s.confessionFather && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">✝️ أب الاعتراف: ${escHtml(s.confessionFather)}</div>` : ''}
         ${(s.church && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">⛪ ${escHtml(s.church)}</div>` : ''}
         ${(s.occupation && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">💼 ${escHtml(s.occupation)}${s.workplace?' — '+escHtml(s.workplace):''}</div>` : ''}
@@ -5077,6 +5107,8 @@ function renderServantList(){
           <input type="text" class="edit-area" list="areaOptionsList" value="${escHtml(s.area)}" style="margin-bottom:10px;">
           <label style="display:block;margin-bottom:4px;">العنوان بالتفصيل</label>
           <input type="text" class="edit-address" value="${escHtml(s.address)}" style="margin-bottom:10px;">
+          <label style="display:block;margin-bottom:4px;">📌 مكان البيت على الخريطة</label>
+          <div class="edit-maploc" style="margin-bottom:10px;">${mapLocFieldHtml(s.mapLoc)}</div>
           <label style="display:block;margin-bottom:4px;">تاريخ الميلاد</label>
           <div style="margin-bottom:10px;">${birthFieldHtml('edit-birth', s.birthDate)}</div>
           <label style="display:block;margin-bottom:4px;">أب الاعتراف</label>
@@ -5139,6 +5171,8 @@ function renderServantList(){
           if(!newName){ alert('الاسم متقدرش يبقى فاضي.'); return; }
           const birthRes = readBirthField(editPanel.querySelector('.edit-birth'));
           if(birthRes.error){ alert(birthRes.error); return; }
+          const locRes = readMapLoc(editPanel.querySelector('.edit-maploc'));
+          if(locRes.error){ alert(locRes.error); return; }
           if(newName !== s.name && DATA.servants.some(o=>o.id !== s.id && o.name === newName)){
             if(!confirm(`في شخص تاني اسمه "${newName}" بالظبط بالفعل. متأكد إنك عايز تكمل؟`)) return;
           }
@@ -5158,6 +5192,7 @@ function renderServantList(){
           s.phone = editPanel.querySelector('.edit-phone').value.trim();
           s.area = editPanel.querySelector('.edit-area').value.trim();
           s.address = editPanel.querySelector('.edit-address').value.trim();
+          if(locRes.value) s.mapLoc = locRes.value; else delete s.mapLoc;
           s.birthDate = birthRes.value;
           s.confessionFather = editPanel.querySelector('.edit-confession').value.trim();
           s.church = editPanel.querySelector('.edit-church').value.trim();
@@ -5749,6 +5784,7 @@ function renderFollowUp(people, visible, ui){
       <div class="follow-acts">
         ${tel ? `<a href="tel:${tel}" title="اتصال">📞</a>` : ''}
         ${wa ? `<a href="${wa}" target="_blank" rel="noopener" title="رسالة واتساب">💬</a>` : ''}
+        ${mapsUrl(s) ? `<a href="${mapsUrl(s)}" target="_blank" rel="noopener" title="العنوان على جوجل ماب">📍</a>` : ''}
         ${ui.onVisit ? `<button type="button" class="kf-act" data-visit="${s.id}" title="تسجيل افتقاد">🏠</button>` : ''}
       </div>
     </div>`;
@@ -7738,6 +7774,7 @@ document.getElementById('downloadBackupExcelBtn').addEventListener('click', asyn
     'تاريخ الميلاد': s.birthDate || '',
     'المنطقة': s.area || '',
     'العنوان': s.address || '',
+    'مكان البيت على الخريطة': s.mapLoc || '',
     'أب الاعتراف': s.confessionFather || '',
     'كنيسته': s.church || '',
     'الوظيفة': s.occupation || '',
@@ -7883,6 +7920,7 @@ document.getElementById('importAllDataFile').addEventListener('change', (e)=>{
           children: String(row['الأبناء']||'').split('،').map(c=>c.trim().replace(/\s*\([^)]*\)\s*$/,'')).filter(Boolean).map(name=>({name, schoolLevelBase:0, schoolLevelBaseYear:0})),
           groups
         };
+        if('مكان البيت على الخريطة' in row){ const lr = parseMapLoc(row['مكان البيت على الخريطة']); if(lr.value) fields.mapLoc = lr.value; }
         const codeFromFile = String(row['كود']||'').trim();
         let existing = id ? DATA.servants.find(s=>s.id===id) : null;
         if(!existing) existing = DATA.servants.find(s=>s.name.trim()===name);
@@ -8441,6 +8479,78 @@ function upcomingBirthdays(days, servantsOnly){
   });
   return out.sort((a,b)=>a.diffDays-b.diffDays || a.s.name.localeCompare(b.s.name,'ar'));
 }
+// "مكان البيت": an exact spot for a person, saved as "lat,lng" or a pasted Google Maps share link.
+// Coordinates are taken out of a long Maps link when possible; short links (maps.app.goo.gl) are kept as they are.
+function parseMapLoc(raw){
+  const txt = String(raw||'').replace(/[\u0660-\u0669]/g, c=>c.charCodeAt(0)-0x0660).replace(/[\u06F0-\u06F9]/g, c=>c.charCodeAt(0)-0x06F0).replace(/٫/g,'.').trim();
+  if(!txt) return { value:'' };
+  const ok = (a,b)=>{ const la=+a, ln=+b; return (Math.abs(la)<=90 && Math.abs(ln)<=180 && (la||ln)) ? { value: String(+la.toFixed(6)) + ',' + String(+ln.toFixed(6)) } : null; };
+  let m = txt.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);            // the pinned place inside a long link
+  if(m && ok(m[1],m[2])) return ok(m[1],m[2]);
+  m = txt.match(/(-?\d{1,3}\.\d{3,})\s*[,،]\s*(-?\d{1,3}\.\d{3,})/); // "30.0444, 31.2357", ?q=…, @…
+  if(m && ok(m[1],m[2])) return ok(m[1],m[2]);
+  const u = (txt.match(/https?:\/\/[^\s"'<>]+/i) || [''])[0];
+  if(/^https?:\/\/(maps\.app\.goo\.gl|goo\.gl\/maps|g\.co\/kgs|(www\.)?google\.[a-z.]+\/maps|maps\.google\.[a-z.]+)/i.test(u)) return { value: u };
+  return { value:'', error:'اللينك ده مش لينك مكان من جوجل ماب. افتح المكان في جوجل ماب ودوس "مشاركة" وانسخ اللينك، أو دوس "خد مكاني" وانت عند البيت.' };
+}
+function mapLocUrl(loc){
+  loc = String(loc||'').trim();
+  if(!loc) return '';
+  if(/^https?:\/\//i.test(loc)) return loc;
+  return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(loc);
+}
+function getHereLoc(){
+  return new Promise((resolve, reject)=>{
+    if(!navigator.geolocation) return reject(new Error('الجهاز ده مش بيدعم تحديد المكان.'));
+    navigator.geolocation.getCurrentPosition(
+      p=>resolve({ value: p.coords.latitude.toFixed(6) + ',' + p.coords.longitude.toFixed(6), acc: Math.round(p.coords.accuracy||0) }),
+      e=>reject(new Error(e.code === 1 ? 'لازم تسمح للبرنامج يعرف مكانك (من إعدادات المتصفح) عشان ياخد مكان البيت.' : 'ما عرفناش نحدد مكانك. اتأكد إن الـ GPS (الموقع) شغال وجرّب تاني.')),
+      { enableHighAccuracy:true, timeout:20000, maximumAge:0 });
+  });
+}
+function mapLocFieldHtml(val){
+  return `<div class="maploc">
+    <input type="text" class="maploc-in" dir="ltr" value="${escHtml(val||'')}" placeholder="الصق لينك المكان من جوجل ماب">
+    <div class="maploc-btns">
+      <button type="button" class="ghost maploc-gps">📡 أنا عند البيت، خد مكاني</button>
+      <a class="maploc-test" href="${escHtml(mapLocUrl(val))}" target="_blank" rel="noopener" style="${val?'':'display:none;'}">🗺️ اتأكد على الخريطة</a>
+    </div>
+    <div class="maploc-msg"></div>
+  </div>`;
+}
+function readMapLoc(box){
+  const inp = box && box.querySelector('.maploc-in');
+  if(!inp) return { value: undefined };
+  return parseMapLoc(inp.value);
+}
+document.addEventListener('input', e=>{
+  const inp = e.target.closest && e.target.closest('.maploc-in'); if(!inp) return;
+  const box = inp.closest('.maploc'), r = parseMapLoc(inp.value), a = box.querySelector('.maploc-test'), msg = box.querySelector('.maploc-msg');
+  a.style.display = r.value ? '' : 'none'; if(r.value) a.href = mapLocUrl(r.value);
+  msg.textContent = r.error && inp.value.trim() ? '⚠️ ' + r.error : '';
+});
+document.addEventListener('click', async e=>{
+  const b = e.target.closest && e.target.closest('.maploc-gps'); if(!b) return;
+  const box = b.closest('.maploc'), msg = box.querySelector('.maploc-msg');
+  b.disabled = true; msg.textContent = '⏳ بنحدد مكانك…';
+  try{
+    const r = await getHereLoc();
+    box.querySelector('.maploc-in').value = r.value;
+    const a = box.querySelector('.maploc-test'); a.href = mapLocUrl(r.value); a.style.display = '';
+    msg.textContent = '✓ اتاخد مكانك' + (r.acc ? ` (بدقة حوالي ${r.acc} متر)` : '') + '. اتأكد على الخريطة وبعدين احفظ.';
+  }catch(err){ msg.textContent = '⚠️ ' + err.message; }
+  b.disabled = false;
+});
+// Google Maps link for a person: the exact saved spot if there is one, otherwise a search for the address (+ area).
+// Plain links: no API key needed, opens the Maps app on phones.
+function mapsUrl(s){
+  if(!s || !can('addresses')) return '';
+  if(s.mapLoc) return mapLocUrl(s.mapLoc);
+  const parts = [s.address, s.area].map(x=>String(x||'').trim()).filter(Boolean);
+  if(!parts.length) return '';
+  const q = parts.join('، ') + (/مصر|egypt/i.test(parts.join(' ')) ? '' : '، مصر');
+  return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
+}
 function waNumber(phone){
   // Arabic/Persian digits (٠١٢…) -> 0-9, then take the first number if several are written ("010… / 012…")
   const raw = String(phone||'').replace(/[\u0660-\u0669]/g, c=>c.charCodeAt(0)-0x0660).replace(/[\u06F0-\u06F9]/g, c=>c.charCodeAt(0)-0x06F0);
@@ -8633,6 +8743,7 @@ function renderKFVisits(body, people){
         </div>
         <div class="follow-acts">
           ${tel ? `<a href="tel:${tel}" title="اتصال">📞</a>` : ''}
+          ${mapsUrl(s) ? `<a href="${mapsUrl(s)}" target="_blank" rel="noopener" title="العنوان على جوجل ماب">📍</a>` : ''}
           <button type="button" class="kf-act" data-open="${s.id}">تسجيل افتقاد</button>
         </div>
       </div>
@@ -11021,6 +11132,8 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
+  { id: 'n36', d: '04-Nov-2026', text: '📌 تقدر تحفظ مكان البيت بالظبط على الخريطة: في تعديل بيانات الشخص (أو وانت بتضيف حد جديد) فيه خانة "مكان البيت" تلصق فيها لينك المكان من جوجل ماب، أو تدوس "أنا عند البيت، خد مكاني" وانت واقف عنده. ووانت بتسجّل الافتقاد فيه زرار "أنا عند البيت، احفظ مكانه". بعد كده زرار 📍 والعنوان بيودّوك للمكان ده بالظبط بدل ما جوجل ماب يدوّر على العنوان المكتوب.' },
+  { id: 'n35', d: '04-Nov-2026', text: '📍 العناوين بقت مربوطة بجوجل ماب: في قايمة الأفراد دوس على العنوان يفتحلك مكانه على الخريطة، وفي الافتقاد ومتابعة الخدام فيه زرار 📍 جنب الاتصال والواتساب يفتح العنوان على طول عشان تعرف تروح إزاي. الزرار بيظهر بس للي عنده صلاحية يشوف العناوين.' },
   { id: 'n34', d: '03-Nov-2026', text: '🌐 البرنامج بقى له عنوان جديد: khedma.pinshti.com. لو فاتح البرنامج من العنوان القديم أو من أيقونة على الشاشة الرئيسية، افتحه من العنوان الجديد وضيف الأيقونة تاني، وهتحتاج تدخل أو تفعّل الجهاز مرة كمان.' },
   { id: 'n33', d: '31-Oct-2026', text: '📊 رسوم بيانية جديدة: في الرئيسية كارت "الاجتماعات المسجّلة" بقى رسم بأعمدة ملونة بعدد الحاضرين في كل اجتماع (كل اجتماع بلونه) ومعاه آخر اجتماع والمتوسط وأعلى حضور، والقايمة بتظهر لما تدوس "اعرض تفاصيل الاجتماعات". و"اكتمال بيانات الأفراد" بقى دواير وشرايط ملونة لكل خانة (الأضعف فوق)، دوس على أي خانة يوريك أسماء اللي ناقصهم، والتفاصيل تحت زرار. وشاشة النقل بقى فوقها إحصائية: دايرة بالمنتقلين والمهاجرين واللي انتقلوا لمكان آخر، ورسم شهر بشهر، والأسماء تحتها زي ما هي.' },
   { id: 'n32', d: '31-Oct-2026', text: '📑 شاشة التقارير اتعملت من جديد: تختار التقرير من كروت بأيقونات بدل القايمة، والفترة بدوسة (السنة الخدمية، الشهر ده، الشهر اللي فات، آخر ٣ شهور، من الأول، أو تاريخ تاني)، والتقرير بيطلع على طول وبيتحدّث لوحده لما تغيّر حاجة. النسب في الجداول بقى جنبها شريط ملوّن، و"ملخص كل اجتماع" بقى فيه دواير بالنسبة ومتوسط الحاضرين والجمعة والأحد وآخر اجتماع وبيتطبع كده. الكروت اللي كانت فوق اتشالت، و"نسبة حضور كل فرد" بقت تقرير بتختاره وتطبعه.' },
