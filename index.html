@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<link rel="icon" type="image/png" href="favicon.png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="64x64" href="favicon-v2.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-v2-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon-v2.png">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1B2A4A">
 <meta name="apple-mobile-web-app-title" content="سجل الحضور">
@@ -3623,7 +3624,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '08-Nov-2026 A';
+const APP_VERSION = '08-Nov-2026 B';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -11136,6 +11137,7 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
+  { id: 'n38', d: '08-Nov-2026', text: '✨ البرنامج بقى له أيقونة جديدة: عصاية الراعي جوه باب الكنيسة وفي نصها صليب قبطي منوّر، ومكتوب تحتها Ϣⲙϣⲉ بالدهبي وحواليها إطار دهبي. على أندرويد والكمبيوتر الأيقونة بتتغير لوحدها بعد شوية (ممكن يطلعلك سؤال توافق فيه على الأيقونة الجديدة). على الآيفون: امسك الأيقونة القديمة واحذفها، وافتح khedma.pinshti.com من Safari ودوس زرار المشاركة ⬆️ ثم "إضافة إلى الشاشة الرئيسية"، وهتحتاج تدخل أو تفعّل الجهاز تاني.' },
   { id: 'n37', d: '08-Nov-2026', text: '🖼️ في تسجيل الحضور بقت صورة كل واحد قدام اسمه، عشان تعرف الشخص بسرعة وانت بتعلّم عليه. اللي لسه ما عندوش صورة بيظهر أول حروف اسمه في دايرة ملوّنة، ولما تعلّم إنه حضر الدايرة بتنوّر أخضر. وفي الوضع الداكن اسم اللي اتعلّم عليه بقى باين بوضوح.' },
   { id: 'n36', d: '04-Nov-2026', text: '📌 تقدر تحفظ مكان البيت بالظبط على الخريطة: في تعديل بيانات الشخص (أو وانت بتضيف حد جديد) فيه خانة "مكان البيت" تلصق فيها لينك المكان من جوجل ماب، أو تدوس "أنا عند البيت، خد مكاني" وانت واقف عنده. ووانت بتسجّل الافتقاد فيه زرار "أنا عند البيت، احفظ مكانه". بعد كده زرار 📍 والعنوان بيودّوك للمكان ده بالظبط بدل ما جوجل ماب يدوّر على العنوان المكتوب.' },
   { id: 'n35', d: '04-Nov-2026', text: '📍 العناوين بقت مربوطة بجوجل ماب: في قايمة الأفراد دوس على العنوان يفتحلك مكانه على الخريطة، وفي الافتقاد ومتابعة الخدام فيه زرار 📍 جنب الاتصال والواتساب يفتح العنوان على طول عشان تعرف تروح إزاي. الزرار بيظهر بس للي عنده صلاحية يشوف العناوين.' },
