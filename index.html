@@ -1162,7 +1162,11 @@ html[data-theme="dark"] .dev-name{filter:drop-shadow(0 1px 0 rgba(255,240,180,.2
 .avatar{flex:none;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;color:#fff;background:var(--brand-2);user-select:none;line-height:1;}
 .avatar.g-anba-boula{background:var(--g-anba-boula);} .avatar.g-makhdomeen-had{background:var(--g-makhdomeen-had);} .avatar.g-makhdomeen-gomaa{background:var(--g-makhdomeen-gomaa);}
 html[data-theme="dark"] .avatar{color:#10182a;}
-.attend-item .avatar{width:28px;height:28px;}
+.attend-item .avatar,.attend-item .att-photo{width:40px !important;height:40px !important;flex:none;box-shadow:0 0 0 2px var(--line);}
+.attend-item .att-photo{background:#fff;}
+.attend-item .avatar{font-size:14px !important;}
+.attend-item.checked .avatar,.attend-item.checked .att-photo{box-shadow:0 0 0 2.5px var(--sage);}
+html[data-theme="dark"] .attend-item.checked{background:rgba(52,211,153,.14);border-color:#34D399;}
 .sector-bars{display:flex;flex-direction:column;gap:16px;}
 .sector-bar .top{display:flex;justify-content:space-between;align-items:baseline;font-size:.9rem;margin-bottom:6px;font-weight:600;}
 .sector-bar .top b{font-size:1.2rem;}
@@ -3619,7 +3623,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '04-Nov-2026 B';
+const APP_VERSION = '08-Nov-2026 A';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -5294,7 +5298,7 @@ function renderAttendList(){
   list.innerHTML = visible.map(m=>`
     <label class="attend-item ${attendCheckedIds.has(m.id)?'checked':''}" data-id="${m.id}" ${canMark?'':'style="cursor:default;"'}>
       <input type="checkbox" ${attendCheckedIds.has(m.id)?'checked':''} ${canMark?'':'disabled'}>
-      ${avatarHtml({ name: m.name, groups: [currentGroupId] }, 28)}
+      ${avatarHtml({ name: m.name, photo: m.photo, groups: [currentGroupId] }, 40).replace('class="zoomable"', 'class="att-photo"')}
       <span>${escHtml(m.name)}</span>
     </label>
   `).join('');
@@ -11132,6 +11136,7 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
+  { id: 'n37', d: '08-Nov-2026', text: '🖼️ في تسجيل الحضور بقت صورة كل واحد قدام اسمه، عشان تعرف الشخص بسرعة وانت بتعلّم عليه. اللي لسه ما عندوش صورة بيظهر أول حروف اسمه في دايرة ملوّنة، ولما تعلّم إنه حضر الدايرة بتنوّر أخضر. وفي الوضع الداكن اسم اللي اتعلّم عليه بقى باين بوضوح.' },
   { id: 'n36', d: '04-Nov-2026', text: '📌 تقدر تحفظ مكان البيت بالظبط على الخريطة: في تعديل بيانات الشخص (أو وانت بتضيف حد جديد) فيه خانة "مكان البيت" تلصق فيها لينك المكان من جوجل ماب، أو تدوس "أنا عند البيت، خد مكاني" وانت واقف عنده. ووانت بتسجّل الافتقاد فيه زرار "أنا عند البيت، احفظ مكانه". بعد كده زرار 📍 والعنوان بيودّوك للمكان ده بالظبط بدل ما جوجل ماب يدوّر على العنوان المكتوب.' },
   { id: 'n35', d: '04-Nov-2026', text: '📍 العناوين بقت مربوطة بجوجل ماب: في قايمة الأفراد دوس على العنوان يفتحلك مكانه على الخريطة، وفي الافتقاد ومتابعة الخدام فيه زرار 📍 جنب الاتصال والواتساب يفتح العنوان على طول عشان تعرف تروح إزاي. الزرار بيظهر بس للي عنده صلاحية يشوف العناوين.' },
   { id: 'n34', d: '03-Nov-2026', text: '🌐 البرنامج بقى له عنوان جديد: khedma.pinshti.com. لو فاتح البرنامج من العنوان القديم أو من أيقونة على الشاشة الرئيسية، افتحه من العنوان الجديد وضيف الأيقونة تاني، وهتحتاج تدخل أو تفعّل الجهاز مرة كمان.' },
