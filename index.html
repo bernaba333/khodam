@@ -1018,6 +1018,26 @@ html[data-theme="dark"] .chat-msg .rx button b,.chat-msg.mine .rx button b{color
 .set-back{border-radius:999px;padding:6px 14px;}
 .set-title{font-size:1.1rem;font-weight:700;}
 .set-pane .card.set-off{display:none !important;}
+/* ---- settings: storage space gauge ---- */
+.spc-gauge{max-width:260px;margin:0 auto;}
+.spc-gauge svg{display:block;width:100%;height:auto;}
+.spc-sum{text-align:center;font-size:.95rem;margin:4px 0 2px;}
+.spc-sum b{font-weight:800;}
+.spc-left{text-align:center;font-size:.82rem;color:var(--muted);}
+.spc-warn{margin:12px 0 4px;padding:10px 12px;border-radius:12px;font-size:.85rem;line-height:1.6;background:rgba(179,38,30,.10);color:var(--wine);border:1px solid rgba(179,38,30,.25);}
+.spc-warn.amber{background:rgba(214,140,20,.12);color:#9a5b00;border-color:rgba(214,140,20,.35);}
+.spc-bar{display:flex;height:14px;border-radius:999px;overflow:hidden;background:var(--cream-dark);margin:14px 0 8px;}
+.spc-bar span{display:block;height:100%;min-width:2px;}
+.spc-rows{display:grid;gap:6px;font-size:.84rem;}
+.spc-row{display:flex;align-items:center;gap:8px;}
+.spc-dot{width:10px;height:10px;border-radius:50%;flex:none;}
+.spc-row .spc-v{margin-inline-start:auto;color:var(--muted);white-space:nowrap;direction:ltr;}
+.spc-foot{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:14px;}
+.spc-note{font-size:.76rem;color:var(--muted);line-height:1.7;margin-top:10px;}
+.set-tile.spc-hot .set-s{color:var(--wine);font-weight:700;}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .spc-warn{color:#ff9a90;} :root:not([data-theme="light"]) .spc-warn.amber{color:#f0b54a;} }
+:root[data-theme="dark"] .spc-warn{color:#ff9a90;}
+:root[data-theme="dark"] .spc-warn.amber{color:#f0b54a;}
 .set-split.picked .set-hub{display:none;}
 .set-split:not(.picked) .set-pane{display:none;}
 @media (min-width:900px){
@@ -2164,6 +2184,10 @@ html[data-theme="dark"] .rp-periods button.on{background:var(--gold);color:#1a23
     <div class="follow-hint">كل رسالة البرنامج بيجهّزها للإرسال تقدر تعدّل نصها من هنا، والتعديل بيتطبق عند كل الخدام. الكلام اللي بين { } بيتبدّل لوحده وقت الإرسال (زي اسم الشخص).</div>
     <div id="msgsList"></div>
   </div>
+  <div class="card" id="spaceCard">
+    <h2>📦 المساحة المستخدمة</h2>
+    <div id="spaceBody"><div class="empty-note">لسه بنحسب…</div></div>
+  </div>
   <div class="card" id="notAdminNote" style="display:none;">
     <h2>الإعدادات</h2>
     <div class="empty-note">إدارة المستخدمين وتصفير البيانات متاحة للمدير فقط. لو محتاج صلاحية مدير كلّم اللي مسؤول عن البرنامج.</div>
@@ -2716,6 +2740,56 @@ setInterval(()=>{ if(alertLsGet(ALERT_Q_KEY, []).length) flushAlerts(); }, 60000
 
   // fixed id: sending the same alert twice keeps one copy
   fbStore.alertSend = (id, m)=> db.collection('chat').doc(id).set(m);
+  /* storage space: Firestore has no "how much am I using" call for the app, so we
+     read the small collections and size every document the way Firestore counts it
+     (name + fields + 32 bytes, plus its two automatic index entries per field).
+     Photos are not downloaded again: the caller sizes them from the copies already on this device. */
+  fbStore.spaceScan = async ()=>{
+    const enc = new TextEncoder();
+    const sb = t => enc.encode(String(t)).length;
+    const val = v => {
+      if(v === null || v === undefined || typeof v === 'boolean') return 1;
+      if(typeof v === 'number') return 8;
+      if(typeof v === 'string') return sb(v) + 1;
+      if(Array.isArray(v)) return v.reduce((t,x)=>t+val(x), 0);
+      if(typeof v === 'object'){ if(typeof v.toMillis === 'function') return 8; return Object.keys(v).reduce((t,k)=>t + sb(k) + 1 + val(v[k]), 0); }
+      return 8;
+    };
+    const docSize = (coll, id, data)=>{
+      const name = sb(coll) + 1 + sb(id) + 1 + 16;
+      let fields = 0, idx = 0;
+      Object.keys(data || {}).forEach(k=>{ const f = sb(k) + 1, v = val(data[k]); fields += f + v; idx += 2 * (name + f + Math.min(v, 1500) + 32); });
+      return name + fields + 32 + idx;
+    };
+    const out = { kv:{}, kvMain:{}, colls:{}, docs:0 };
+    const kvSnap = await db.collection('kv').get();
+    const parts = [];
+    kvSnap.docs.forEach(d=>{
+      const id = d.id, data = d.data() || {}, size = docSize('kv', id, data);
+      out.docs++;
+      const i = id.indexOf(PART_SEP);
+      if(i === -1){ out.kvMain[id] = data.wid || ''; out.kv[id] = (out.kv[id] || 0) + size; }
+      else parts.push({ id, base: id.slice(0, i), wid: id.slice(i + PART_SEP.length).replace(/_\d+$/, ''), size });
+    });
+    // parts that no main document points to any more (a save that was cut off half way)
+    out.orphans = { n:0, bytes:0, ids:[] };
+    parts.forEach(x=>{
+      if(out.kvMain[x.base] === x.wid){ out.kv[x.base] = (out.kv[x.base] || 0) + x.size; return; }
+      const born = parseInt(x.wid.slice(0, 8), 36);
+      if(born && Date.now() - born < 3600000){ out.kv[x.base] = (out.kv[x.base] || 0) + x.size; return; }   // a save may be running right now
+      out.orphans.n++; out.orphans.bytes += x.size; out.orphans.ids.push(x.id);
+    });
+    for(const c of ['chat', 'chatseen', 'chatmeta', 'presence', 'pair']){
+      try{
+        const snap = await db.collection(c).get();
+        out.colls[c] = snap.docs.reduce((t,d)=>t + docSize(c, d.id, d.data()), 0);
+        out.docs += snap.size;
+      }catch(e){ out.colls[c] = 0; }
+    }
+    out.photoDoc = (id, v, ver)=> docSize('ph', id, { v, ver, at: 0 });
+    return out;
+  };
+  fbStore.spaceCleanOrphans = ids=> Promise.all(ids.map(id=>db.collection('kv').doc(id).delete().catch(()=>{})));
   // any shared save that fails is reported to the admin
   ['set', 'setIfRev', 'photoSet'].forEach(fn=>{
     const orig = fbStore[fn];
@@ -3624,7 +3698,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '08-Nov-2026 B';
+const APP_VERSION = '11-Nov-2026 A';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -6939,6 +7013,7 @@ const SETTINGS_SECTIONS = [
   { k:'look', ic:'🎨', bg:'var(--g-anba-boula-soft)', t:'الشكل واسم الاجتماع', s:'الألوان · الاسم · الشعار · الآيات', cards:['themeCard','myPhotoCard','faceLoginCard','brandingCard'] },
   { k:'msgs', ic:'💬', bg:'rgba(37,211,102,.16)', t:'الرسايل الجاهزة', s:'واتساب · التهنئة · التفكير · الأكواد', cards:['msgsCard'] },
   { k:'audit', ic:'📝', bg:'var(--cream-dark)', t:'سجل التعديلات', s:'مين عدّل إيه وإمتى', cards:['auditCard'] },
+  { k:'space', ic:'📦', bg:'rgba(46,125,90,.14)', t:'المساحة المستخدمة', s:'المستخدم واللي فاضل من مساحة Firebase', cards:['spaceCard'] },
   { k:'data', ic:'💾', bg:'var(--g-makhdomeen-gomaa-soft)', t:'النسخ الاحتياطي والبيانات', cards:['fullBackupCard','bulkDataCard'] },
   { k:'reset', ic:'🧨', bg:'rgba(179,38,30,.14)', t:'تصفير البرنامج', s:'للتجربة بس · مفيش تراجع', cards:['resetCard'], danger:true },
 ];
@@ -6948,6 +7023,10 @@ function settingsSubtitle(sec){
   if(sec.k === 'users'){
     const locked = USERS.filter(u=>u.locked).length;
     return `${USERS.length} مستخدم` + (locked ? ` · 🔒 ${locked} مقفول` : ' · نوع كل واحد وشاشاته');
+  }
+  if(sec.k === 'space'){
+    const r = spaceLast();
+    return r ? `مستخدم ${spacePct(r) > 0 && spacePct(r) < 1 ? 'أقل من 1%' : spacePct(r) + '%'} · فاضل ${fmtBytes(SPACE_LIMIT - r.total)}` + (spacePct(r) >= SPACE_WARN_PCT ? ' ⚠️' : '') : (sec.s || '');
   }
   if(sec.k === 'data'){
     const st = document.getElementById('lastBackupStatus');
@@ -6961,7 +7040,7 @@ function renderSettingsHub(){
   const secs = SETTINGS_SECTIONS.filter(x=>isAdmin() || x.k === 'msgs');
   if(settingsSection && !secs.some(x=>x.k === settingsSection)) settingsSection = '';
   const sel = settingsSection || (settingsWideMq.matches ? secs[0].k : '');
-  hub.innerHTML = secs.map(sec=>`<button type="button" class="set-tile${sec.danger ? ' set-danger' : ''}${sec.k === sel ? ' on' : ''}" data-k="${sec.k}">
+  hub.innerHTML = secs.map(sec=>`<button type="button" class="set-tile${sec.danger ? ' set-danger' : ''}${sec.k === 'space' && spaceHot() ? ' spc-hot' : ''}${sec.k === sel ? ' on' : ''}" data-k="${sec.k}">
       <span class="set-ic" style="background:${sec.bg}">${sec.ic}</span>
       <span><div class="set-t">${sec.t}</div><div class="set-s">${escHtml(settingsSubtitle(sec))}</div></span>
       <span class="set-chev">‹</span></button>`).join('');
@@ -6969,6 +7048,7 @@ function renderSettingsHub(){
   document.getElementById('settingsSplit').classList.toggle('picked', !!settingsSection);
   const cur = secs.find(x=>x.k === sel);
   if(sel === 'msgs') renderMsgsCard();
+  if(sel === 'space') renderSpaceCard();
   document.getElementById('settingsTitle').textContent = cur ? cur.ic + ' ' + cur.t : '';
   document.querySelectorAll('#settingsPane > .card').forEach(c=>c.classList.toggle('set-off', !cur || !cur.cards.includes(c.id)));
 }
@@ -6981,6 +7061,149 @@ function openSettingsSection(k){
   }
 }
 document.getElementById('settingsBackBtn').addEventListener('click', ()=>openSettingsSection(''));
+
+/* ---------- STORAGE SPACE (admin, الإعدادات › المساحة المستخدمة) ----------
+   Firebase's free plan keeps up to 1 GiB of Firestore data. We estimate what is used
+   (see storage.spaceScan) at most once a day on an admin's device, show it as a gauge
+   with what is left, and from 70% the admins get an alert in the 🔔 (again at 80% and 90%). */
+const SPACE_LIMIT = 1024 * 1024 * 1024, SPACE_WARN_PCT = 70;
+const SPACE_LAST_KEY = 'khodam_space_last', SPACE_ALERT_KEY = 'khodam_space_alerted';
+let spaceBusy = false;
+function fmtBytes(b){
+  b = Math.max(0, b || 0);
+  if(b >= 1024*1024*1024) return (b/1024/1024/1024).toFixed(2).replace(/\.?0+$/, '') + ' جيجا';
+  if(b >= 1024*1024) return (b/1024/1024).toFixed(b >= 100*1024*1024 ? 0 : 1).replace(/\.0$/, '') + ' ميجا';
+  if(b >= 1024) return Math.round(b/1024) + ' كيلو';
+  return b + ' بايت';
+}
+function spaceLast(){ try{ return JSON.parse(localStorage.getItem(SPACE_LAST_KEY)) || null; }catch(e){ return null; } }
+function spacePct(r){ const p = r.total / SPACE_LIMIT * 100; return p > 0 && p < 1 ? Math.max(0.1, Math.round(p * 10) / 10) : Math.round(p); }
+function spacePctTxt(pct){ return pct > 0 && pct < 1 ? '<1%' : pct + '%'; }
+function spaceHot(){ const r = spaceLast(); return !!(r && spacePct(r) >= SPACE_WARN_PCT); }
+async function measureSpace(){
+  if(!window.storage || !window.storage.spaceScan) throw new Error('no firebase');
+  const scan = await window.storage.spaceScan();
+  // photos: sized from this device's copies (every device downloads them all anyway); any missing one counts as the average
+  let phBytes = 0, phKnown = 0, phMissing = 0;
+  const seen = new Set();
+  PHOTO_MEM.forEach((rec, id)=>{ if(rec && rec.v){ seen.add(id); phKnown++; phBytes += scan.photoDoc(id, rec.v, rec.ver || ''); } });
+  (DATA.servants || []).forEach(s=>{ if(s.photoVer && !seen.has(s.id)) phMissing++; });
+  const avg = phKnown ? phBytes / phKnown : 40 * 1024;
+  phBytes += phMissing * avg;
+  const kv = scan.kv, pick = k => { const v = kv[k] || 0; delete kv[k]; return v; };
+  const groups = [
+    { k:'data', t:'الخدام والمخدومين والحضور والافتقاد', c:'#2e7d5a', v: pick(STORAGE_KEY) },
+    { k:'ph', t:'الصور (' + (phKnown + phMissing) + ' صورة)', c:'#c08a2b', v: phBytes },
+    { k:'chat', t:'الشات والتنبيهات', c:'#3a6ea5', v: (scan.colls.chat||0) + (scan.colls.chatseen||0) + (scan.colls.chatmeta||0) + (scan.colls.presence||0) + (scan.colls.pair||0) },
+    { k:'audit', t:'سجل التعديلات', c:'#8a5aa8', v: pick(AUDIT_KEY) },
+    { k:'other', t:'المستخدمين والإعدادات وباقي البيانات', c:'#7a8a96', v: 0 },
+    { k:'orph', t:'بقايا حفظ قديمة متسابة', c:'#b3261e', v: scan.orphans.bytes },
+  ];
+  groups[4].v = Object.keys(kv).reduce((t,k)=>t + kv[k], 0);
+  const r = { at: Date.now(), total: Math.round(groups.reduce((t,g)=>t+g.v, 0)), groups: groups.map(g=>Object.assign({}, g, { v: Math.round(g.v) })),
+    orphanN: scan.orphans.n, docs: scan.docs + phKnown + phMissing };
+  const old = spaceLast();
+  r.hist = ((old && old.hist) || []).filter(h=>r.at - h.at < 120*86400000).concat([{ at: r.at, total: r.total }]).slice(-60);
+  try{ localStorage.setItem(SPACE_LAST_KEY, JSON.stringify(r)); }catch(e){}
+  spaceOrphanIds = scan.orphans.ids;
+  spaceMaybeAlert(r);
+  return r;
+}
+let spaceOrphanIds = [];
+// one alert for each step (70, 80, 90%); the same step again only after a week; fixed id so admins never get duplicates
+function spaceMaybeAlert(r){
+  const pct = spacePct(r);
+  if(pct < SPACE_WARN_PCT || !isAdmin() || !window.storage.alertSend) return;
+  const step = Math.min(90, Math.floor(pct / 10) * 10);
+  let sent = {}; try{ sent = JSON.parse(localStorage.getItem(SPACE_ALERT_KEY)) || {}; }catch(e){}
+  if(Date.now() - (sent[step] || 0) < 7*86400000) return;
+  sent[step] = Date.now(); try{ localStorage.setItem(SPACE_ALERT_KEY, JSON.stringify(sent)); }catch(e){}
+  const now = Date.now();
+  window.storage.alertSend('space_' + step, { by: ALERT_BY, role: '', to: 'admin', kind: 'alert', problem: 'space', user: '', at: now,
+    text: `📦 مساحة البيانات وصلت ${pct}%: مستخدم ${fmtBytes(r.total)} من ${fmtBytes(SPACE_LIMIT)} وفاضل ${fmtBytes(SPACE_LIMIT - r.total)}. افتح الإعدادات › المساحة المستخدمة تشوف إيه اللي واخد المساحة.` }).catch(()=>{});
+}
+function spaceGaugeSvg(pct){
+  const p = Math.max(0, Math.min(100, pct)), r = 80, cx = 100, cy = 100;
+  const pt = a => [cx + r * Math.cos(Math.PI * a), cy - r * Math.sin(Math.PI * a)];   // starts on the right (Arabic reads right to left)
+  const arc = (a0, a1) => { const [x0,y0] = pt(a0), [x1,y1] = pt(a1); return `M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 0 0 ${x1.toFixed(1)} ${y1.toFixed(1)}`; };
+  const pctTxt = spacePctTxt(pct);
+  const col = p >= SPACE_WARN_PCT ? '#b3261e' : p >= 50 ? '#d68c14' : '#2e7d5a';
+  const [mx, my] = pt(SPACE_WARN_PCT / 100), [ix, iy] = [cx + (r - 22) * Math.cos(Math.PI * SPACE_WARN_PCT/100), cy - (r - 22) * Math.sin(Math.PI * SPACE_WARN_PCT/100)];
+  return `<svg viewBox="0 0 200 118" role="img" aria-label="مستخدم ${escHtml(pctTxt)}">
+    <path d="${arc(0, 1)}" style="fill:none;stroke:var(--cream-dark);stroke-width:18;stroke-linecap:round;"/>
+    ${p > 0 ? `<path d="${arc(0, Math.max(p / 100, 0.004))}" style="fill:none;stroke:${col};stroke-width:18;stroke-linecap:round;"/>` : ''}
+    <line x1="${ix.toFixed(1)}" y1="${iy.toFixed(1)}" x2="${mx.toFixed(1)}" y2="${my.toFixed(1)}" style="stroke:#b3261e;stroke-width:2;stroke-dasharray:3 2;"/>
+    <text x="${(ix - 2).toFixed(1)}" y="${(iy + 12).toFixed(1)}" text-anchor="middle" style="fill:#b3261e;font-family:'Cairo',sans-serif;font-size:8px;font-weight:700;">70%</text>
+    <text x="100" y="92" text-anchor="middle" style="fill:var(--ink);font-family:'Cairo',sans-serif;font-weight:800;font-size:30px;direction:ltr;unicode-bidi:plaintext;">${escHtml(pctTxt)}</text>
+    <text x="100" y="110" text-anchor="middle" style="fill:var(--muted);font-family:'Cairo',sans-serif;font-size:10px;">مستخدم</text>
+  </svg>`;
+}
+function renderSpaceCard(){
+  const el = document.getElementById('spaceBody'); if(!el) return;
+  const r = spaceLast();
+  if(!r){
+    el.innerHTML = '<div class="empty-note">لسه بنحسب المساحة… ثواني.</div>';
+    if(!spaceBusy) spaceRefresh();
+    return;
+  }
+  const pct = spacePct(r), left = SPACE_LIMIT - r.total;
+  const groups = r.groups.filter(g=>g.v > 0).sort((a,b)=>b.v - a.v);
+  let growth = '';
+  const h = (r.hist || []).filter(x=>r.at - x.at <= 31*86400000);
+  if(h.length >= 2 && r.at - h[0].at >= 3*86400000){
+    const days = (r.at - h[0].at) / 86400000, perDay = (r.total - h[0].total) / days;
+    const grew = r.total - h[0].total;
+    if(perDay > 1024){
+      const target = pct >= SPACE_WARN_PCT ? SPACE_LIMIT : SPACE_LIMIT * SPACE_WARN_PCT / 100;
+      const months = Math.round((target - r.total) / perDay / 30);
+      const when = months < 1 ? 'في أقل من شهر' : months > 120 ? 'بعد أكتر من 10 سنين' : `بعد حوالي ${months} ${months === 1 ? 'شهر' : months <= 10 ? 'شهور' : 'شهر'}`;
+      growth = `<div class="spc-note">📈 في آخر ${Math.round(days)} يوم زادت ${fmtBytes(grew)}، ولو فضلت تزيد كده ${pct >= SPACE_WARN_PCT ? 'المساحة هتخلص' : 'هتوصل ' + SPACE_WARN_PCT + '%'} ${when}.</div>`;
+    } else growth = `<div class="spc-note">📈 المساحة تقريبًا ما زادتش في آخر ${Math.round(days)} يوم.</div>`;
+  }
+  el.innerHTML = `
+    <div class="spc-gauge">${spaceGaugeSvg(pct)}</div>
+    <div class="spc-sum">مستخدم <b>${fmtBytes(r.total)}</b> من <b>${fmtBytes(SPACE_LIMIT)}</b></div>
+    <div class="spc-left">فاضل ${fmtBytes(left)} (${Math.max(0, Math.round(100 - pct))}%)</div>
+    ${pct >= SPACE_WARN_PCT ? `<div class="spc-warn">⚠️ المساحة عدّت ${SPACE_WARN_PCT}%. امسح الصور والبيانات اللي مش محتاجها، أو فكّر تنقل مشروع Firebase للخطة المدفوعة (Blaze) عشان البرنامج ما يقفش عن الحفظ لما توصل 100%.</div>`
+      : pct >= 50 ? `<div class="spc-warn amber">المساحة عدّت النص. لما توصل ${SPACE_WARN_PCT}% هيجيلك تنبيه في 🔔.</div>` : ''}
+    <div class="spc-bar">${groups.map(g=>`<span style="width:${(g.v / Math.max(r.total, 1) * 100).toFixed(2)}%;background:${g.c}" title="${escHtml(g.t)}"></span>`).join('')}</div>
+    <div class="spc-rows">${groups.map(g=>`<div class="spc-row"><span class="spc-dot" style="background:${g.c}"></span><span>${escHtml(g.t)}</span><span class="spc-v">${fmtBytes(g.v)}</span></div>`).join('')}</div>
+    ${growth}
+    <div class="spc-foot">
+      <button type="button" class="ghost" id="spaceRefreshBtn">🔄 احسب تاني</button>
+      ${r.orphanN ? `<button type="button" class="ghost" id="spaceCleanBtn">🧹 امسح البقايا القديمة (${fmtBytes((r.groups.find(g=>g.k === 'orph') || {}).v)})</button>` : ''}
+      <span style="font-size:.76rem;color:var(--muted);">آخر حساب: ${escHtml(chatDay(r.at))} ${chatTime(r.at)}</span>
+    </div>
+    <div class="spc-note">الرقم ده حساب تقريبي من البرنامج نفسه لبيانات Firestore (الخطة المجانية فيها 1 جيجا). البرنامج بيحسبه لوحده مرة في اليوم على جهاز الأدمن، ولما المساحة توصل ${SPACE_WARN_PCT}% بيجيلك تنبيه في 🔔. الرقم الرسمي بالظبط موجود في Firebase Console › Firestore › Usage.</div>`;
+  const rb = document.getElementById('spaceRefreshBtn'); if(rb) rb.addEventListener('click', ()=>spaceRefresh(true));
+  const cb = document.getElementById('spaceCleanBtn');
+  if(cb) cb.addEventListener('click', async ()=>{
+    if(!confirm('البقايا دي أجزاء من مرات حفظ قديمة اتقطعت في النص ومحدش بيستخدمها. تمسحها؟')) return;
+    cb.disabled = true; cb.textContent = 'بيمسح…';
+    try{
+      if(!spaceOrphanIds.length) await measureSpace();
+      await window.storage.spaceCleanOrphans(spaceOrphanIds); spaceOrphanIds = [];
+    }catch(e){ console.error('space clean failed', e); }
+    spaceRefresh(true);
+  });
+}
+async function spaceRefresh(manual){
+  if(spaceBusy) return;
+  spaceBusy = true;
+  const rb = document.getElementById('spaceRefreshBtn'); if(rb){ rb.disabled = true; rb.textContent = 'بيحسب…'; }
+  try{ await measureSpace(); }
+  catch(e){ console.error('space measure failed', e); if(manual) alert('معرفناش نحسب المساحة دلوقتي. اتأكد من النت وجرّب تاني.'); }
+  finally{ spaceBusy = false; }
+  if(settingsSection === 'space' || (settingsWideMq.matches && !settingsSection)) renderSpaceCard();
+  try{ renderSettingsHub(); }catch(e){}
+}
+// on an admin's device: at most once a day, a little after sign-in
+function spaceAutoCheck(){
+  if(!isAdmin()) return;
+  const r = spaceLast();
+  if(r && Date.now() - r.at < 20 * 3600000){ spaceMaybeAlert(r); return; }
+  spaceRefresh(false);
+}
 try{ settingsWideMq.addEventListener('change', renderSettingsHub); }catch(e){}
 renderSettingsHub();
 document.getElementById('mySettingsBtn').addEventListener('click', ()=>{ renderFaceLoginCard(); document.getElementById('mySettingsOverlay').style.display = 'flex'; });
@@ -7034,6 +7257,7 @@ function applyUserUI(){
   resetInactivityTimer();
   showWelcomeBanner();
   setTimeout(maybeShowNews, 1200);
+  setTimeout(()=>{ try{ spaceAutoCheck(); }catch(e){ console.error('space check failed', e); } }, 25000);
   animateHeaderTitle();
   document.getElementById('usersCard').style.display = isAdmin() ? 'block' : 'none';
   document.getElementById('permissionsCard').style.display = isAdmin() ? 'block' : 'none';
@@ -11137,6 +11361,7 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
+  { id: 'n39', d: '11-Nov-2026', admin: true, text: '📦 في الإعدادات قسم جديد "المساحة المستخدمة": عدّاد بيوريك البرنامج مستخدم كام من مساحة Firebase المجانية (1 جيجا) وفاضل كام، ومين واخد المساحة (البيانات، الصور، الشات، سجل التعديلات). البرنامج بيحسبها لوحده مرة في اليوم، ولما توصل 70% بيجيلك تنبيه في 🔔 (وتاني عند 80% و90%). ولو فيه بقايا حفظ قديمة متسابة تقدر تمسحها بزرار.' },
   { id: 'n38', d: '08-Nov-2026', text: '✨ البرنامج بقى له أيقونة جديدة: عصاية الراعي جوه باب الكنيسة وفي نصها صليب قبطي منوّر، ومكتوب تحتها Ϣⲙϣⲉ بالدهبي وحواليها إطار دهبي. على أندرويد والكمبيوتر الأيقونة بتتغير لوحدها بعد شوية (ممكن يطلعلك سؤال توافق فيه على الأيقونة الجديدة). على الآيفون: امسك الأيقونة القديمة واحذفها، وافتح khedma.pinshti.com من Safari ودوس زرار المشاركة ⬆️ ثم "إضافة إلى الشاشة الرئيسية"، وهتحتاج تدخل أو تفعّل الجهاز تاني.' },
   { id: 'n37', d: '08-Nov-2026', text: '🖼️ في تسجيل الحضور بقت صورة كل واحد قدام اسمه، عشان تعرف الشخص بسرعة وانت بتعلّم عليه. اللي لسه ما عندوش صورة بيظهر أول حروف اسمه في دايرة ملوّنة، ولما تعلّم إنه حضر الدايرة بتنوّر أخضر. وفي الوضع الداكن اسم اللي اتعلّم عليه بقى باين بوضوح.' },
   { id: 'n36', d: '04-Nov-2026', text: '📌 تقدر تحفظ مكان البيت بالظبط على الخريطة: في تعديل بيانات الشخص (أو وانت بتضيف حد جديد) فيه خانة "مكان البيت" تلصق فيها لينك المكان من جوجل ماب، أو تدوس "أنا عند البيت، خد مكاني" وانت واقف عنده. ووانت بتسجّل الافتقاد فيه زرار "أنا عند البيت، احفظ مكانه". بعد كده زرار 📍 والعنوان بيودّوك للمكان ده بالظبط بدل ما جوجل ماب يدوّر على العنوان المكتوب.' },
