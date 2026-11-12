@@ -3699,7 +3699,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '12-Nov-2026 C';
+const APP_VERSION = '12-Nov-2026 D';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -4516,14 +4516,16 @@ function afqOpenWa(id){
   const pick = bd ? 'bday' : (f && f.attended <= 1 && f.total <= 6 ? 'new' : (f && f.streak >= 4 ? 'long' : 'miss'));
   const ov = afqSheetShell(`<h3>💬 رسالة واتساب لـ${escHtml(s.name)}</h3><div class="q">اختار الرسالة، وهتتفتح في واتساب وتقدر تعدّلها قبل ما تبعت</div>
     <div class="afq-tpl">${T.map(o=>`<button type="button" data-k="${o.k}" class="${o.k===pick?'sug':''}"><b>${o.t}${o.k===pick?' <small>· مقترحة</small>':''}</b>${o.x ? `<span>${escHtml(o.x)}</span>` : ''}</button>`).join('')}</div>
-    <div class="afq-btns"><button type="button" class="ghost afq-cancel">إلغاء</button></div>`);
+    <div class="afq-btns">${!(IS_ANDROID || IS_IOS) ? `<button type="button" class="ghost afq-wahow">💻 غيّر (${waDesktopPref()==='app' ? 'برنامج واتساب' : waDesktopPref()==='web' ? 'واتساب ويب' : 'لسه ما اخترتش'})</button>` : ''}<button type="button" class="ghost afq-cancel">إلغاء</button></div>`);
   ov.querySelector('.afq-cancel').addEventListener('click', afqCloseSheet);
+  const how = ov.querySelector('.afq-wahow'); if(how) how.addEventListener('click', ()=>waAskDesktop(null));
   ov.querySelectorAll('.afq-tpl button').forEach(b=>b.addEventListener('click', ()=>{
     const o = T.find(x=>x.k === b.dataset.k);
     const url = waUrl(num, o.x);
     afqCloseSheet();
-    afqStartContact(id, 'واتساب');
-    if(IS_ANDROID || IS_IOS) window.location.href = url; else window.open(url, '_blank', 'noopener');
+    // the "how did it go" question starts only once WhatsApp really opens (not while a computer
+    // is still being asked app/web)
+    waOpen(url, ()=>afqStartContact(id, 'واتساب'));
   }));
 }
 function afqOpenSheet(id, type, after){
@@ -8801,13 +8803,66 @@ function waUrl(num, text){
   const enc = text ? encodeURIComponent(text) : '';
   if(IS_ANDROID) return `whatsapp://send?phone=${num}${enc ? '&text=' + enc : ''}`;
   if(IS_IOS) return `https://wa.me/${num}${enc ? '?text=' + enc : ''}`;
-  return `https://api.whatsapp.com/send?phone=${num}${enc ? '&text=' + enc : ''}`;
+  // computer: WhatsApp Web straight to the chat (api.whatsapp.com showed a "continue to chat" page
+  // in a brand-new tab every single time)
+  return `https://web.whatsapp.com/send?phone=${num}${enc ? '&text=' + enc : ''}`;
+}
+// computer: a web page can't send into a WhatsApp Web tab the user opened themselves (and WhatsApp
+// Web cuts the link to the page that opened it), so each message used to open a new tab/window.
+// Each computer picks once (saved on that device):
+//  'app' = the WhatsApp program on the computer: whatsapp://send goes straight into the open program,
+//          no browser window at all
+//  'web' = WhatsApp Web: tried in ONE named tab, so the browser reuses it when it can
+// Phones open the WhatsApp app in the same window, as before.
+const WA_TAB = 'khodam_whatsapp', WA_PREF_KEY = 'khodam_wa_desktop';
+function waParts(url){
+  // wa.me/<num>?text=…, wa.me/?text=…, api/web.whatsapp.com/send?…, whatsapp://send?… -> { phone, text }
+  const m = String(url).match(/^(?:https:\/\/(?:wa\.me|api\.whatsapp\.com|web\.whatsapp\.com)|whatsapp:\/)\/(?:send)?\/?(\d*)\/?(?:\?(.*))?$/);
+  if(!m) return null;
+  const q = new URLSearchParams(m[2] || '');
+  return { phone: m[1] || q.get('phone') || '', text: q.get('text') || '' };
+}
+function waDesktopUrl(url, how){
+  const p = waParts(url); if(!p) return url;
+  const q = [];
+  if(p.phone) q.push('phone=' + p.phone);
+  if(p.text) q.push('text=' + encodeURIComponent(p.text));
+  return (how === 'app' ? 'whatsapp://send?' : 'https://web.whatsapp.com/send?') + q.join('&');
+}
+function waDesktopPref(){ try{ return localStorage.getItem(WA_PREF_KEY) || ''; }catch(e){ return ''; } }
+function waAskDesktop(then){
+  const cur = waDesktopPref();
+  const ov = afqSheetShell(`<h3>💻 بتستخدم واتساب على الكمبيوتر ده إزاي؟</h3>
+    <div class="q">عشان الرسايل تروح لواتساب اللي فاتحه، من غير ما يفتح نافذة جديدة كل مرة. الاختيار بيتحفظ على الجهاز ده، وتقدر تغيّره من زرار "💻 غيّر" في شاشة رسالة الافتقاد.</div>
+    <div class="afq-tpl">
+      <button type="button" data-how="app" class="${cur==='app'?'sug':''}"><b>🖥️ برنامج واتساب متسطّب على الكمبيوتر</b><span>الرسالة بتتفتح جوه البرنامج نفسه على المحادثة، من غير أي نافذة جديدة (الأفضل)</span></button>
+      <button type="button" data-how="web" class="${cur==='web'?'sug':''}"><b>🌐 واتساب ويب في المتصفح</b><span>بيفتح تاب واتساب واحدة للبرنامج. واتساب ويب ما بيسمحش لأي موقع يبعت في تاب انت فاتحها بنفسك، فممكن يطلب "استخدم هنا" أو يفتح تاب تانية</span></button>
+    </div>
+    <div class="afq-btns"><button type="button" class="ghost afq-cancel">إلغاء</button></div>`);
+  ov.querySelector('.afq-cancel').addEventListener('click', afqCloseSheet);
+  ov.querySelectorAll('.afq-tpl button').forEach(b=>b.addEventListener('click', ()=>{
+    try{ localStorage.setItem(WA_PREF_KEY, b.dataset.how); }catch(e){}
+    afqCloseSheet();
+    if(then) then(b.dataset.how);
+  }));
+}
+function waOpen(url, opened){
+  if(IS_ANDROID || IS_IOS){ if(opened) opened(); window.location.href = url; return; }
+  const go = how=>{
+    if(opened) opened();
+    if(how === 'app'){ window.location.href = waDesktopUrl(url, 'app'); return; }
+    // no noopener / opener=null here: that would stop the browser from finding the same tab next time
+    const w = window.open(waDesktopUrl(url, 'web'), WA_TAB);
+    try{ if(w) w.focus(); }catch(e){}
+  };
+  const how = waDesktopPref();
+  if(how) go(how); else waAskDesktop(go);
 }
 document.addEventListener('click', e=>{
-  const a = e.target.closest && e.target.closest('a[href^="whatsapp:"], a[href^="https://wa.me/"]');
-  if(!a || !(IS_ANDROID || IS_IOS)) return;
+  const a = e.target.closest && e.target.closest('a[href^="whatsapp:"], a[href^="https://wa.me/"], a[href^="https://api.whatsapp.com/"], a[href^="https://web.whatsapp.com/"]');
+  if(!a) return;
   e.preventDefault();
-  window.location.href = a.getAttribute('href');
+  waOpen(a.getAttribute('href'));
 }, true);
 function waBirthdayLink(s){
   const num = waNumber(s.phone); if(!num) return '';
@@ -11361,6 +11416,7 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
+  { id: 'n41', d: '12-Nov-2026', text: '💬 على الكمبيوتر: رسايل واتساب من البرنامج (افتقاد، تهنئة عيد ميلاد، تفكير المتكلم…) ما بقتش بتفتح نافذة جديدة كل مرة. أول مرة البرنامج بيسألك بتستخدم برنامج واتساب على الكمبيوتر ولا واتساب ويب؛ لو اخترت البرنامج الرسالة بتتفتح جوه واتساب اللي فاتحه على المحادثة على طول. وتقدر تغيّر الاختيار من زرار "💻 غيّر" في شاشة رسالة الافتقاد. الموبايل زي ما هو.' },
   { id: 'n40', d: '12-Nov-2026', text: '📤 لما تشير القراءات أو قصة اليوم أو حاجة من نوتتك، بتطلع صورة شيك بإطار دهبي، وفي آخرها اسم البرنامج بالقبطي Ϣⲙϣⲉ بالدهبي مع الأيقونة، ومن غير أي لينك. الصورة بتظهرلك الأول، ودوس "📤 مشاركة" تحتها وابعتها على واتساب.' },
   { id: 'n39', d: '11-Nov-2026', admin: true, text: '📦 في الإعدادات قسم جديد "المساحة المستخدمة": عدّاد بيوريك البرنامج مستخدم كام من مساحة Firebase المجانية (1 جيجا) وفاضل كام، ومين واخد المساحة (البيانات، الصور، الشات، سجل التعديلات). البرنامج بيحسبها لوحده مرة في اليوم، ولما توصل 70% بيجيلك تنبيه في 🔔 (وتاني عند 80% و90%). ولو فيه بقايا حفظ قديمة متسابة تقدر تمسحها بزرار.' },
   { id: 'n38', d: '08-Nov-2026', text: '✨ البرنامج بقى له أيقونة جديدة: عصاية الراعي جوه باب الكنيسة وفي نصها صليب قبطي منوّر، ومكتوب تحتها Ϣⲙϣⲉ بالدهبي وحواليها إطار دهبي. على أندرويد والكمبيوتر الأيقونة بتتغير لوحدها بعد شوية (ممكن يطلعلك سؤال توافق فيه على الأيقونة الجديدة). على الآيفون: امسك الأيقونة القديمة واحذفها، وافتح khedma.pinshti.com من Safari ودوس زرار المشاركة ⬆️ ثم "إضافة إلى الشاشة الرئيسية"، وهتحتاج تدخل أو تفعّل الجهاز تاني.' },
@@ -11819,7 +11875,7 @@ async function spShare(title, text, card){
   // the picture couldn't be made: send the words, still without a link
   const body = title + '\n\n' + text;
   try{ if(navigator.share){ await navigator.share({ title, text: body }); return; } }catch(e){ if(e && e.name === 'AbortError') return; }
-  window.open('https://wa.me/?text=' + encodeURIComponent(body), '_blank');
+  waOpen('https://wa.me/?text=' + encodeURIComponent(body));
 }
 async function spLoadReadings(d){
   const k = spKeyDate(d);
