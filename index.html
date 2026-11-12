@@ -628,6 +628,7 @@ html[data-theme="dark"] #copticDate{color:var(--gold);}
 img.zoomable{cursor:zoom-in;}
 #photoViewer{position:fixed;inset:0;z-index:9500;background:rgba(10,16,30,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:16px;direction:rtl;}
 #photoViewer img{width:min(86vw,420px);height:min(86vw,420px);object-fit:contain;border-radius:14px;background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.4);}
+#photoViewer.pv-card img{width:auto;height:auto;max-width:min(92vw,520px);max-height:68vh;object-fit:contain;border-radius:8px;}
 #photoViewer .pv-name{color:#fff;font-weight:700;font-size:1.05rem;text-align:center;}
 #photoViewer .pv-btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
 #photoViewer .pv-msg{color:#f3e3a6;font-size:.85rem;min-height:1.2em;}
@@ -3698,7 +3699,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '12-Nov-2026 A';
+const APP_VERSION = '12-Nov-2026 B';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -7066,7 +7067,7 @@ document.getElementById('settingsBackBtn').addEventListener('click', ()=>openSet
    with what is left, and from 70% the admins get an alert in the 🔔 (again at 80% and 90%). */
 const SPACE_LIMIT = 1024 * 1024 * 1024, SPACE_WARN_PCT = 70;
 const SPACE_LAST_KEY = 'khodam_space_last', SPACE_ALERT_KEY = 'khodam_space_alerted';
-let spaceBusy = false;
+let spaceBusy = false, spaceFailed = false;   // after a failed try, wait for a press instead of trying again and again
 function fmtBytes(b){
   b = Math.max(0, b || 0);
   if(b >= 1024*1024*1024) return (b/1024/1024/1024).toFixed(2).replace(/\.?0+$/, '') + ' جيجا';
@@ -7140,6 +7141,7 @@ function renderSpaceCard(){
   const el = document.getElementById('spaceBody'); if(!el) return;
   const r = spaceLast();
   if(!r){
+    if(spaceFailed){ el.innerHTML = '<div class="empty-note">معرفناش نحسب المساحة دلوقتي. اتأكد من النت وجرّب تاني.</div><button type="button" class="ghost" id="spaceRefreshBtn" style="margin-top:10px;">🔄 جرّب تاني</button>'; document.getElementById('spaceRefreshBtn').addEventListener('click', ()=>spaceRefresh(true)); return; }
     el.innerHTML = '<div class="empty-note">لسه بنحسب المساحة… ثواني.</div>';
     if(!spaceBusy) spaceRefresh();
     return;
@@ -7189,8 +7191,8 @@ async function spaceRefresh(manual){
   if(spaceBusy) return;
   spaceBusy = true;
   const rb = document.getElementById('spaceRefreshBtn'); if(rb){ rb.disabled = true; rb.textContent = 'بيحسب…'; }
-  try{ await measureSpace(); }
-  catch(e){ console.error('space measure failed', e); if(manual) alert('معرفناش نحسب المساحة دلوقتي. اتأكد من النت وجرّب تاني.'); }
+  try{ await measureSpace(); spaceFailed = false; }
+  catch(e){ spaceFailed = true; console.error('space measure failed', e); if(manual) alert('معرفناش نحسب المساحة دلوقتي. اتأكد من النت وجرّب تاني.'); }
   finally{ spaceBusy = false; }
   if(settingsSection === 'space' || (settingsWideMq.matches && !settingsSection)) renderSpaceCard();
   try{ renderSettingsHub(); }catch(e){}
@@ -10596,7 +10598,7 @@ function openPhotoViewer(src, name){
     try{
       const file = new File([await photoToPngBlob(src)], fileName, { type:'image/png' });
       if(navigator.canShare && !navigator.canShare({ files:[file] })) throw new Error('no file share');
-      await navigator.share({ files:[file], title: name || '' });
+      await navigator.share({ files:[file] });
     }catch(e){ if(e && e.name !== 'AbortError') msg.textContent = 'المشاركة مش متاحة هنا، استخدم "حفظ الصورة".'; }
   });
 }
@@ -11359,7 +11361,7 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
-  { id: 'n40', d: '12-Nov-2026', text: '📤 لما تشير القراءات أو قصة اليوم أو حاجة من نوتتك، بتطلع صورة شيك بإطار دهبي، وفي آخرها اسم البرنامج بالقبطي Ϣⲙϣⲉ بالدهبي مع الأيقونة. ومن غير أي لينك.' },
+  { id: 'n40', d: '12-Nov-2026', text: '📤 لما تشير القراءات أو قصة اليوم أو حاجة من نوتتك، بتطلع صورة شيك بإطار دهبي، وفي آخرها اسم البرنامج بالقبطي Ϣⲙϣⲉ بالدهبي مع الأيقونة، ومن غير أي لينك. الصورة بتظهرلك الأول، ودوس "📤 مشاركة" تحتها وابعتها على واتساب.' },
   { id: 'n39', d: '11-Nov-2026', admin: true, text: '📦 في الإعدادات قسم جديد "المساحة المستخدمة": عدّاد بيوريك البرنامج مستخدم كام من مساحة Firebase المجانية (1 جيجا) وفاضل كام، ومين واخد المساحة (البيانات، الصور، الشات، سجل التعديلات). البرنامج بيحسبها لوحده مرة في اليوم، ولما توصل 70% بيجيلك تنبيه في 🔔 (وتاني عند 80% و90%). ولو فيه بقايا حفظ قديمة متسابة تقدر تمسحها بزرار.' },
   { id: 'n38', d: '08-Nov-2026', text: '✨ البرنامج بقى له أيقونة جديدة: عصاية الراعي جوه باب الكنيسة وفي نصها صليب قبطي منوّر، ومكتوب تحتها Ϣⲙϣⲉ بالدهبي وحواليها إطار دهبي. على أندرويد والكمبيوتر الأيقونة بتتغير لوحدها بعد شوية (ممكن يطلعلك سؤال توافق فيه على الأيقونة الجديدة). على الآيفون: امسك الأيقونة القديمة واحذفها، وافتح khedma.pinshti.com من Safari ودوس زرار المشاركة ⬆️ ثم "إضافة إلى الشاشة الرئيسية"، وهتحتاج تدخل أو تفعّل الجهاز تاني.' },
   { id: 'n37', d: '08-Nov-2026', text: '🖼️ في تسجيل الحضور بقت صورة كل واحد قدام اسمه، عشان تعرف الشخص بسرعة وانت بتعلّم عليه. اللي لسه ما عندوش صورة بيظهر أول حروف اسمه في دايرة ملوّنة، ولما تعلّم إنه حضر الدايرة بتنوّر أخضر. وفي الوضع الداكن اسم اللي اتعلّم عليه بقى باين بوضوح.' },
@@ -11784,16 +11786,11 @@ async function spShare(title, text, card){
   try{ blob = await spShareImage(card, text); }catch(e){ console.warn('share picture failed', e); }
   const name = (String(card.head || card.kicker || 'مشاركة').replace(/[\\/:*?"<>|]+/g, '').slice(0, 60) || 'مشاركة') + '.jpg';
   if(blob){
-    const file = new File([blob], name, { type:'image/jpeg' });
-    try{
-      if(navigator.canShare && navigator.canShare({ files:[file] })){ await navigator.share({ files:[file], text: title }); return; }
-    }catch(e){ if(e && e.name === 'AbortError') return; }
-    // this device can't share pictures (usually a computer): save it instead
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = name;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url), 4000);
-    alert('الجهاز ده مش بيشير صور، فالصورة اتحفظت عندك. ابعتها من الصور على واتساب.');
+    // show the picture first, with copy / save / share buttons: the share then starts from a fresh tap
+    // (Safari refuses a share that comes long after the tap), and only the picture is sent, since
+    // WhatsApp on iPhone drops the picture when text is sent with it
+    openPhotoViewer(URL.createObjectURL(blob), name.replace(/\.jpg$/, ''));
+    const pv = document.getElementById('photoViewer'); if(pv) pv.classList.add('pv-card');
     return;
   }
   // the picture couldn't be made: send the words, still without a link
