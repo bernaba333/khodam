@@ -3698,7 +3698,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '11-Nov-2026 A';
+const APP_VERSION = '12-Nov-2026 A';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -4041,9 +4041,7 @@ const MSG_DEFS = [
     help:'{ك} بتبقى "كِ" لو المتكلمة ست و"ك" لو راجل. {العنوان} بتطلع " بعنوان «...»" لو فيه عنوان، وفاضية لو مفيش.',
     def:'سلام ونعمة يا {الاسم} 🌿\nيسعدنا ونتشرف نفكّر حضرتك بميعاد {المناسبة} معانا في {الاجتماع}، يوم {اليوم} {التاريخ}{العنوان}.\nوجود حضرتك وسطنا بركة كبيرة، ومنتظرين{ك} بكل محبة وشوق.\nربنا يبارك خدمت{ك} ويعوّض تعب محبت{ك} 🙏' },
   { k:'activation', t:'🔑 كود تفعيل الموبايل', where:'تفعيل جهاز جديد (إرسال الكود على واتساب)', vars:['الكود','اللينك'],
-    def:'كود تفعيل برنامج الخدمة على موبايلك: {الكود}\nافتح البرنامج واكتبه، أو دوس على اللينك:\n{اللينك}\n(الكود بيشتغل ١٠ دقايق ومرة واحدة بس)' },
-  { k:'share', t:'📤 آخر سطر في المشاركة', where:'مشاركة القراءات والقصة ورسالة اليوم', vars:['اللينك'],
-    def:'— من برنامج الخدمة: {اللينك}' }
+    def:'كود تفعيل برنامج الخدمة على موبايلك: {الكود}\nافتح البرنامج واكتبه، أو دوس على اللينك:\n{اللينك}\n(الكود بيشتغل ١٠ دقايق ومرة واحدة بس)' }
 ];
 // sample values for the preview under each message
 const MSG_SAMPLE = { 'الاسم':'مينا', 'المناسبة':'كلمتك', 'الاجتماع':'اجتماع الجمعة', 'اليوم':'الجمعة', 'التاريخ':'7 نوفمبر', 'العنوان':' بعنوان «المحبة»', 'ك':'ك', 'الكود':'12345-67890', 'اللينك':'https://khedma.pinshti.com/' };
@@ -11361,6 +11359,7 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
+  { id: 'n40', d: '12-Nov-2026', text: '📤 لما تشير القراءات أو قصة اليوم أو حاجة من نوتتك، بتطلع صورة شيك بإطار دهبي، وفي آخرها اسم البرنامج بالقبطي Ϣⲙϣⲉ بالدهبي مع الأيقونة. ومن غير أي لينك.' },
   { id: 'n39', d: '11-Nov-2026', admin: true, text: '📦 في الإعدادات قسم جديد "المساحة المستخدمة": عدّاد بيوريك البرنامج مستخدم كام من مساحة Firebase المجانية (1 جيجا) وفاضل كام، ومين واخد المساحة (البيانات، الصور، الشات، سجل التعديلات). البرنامج بيحسبها لوحده مرة في اليوم، ولما توصل 70% بيجيلك تنبيه في 🔔 (وتاني عند 80% و90%). ولو فيه بقايا حفظ قديمة متسابة تقدر تمسحها بزرار.' },
   { id: 'n38', d: '08-Nov-2026', text: '✨ البرنامج بقى له أيقونة جديدة: عصاية الراعي جوه باب الكنيسة وفي نصها صليب قبطي منوّر، ومكتوب تحتها Ϣⲙϣⲉ بالدهبي وحواليها إطار دهبي. على أندرويد والكمبيوتر الأيقونة بتتغير لوحدها بعد شوية (ممكن يطلعلك سؤال توافق فيه على الأيقونة الجديدة). على الآيفون: امسك الأيقونة القديمة واحذفها، وافتح khedma.pinshti.com من Safari ودوس زرار المشاركة ⬆️ ثم "إضافة إلى الشاشة الرئيسية"، وهتحتاج تدخل أو تفعّل الجهاز تاني.' },
   { id: 'n37', d: '08-Nov-2026', text: '🖼️ في تسجيل الحضور بقت صورة كل واحد قدام اسمه، عشان تعرف الشخص بسرعة وانت بتعلّم عليه. اللي لسه ما عندوش صورة بيظهر أول حروف اسمه في دايرة ملوّنة، ولما تعلّم إنه حضر الدايرة بتنوّر أخضر. وفي الوضع الداكن اسم اللي اتعلّم عليه بقى باين بوضوح.' },
@@ -11714,11 +11713,92 @@ function spScale(){ try{ return +localStorage.getItem('khodam_sp_scale') || 1; }
 function spSetScale(v){ v = Math.min(1.8, Math.max(0.85, Math.round(v*100)/100)); try{ localStorage.setItem('khodam_sp_scale', String(v)); }catch(e){} document.getElementById('panel-spirit').style.setProperty('--sp-scale', v); }
 function spNotesKey(){ return 'khodam_snote_' + encodeURIComponent(currentUser ? currentUser.name : '').slice(0, 300); }
 function spAppLink(){ return location.origin + location.pathname; }
-async function spShare(title, text){
-  const body = title + '\n\n' + text + '\n\n' + msgText('share', { 'اللينك': spAppLink() });
-  try{
-    if(navigator.share){ await navigator.share({ title, text: body }); return; }
-  }catch(e){ if(e && e.name === 'AbortError') return; }
+/* Sharing from the spiritual screen sends a picture: a cream page with a double gold frame,
+   the heading, the text, and the app's Coptic name Ϣⲙϣⲉ in gold at the bottom. No link.
+   card = { kicker, head, sub } */
+let spIconImg = null;
+async function spShareImage(card, text){
+  await postFontsReady();
+  try{ await document.fonts.load("400 80px 'Noto Sans Coptic'", 'Ϣⲙϣⲉ'); }catch(e){}
+  if(!spIconImg) spIconImg = postLoadImage('icon-v2-192.png');
+  const icon = await spIconImg;
+  const W = 1080, P = 120, TW = W - 2*P;
+  const paras = String(text || '').split(/\n+/).map(t=>t.trim()).filter(Boolean);
+  const m = postMeasureCtx(); m.direction = 'rtl';
+  // long readings get a smaller font so the picture stays a sensible size
+  let fs = 42, lines;
+  const wrapAll = ()=>{ m.font = `400 ${fs}px 'Amiri', serif`; const out = []; paras.forEach((t, i)=>{ if(i) out.push(''); postWrap(m, t, TW).forEach(l=>out.push(l)); }); return out; };
+  for(;;){ lines = wrapAll(); if(lines.length * fs * 1.75 < 9000 || fs <= 28) break; fs -= 2; }
+  const lh = Math.round(fs * 1.75), gap = Math.round(lh * 0.45);
+  const bodyH = lines.reduce((h, l)=>h + (l ? lh : gap), 0);
+  m.font = "700 64px 'Amiri', serif";
+  const headLines = card.head ? postWrap(m, card.head, TW, 3) : [];
+  const center = lines.filter(Boolean).length <= 5;
+  const top = 110, footH = 190;
+  const headH = (card.kicker ? 46 : 0) + headLines.length * 84 + (card.sub ? 62 : 0) + 70;
+  const H = top + headH + bodyH + footH + 60;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const ctx = c.getContext('2d'); ctx.direction = 'rtl';
+  // paper
+  const bg = ctx.createLinearGradient(0, 0, W, H); bg.addColorStop(0, '#fffdf6'); bg.addColorStop(.55, '#fbf6ea'); bg.addColorStop(1, '#f3e8cf');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  // double gold frame with a dot at each corner
+  ctx.strokeStyle = '#c8a75a'; ctx.lineWidth = 5; postRoundRect(ctx, 44, 44, W - 88, H - 88, 10); ctx.stroke();
+  ctx.lineWidth = 2; postRoundRect(ctx, 60, 60, W - 120, H - 120, 6); ctx.stroke();
+  ctx.fillStyle = '#c8a75a';
+  [[60,60],[W-60,60],[60,H-60],[W-60,H-60]].forEach(([x,y])=>{ ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI*2); ctx.fill(); });
+  // heading
+  let y = top;
+  ctx.textAlign = 'center';
+  if(card.kicker){ ctx.font = "700 32px 'Cairo', sans-serif"; ctx.fillStyle = '#B0822C'; ctx.fillText(card.kicker, W/2, y + 30); y += 46; }
+  ctx.font = "700 64px 'Amiri', serif"; ctx.fillStyle = '#7A2E2E';
+  headLines.forEach(l=>{ ctx.fillText(l, W/2, y + 66); y += 84; });
+  if(card.sub){ ctx.font = "600 27px 'Cairo', sans-serif"; ctx.fillStyle = '#857963'; ctx.fillText(card.sub, W/2, y + 48); y += 62; }
+  ctx.font = "700 30px 'Cairo', sans-serif"; ctx.fillStyle = '#c8a75a'; ctx.fillText('✦     ✠     ✦', W/2, y + 44); y += 70;
+  // the text
+  ctx.font = `400 ${fs}px 'Amiri', serif`; ctx.fillStyle = '#2F2A24';
+  ctx.textAlign = center ? 'center' : 'right';
+  const tx = center ? W/2 : W - P;
+  lines.forEach(l=>{ if(!l){ y += gap; return; } ctx.fillText(l, tx, y + fs * 1.15); y += lh; });
+  // signature: thin gold line, the icon, Ϣⲙϣⲉ in gold, "برنامج الخدمة"
+  y = H - 60 - footH + 30;
+  const lg = ctx.createLinearGradient(P, 0, W - P, 0); lg.addColorStop(0, 'rgba(200,167,90,0)'); lg.addColorStop(.5, '#c8a75a'); lg.addColorStop(1, 'rgba(200,167,90,0)');
+  ctx.fillStyle = lg; ctx.fillRect(P, y, TW, 2);
+  ctx.direction = 'ltr';
+  ctx.font = "400 84px 'Noto Sans Coptic', serif"; const nameW = ctx.measureText('Ϣⲙϣⲉ').width;
+  ctx.font = "600 26px 'Cairo', sans-serif"; const subW = ctx.measureText('برنامج الخدمة').width;
+  const iconD = icon ? 78 : 0, g1 = icon ? 24 : 0, g2 = 26;
+  let x = (W - (iconD + g1 + nameW + g2 + subW)) / 2; const cy = y + 92;
+  if(icon){ ctx.save(); postRoundRect(ctx, x, cy - iconD/2, iconD, iconD, 18); ctx.clip(); ctx.drawImage(icon, x, cy - iconD/2, iconD, iconD); ctx.restore(); x += iconD + g1; }
+  const gg = ctx.createLinearGradient(x, 0, x + nameW, 0);
+  gg.addColorStop(0, '#8f6d26'); gg.addColorStop(.35, '#c8a75a'); gg.addColorStop(.5, '#e6cf8e'); gg.addColorStop(.65, '#c8a75a'); gg.addColorStop(1, '#8f6d26');
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = "400 84px 'Noto Sans Coptic', serif"; ctx.fillStyle = gg; ctx.fillText('Ϣⲙϣⲉ', x, cy + 4); x += nameW + g2;
+  ctx.fillStyle = 'rgba(200,167,90,.6)'; ctx.fillRect(x - g2/2 - 1, cy - 22, 2, 44);
+  ctx.font = "600 26px 'Cairo', sans-serif"; ctx.fillStyle = '#857963'; ctx.fillText('برنامج الخدمة', x, cy + 2);
+  return new Promise(res=>c.toBlob(res, 'image/jpeg', 0.92));
+}
+async function spShare(title, text, card){
+  card = card || { kicker:'', head: String(title).replace(/^\S+\s/, ''), sub:'' };
+  let blob = null;
+  try{ blob = await spShareImage(card, text); }catch(e){ console.warn('share picture failed', e); }
+  const name = (String(card.head || card.kicker || 'مشاركة').replace(/[\\/:*?"<>|]+/g, '').slice(0, 60) || 'مشاركة') + '.jpg';
+  if(blob){
+    const file = new File([blob], name, { type:'image/jpeg' });
+    try{
+      if(navigator.canShare && navigator.canShare({ files:[file] })){ await navigator.share({ files:[file], text: title }); return; }
+    }catch(e){ if(e && e.name === 'AbortError') return; }
+    // this device can't share pictures (usually a computer): save it instead
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+    alert('الجهاز ده مش بيشير صور، فالصورة اتحفظت عندك. ابعتها من الصور على واتساب.');
+    return;
+  }
+  // the picture couldn't be made: send the words, still without a link
+  const body = title + '\n\n' + text;
+  try{ if(navigator.share){ await navigator.share({ title, text: body }); return; } }catch(e){ if(e && e.name === 'AbortError') return; }
   window.open('https://wa.me/?text=' + encodeURIComponent(body), '_blank');
 }
 async function spLoadReadings(d){
@@ -11837,9 +11917,10 @@ async function spRenderReadings(body, d){
           ${it.concl ? `<p class="concl">${escHtml(it.concl)}</p>` : ''}
         </div></div>`; }).join('')}
     </details></div>`).join('') + '<div style="text-align:center;font-size:.75rem;color:var(--muted);margin:4px 0 12px;">القراءات من القطمارس (katameros.app)</div>';
-  body.querySelectorAll('[data-sp-share]').forEach(b=>b.onclick = ()=>{ const it = items[+b.dataset.spShare]; spShare('📖 ' + spReadingHead(it) + (it.ref ? ' (' + it.ref + ')' : '') + ' — ' + spDayLabelShort(d), spReadingText(it)); });
+  body.querySelectorAll('[data-sp-share]').forEach(b=>b.onclick = ()=>{ const it = items[+b.dataset.spShare]; spShare('📖 ' + spReadingHead(it) + (it.ref ? ' (' + it.ref + ')' : '') + ' — ' + spDayLabelShort(d), spReadingText(it), { kicker:'قراءات اليوم', head: spReadingHead(it), sub: spCardSub(it.ref, d) }); });
   body.querySelectorAll('[data-sp-note]').forEach(b=>b.onclick = ()=>{ const it = items[+b.dataset.spNote]; spEditNote = ''; spTab = 'notes'; spSub = 'free'; spPrefill = spReadingHead(it) + (it.ref ? ' (' + it.ref + ')' : '') + '\n'; renderSpirit(); });
 }
+function spCardSub(ref, d){ return [ref, d.toLocaleDateString('ar-EG-u-nu-latn', { weekday:'long', day:'numeric', month:'long' }), (typeof copticDateStr === 'function' ? copticDateStr(d) : '')].filter(Boolean).join('  ·  '); }
 function spDayLabelShort(d){ return d.toLocaleDateString('ar-EG', { day:'numeric', month:'long' }); }
 let spPrefill = '';
 /* Spiritual follow-up (القانون الروحي): a daily checklist like the
@@ -12013,7 +12094,7 @@ async function spRenderNotesFree(body){
   const search = document.getElementById('spNoteSearch');
   if(search) search.oninput = ()=>{ const pos = search.selectionStart; spNoteQ = search.value; renderSpirit().then(()=>{ const s2 = document.getElementById('spNoteSearch'); if(s2){ s2.focus(); s2.setSelectionRange(pos, pos); } }); };
   body.querySelectorAll('[data-n-edit]').forEach(b=>b.onclick = ()=>{ spEditNote = b.dataset.nEdit; renderSpirit(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
-  body.querySelectorAll('[data-n-share]').forEach(b=>b.onclick = ()=>{ const n = spNotes.find(x=>x.id === b.dataset.nShare); if(n) spShare('📝 من نوتتي الروحية', n.text); });
+  body.querySelectorAll('[data-n-share]').forEach(b=>b.onclick = ()=>{ const n = spNotes.find(x=>x.id === b.dataset.nShare); if(n) spShare('📝 من نوتتي الروحية', n.text, { kicker:'نوتتي الروحية', head:'', sub: spCardSub('', new Date()) }); });
   body.querySelectorAll('[data-n-del]').forEach(b=>b.onclick = async ()=>{
     if(!confirm('تحذف الكتابة دي؟')) return;
     try{ spNotesFor = ''; await spLoadNotes(); spNotes = spNotes.filter(x=>x.id !== b.dataset.nDel); await spSaveNotes(); renderSpirit(); }
@@ -12800,7 +12881,7 @@ async function spRenderStory(body, d){
           ${rec.ok ? '<button class="ghost" id="spStoryShare">📤 مشاركة القصة</button>' : ''}</div>` : ''}
     </div>`;
     const on = (id, fn)=>{ const b = document.getElementById(id); if(b) b.onclick = fn; };
-    on('spStoryShare', ()=>spShare('📚 قصة اليوم: ' + title, rec.paras.map(t=>t.replace(/^✦ /, '')).join('\n') + '\n\n— من قصص أبونا تادرس يعقوب ملطي'));
+    on('spStoryShare', ()=>spShare('📚 قصة اليوم: ' + title, rec.paras.map(t=>t.replace(/^✦ /, '')).join('\n') + '\n\n— من قصص أبونا تادرس يعقوب ملطي', { kicker:'قصة اليوم', head: title, sub: spCardSub('', d) }));
     on('spStoryRetry', ()=>spRenderStory(body, d));
     on('spTdEdit', ()=>{ tadrosEditing = st.slug; paint(rec); });
     on('spTdCancel', ()=>{ tadrosEditing = ''; paint(rec); });
