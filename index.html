@@ -1608,6 +1608,8 @@ html[data-theme="dark"] .afq-chips button.on{color:#86c4a2;border-color:#86c4a2;
 .afq-tpl button.sug{border-color:#25D366;box-shadow:0 0 0 1px #25D366 inset;}
 .afq-tpl button b{display:block;font-size:.84rem;margin-bottom:2px;}
 .afq-tpl button b small{color:#1d9e50;font-weight:700;}
+.wa-remember{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.82rem;cursor:pointer;}
+.wa-remember input{width:18px;height:18px;margin:0;accent-color:#25D366;}
 .afq-tpl button span{white-space:pre-line;color:var(--text-2);}
 .afq-acts .afq-al-t{display:none;}
 @media(max-width:600px){
@@ -2164,6 +2166,16 @@ html[data-theme="dark"] .rp-periods button.on{background:var(--gold);color:#1a23
       <option value="light">فاتح</option>
       <option value="dark">غامق (الوضع الليلي)</option>
     </select>
+  </div>
+  <div class="card" id="waPrefCard">
+    <h2>💬 واتساب على الكمبيوتر ده</h2>
+    <label style="display:block;margin-bottom:6px;">رسايل واتساب من البرنامج (افتقاد، تهنئة، تفكير المتكلم…) تتفتح في</label>
+    <select id="waPrefSelect" style="max-width:320px;">
+      <option value="ask">❓ اسألني كل مرة</option>
+      <option value="app">🖥️ برنامج واتساب المتسطّب على الكمبيوتر</option>
+      <option value="web">🌐 واتساب ويب في المتصفح</option>
+    </select>
+    <div class="empty-note" style="margin-top:8px;">الاختيار ده للجهاز ده بس. على الموبايل الرسايل دايمًا بتتفتح في تطبيق واتساب.</div>
   </div>
   <div class="card" id="myPhotoCard">
     <h2>📸 صورتي</h2>
@@ -3699,7 +3711,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '12-Nov-2026 D';
+const APP_VERSION = '14-Nov-2026 A';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -4516,9 +4528,9 @@ function afqOpenWa(id){
   const pick = bd ? 'bday' : (f && f.attended <= 1 && f.total <= 6 ? 'new' : (f && f.streak >= 4 ? 'long' : 'miss'));
   const ov = afqSheetShell(`<h3>💬 رسالة واتساب لـ${escHtml(s.name)}</h3><div class="q">اختار الرسالة، وهتتفتح في واتساب وتقدر تعدّلها قبل ما تبعت</div>
     <div class="afq-tpl">${T.map(o=>`<button type="button" data-k="${o.k}" class="${o.k===pick?'sug':''}"><b>${o.t}${o.k===pick?' <small>· مقترحة</small>':''}</b>${o.x ? `<span>${escHtml(o.x)}</span>` : ''}</button>`).join('')}</div>
-    <div class="afq-btns">${!(IS_ANDROID || IS_IOS) ? `<button type="button" class="ghost afq-wahow">💻 غيّر (${waDesktopPref()==='app' ? 'برنامج واتساب' : waDesktopPref()==='web' ? 'واتساب ويب' : 'لسه ما اخترتش'})</button>` : ''}<button type="button" class="ghost afq-cancel">إلغاء</button></div>`);
+    <div class="afq-btns">${!(IS_ANDROID || IS_IOS) ? `<button type="button" class="ghost afq-wahow">💻 ${waPrefLabel(waDesktopPref())} · غيّر</button>` : ''}<button type="button" class="ghost afq-cancel">إلغاء</button></div>`);
   ov.querySelector('.afq-cancel').addEventListener('click', afqCloseSheet);
-  const how = ov.querySelector('.afq-wahow'); if(how) how.addEventListener('click', ()=>waAskDesktop(null));
+  const how = ov.querySelector('.afq-wahow'); if(how) how.addEventListener('click', ()=>waAskDesktop(()=>afqOpenWa(id)));
   ov.querySelectorAll('.afq-tpl button').forEach(b=>b.addEventListener('click', ()=>{
     const o = T.find(x=>x.k === b.dataset.k);
     const url = waUrl(num, o.x);
@@ -7003,7 +7015,7 @@ function placePersonalSettings(){
   const admin = isAdmin();
   const home = admin ? document.getElementById('settingsPane') : document.getElementById('mySettingsBody');
   const before = admin ? document.getElementById('notAdminNote') : null;
-  ['themeCard','myPhotoCard','faceLoginCard'].forEach(id=>{ const c = document.getElementById(id); if(c && c.parentNode !== home) home.insertBefore(c, before); });
+  ['themeCard','waPrefCard','myPhotoCard','faceLoginCard'].forEach(id=>{ const c = document.getElementById(id); if(c && c.parentNode !== home) home.insertBefore(c, before); });
   document.getElementById('mySettingsBtn').style.display = (currentUser && !admin) ? 'inline-flex' : 'none';
   if(admin) document.getElementById('mySettingsOverlay').style.display = 'none';
 }
@@ -7011,7 +7023,7 @@ function placePersonalSettings(){
    (on wide screens the list sits beside the open section) */
 const SETTINGS_SECTIONS = [
   { k:'users', ic:'👥', bg:'var(--g-makhdomeen-had-soft)', t:'المستخدمين والصلاحيات', cards:['usersCard','permissionsCard'] },
-  { k:'look', ic:'🎨', bg:'var(--g-anba-boula-soft)', t:'الشكل واسم الاجتماع', s:'الألوان · الاسم · الشعار · الآيات', cards:['themeCard','myPhotoCard','faceLoginCard','brandingCard'] },
+  { k:'look', ic:'🎨', bg:'var(--g-anba-boula-soft)', t:'الشكل واسم الاجتماع', s:'الألوان · الاسم · الشعار · الآيات', cards:['themeCard','waPrefCard','myPhotoCard','faceLoginCard','brandingCard'] },
   { k:'msgs', ic:'💬', bg:'rgba(37,211,102,.16)', t:'الرسايل الجاهزة', s:'واتساب · التهنئة · التفكير · الأكواد', cards:['msgsCard'] },
   { k:'audit', ic:'📝', bg:'var(--cream-dark)', t:'سجل التعديلات', s:'مين عدّل إيه وإمتى', cards:['auditCard'] },
   { k:'space', ic:'📦', bg:'rgba(46,125,90,.14)', t:'المساحة المستخدمة', s:'المستخدم واللي فاضل من مساحة Firebase', cards:['spaceCard'] },
@@ -8809,12 +8821,14 @@ function waUrl(num, text){
 }
 // computer: a web page can't send into a WhatsApp Web tab the user opened themselves (and WhatsApp
 // Web cuts the link to the page that opened it), so each message used to open a new tab/window.
-// Each computer picks once (saved on that device):
+// Each computer chooses (saved on that device, 'ask' until the user ticks "remember"):
 //  'app' = the WhatsApp program on the computer: whatsapp://send goes straight into the open program,
 //          no browser window at all
 //  'web' = WhatsApp Web: tried in ONE named tab, so the browser reuses it when it can
+//  'ask' = a small sheet on every send with both choices (the default; the last one used is marked)
+// The 12-Nov key khodam_wa_desktop is no longer read, so every computer starts at 'ask'.
 // Phones open the WhatsApp app in the same window, as before.
-const WA_TAB = 'khodam_whatsapp', WA_PREF_KEY = 'khodam_wa_desktop';
+const WA_TAB = 'khodam_whatsapp', WA_PREF_KEY = 'khodam_wa_desktop2', WA_LAST_KEY = 'khodam_wa_last';
 function waParts(url){
   // wa.me/<num>?text=…, wa.me/?text=…, api/web.whatsapp.com/send?…, whatsapp://send?… -> { phone, text }
   const m = String(url).match(/^(?:https:\/\/(?:wa\.me|api\.whatsapp\.com|web\.whatsapp\.com)|whatsapp:\/)\/(?:send)?\/?(\d*)\/?(?:\?(.*))?$/);
@@ -8829,23 +8843,59 @@ function waDesktopUrl(url, how){
   if(p.text) q.push('text=' + encodeURIComponent(p.text));
   return (how === 'app' ? 'whatsapp://send?' : 'https://web.whatsapp.com/send?') + q.join('&');
 }
-function waDesktopPref(){ try{ return localStorage.getItem(WA_PREF_KEY) || ''; }catch(e){ return ''; } }
+function waDesktopPref(){ let v = ''; try{ v = localStorage.getItem(WA_PREF_KEY) || ''; }catch(e){} return v === 'app' || v === 'web' ? v : 'ask'; }
+function waSetDesktopPref(v){ try{ localStorage.setItem(WA_PREF_KEY, v); }catch(e){} waSyncPrefSelect(); }
+function waDesktopLast(){ try{ return localStorage.getItem(WA_LAST_KEY) || ''; }catch(e){ return ''; } }
+function waPrefLabel(v){ return v === 'app' ? '🖥️ برنامج واتساب' : v === 'web' ? '🌐 واتساب ويب' : '❓ بيسألني كل مرة'; }
+const WA_OPT_APP = `<b>🖥️ برنامج واتساب المتسطّب على الكمبيوتر</b><span>الرسالة بتتفتح جوه البرنامج نفسه على المحادثة، من غير أي نافذة جديدة</span>`;
+const WA_OPT_WEB = `<b>🌐 واتساب ويب في المتصفح</b><span>بيفتح web.whatsapp.com في تاب واحدة للبرنامج (ممكن يطلب "استخدم هنا" لو فاتحه في تاب تانية)</span>`;
+// on every send while the choice is 'ask': pick app or web, optionally remember it on this computer
+function waPickDesktop(then){
+  const last = waDesktopLast() || 'app';
+  const ov = afqSheetShell(`<h3>💬 تفتح الرسالة فين؟</h3>
+    <div class="q">اختار تبعت من برنامج واتساب اللي على الكمبيوتر ولا من واتساب ويب.</div>
+    <div class="afq-tpl">
+      <button type="button" data-how="app" class="${last==='app'?'sug':''}">${WA_OPT_APP}</button>
+      <button type="button" data-how="web" class="${last==='web'?'sug':''}">${WA_OPT_WEB}</button>
+    </div>
+    <label class="wa-remember"><input type="checkbox" class="wa-rem"> افتكر اختياري على الجهاز ده وماتسألنيش تاني</label>
+    <div class="follow-hint" style="margin-top:4px;">تقدر ترجّع السؤال أو تغيّر الاختيار من ⚙️ الإعدادات › "💬 واتساب على الكمبيوتر ده"، أو من زرار "💻" في رسالة الافتقاد.</div>
+    <div class="afq-btns"><button type="button" class="ghost afq-cancel">إلغاء</button></div>`);
+  ov.querySelector('.afq-cancel').addEventListener('click', afqCloseSheet);
+  ov.querySelectorAll('.afq-tpl button').forEach(b=>b.addEventListener('click', ()=>{
+    const how = b.dataset.how;
+    try{ localStorage.setItem(WA_LAST_KEY, how); }catch(e){}
+    if(ov.querySelector('.wa-rem').checked) waSetDesktopPref(how);
+    afqCloseSheet();
+    if(then) then(how);
+  }));
+}
+// change the saved choice (afq sheet button): app / web / ask every time
 function waAskDesktop(then){
   const cur = waDesktopPref();
-  const ov = afqSheetShell(`<h3>💻 بتستخدم واتساب على الكمبيوتر ده إزاي؟</h3>
-    <div class="q">عشان الرسايل تروح لواتساب اللي فاتحه، من غير ما يفتح نافذة جديدة كل مرة. الاختيار بيتحفظ على الجهاز ده، وتقدر تغيّره من زرار "💻 غيّر" في شاشة رسالة الافتقاد.</div>
+  const ov = afqSheetShell(`<h3>💻 رسايل واتساب على الكمبيوتر ده تتفتح فين؟</h3>
+    <div class="q">الاختيار بيتحفظ على الجهاز ده بس. الموبايل دايمًا بيفتح تطبيق واتساب.</div>
     <div class="afq-tpl">
-      <button type="button" data-how="app" class="${cur==='app'?'sug':''}"><b>🖥️ برنامج واتساب متسطّب على الكمبيوتر</b><span>الرسالة بتتفتح جوه البرنامج نفسه على المحادثة، من غير أي نافذة جديدة (الأفضل)</span></button>
-      <button type="button" data-how="web" class="${cur==='web'?'sug':''}"><b>🌐 واتساب ويب في المتصفح</b><span>بيفتح تاب واتساب واحدة للبرنامج. واتساب ويب ما بيسمحش لأي موقع يبعت في تاب انت فاتحها بنفسك، فممكن يطلب "استخدم هنا" أو يفتح تاب تانية</span></button>
+      <button type="button" data-how="ask" class="${cur==='ask'?'sug':''}"><b>❓ اسألني كل مرة</b><span>قبل كل رسالة يطلعلك اختيار: البرنامج ولا الويب</span></button>
+      <button type="button" data-how="app" class="${cur==='app'?'sug':''}">${WA_OPT_APP}</button>
+      <button type="button" data-how="web" class="${cur==='web'?'sug':''}">${WA_OPT_WEB}</button>
     </div>
     <div class="afq-btns"><button type="button" class="ghost afq-cancel">إلغاء</button></div>`);
   ov.querySelector('.afq-cancel').addEventListener('click', afqCloseSheet);
   ov.querySelectorAll('.afq-tpl button').forEach(b=>b.addEventListener('click', ()=>{
-    try{ localStorage.setItem(WA_PREF_KEY, b.dataset.how); }catch(e){}
+    waSetDesktopPref(b.dataset.how);
     afqCloseSheet();
     if(then) then(b.dataset.how);
   }));
 }
+function waSyncPrefSelect(){
+  const sel = document.getElementById('waPrefSelect'); if(sel) sel.value = waDesktopPref();
+}
+(function(){
+  const card = document.getElementById('waPrefCard'), sel = document.getElementById('waPrefSelect');
+  if(IS_ANDROID || IS_IOS){ if(card) card.remove(); return; }   // phones always use the WhatsApp app
+  if(sel){ waSyncPrefSelect(); sel.addEventListener('change', ()=>waSetDesktopPref(sel.value)); }
+})();
 function waOpen(url, opened){
   if(IS_ANDROID || IS_IOS){ if(opened) opened(); window.location.href = url; return; }
   const go = how=>{
@@ -8856,7 +8906,7 @@ function waOpen(url, opened){
     try{ if(w) w.focus(); }catch(e){}
   };
   const how = waDesktopPref();
-  if(how) go(how); else waAskDesktop(go);
+  if(how === 'ask') waPickDesktop(go); else go(how);
 }
 document.addEventListener('click', e=>{
   const a = e.target.closest && e.target.closest('a[href^="whatsapp:"], a[href^="https://wa.me/"], a[href^="https://api.whatsapp.com/"], a[href^="https://web.whatsapp.com/"]');
@@ -11416,6 +11466,7 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
+  { id: 'n42', d: '14-Nov-2026', text: '💬 على الكمبيوتر بقيت تختار رسايل واتساب تتفتح فين: قبل كل رسالة (افتقاد، تهنئة عيد ميلاد، تفكير المتكلم…) بيطلعلك اختيار "برنامج واتساب المتسطّب" ولا "واتساب ويب". ولو مش عاوز يسألك كل مرة علّم على "افتكر اختياري". وتقدر تغيّر ده في أي وقت من ⚙️ الإعدادات › "💬 واتساب على الكمبيوتر ده" أو من زرار 💻 في رسالة الافتقاد. الموبايل زي ما هو.' },
   { id: 'n41', d: '12-Nov-2026', text: '💬 على الكمبيوتر: رسايل واتساب من البرنامج (افتقاد، تهنئة عيد ميلاد، تفكير المتكلم…) ما بقتش بتفتح نافذة جديدة كل مرة. أول مرة البرنامج بيسألك بتستخدم برنامج واتساب على الكمبيوتر ولا واتساب ويب؛ لو اخترت البرنامج الرسالة بتتفتح جوه واتساب اللي فاتحه على المحادثة على طول. وتقدر تغيّر الاختيار من زرار "💻 غيّر" في شاشة رسالة الافتقاد. الموبايل زي ما هو.' },
   { id: 'n40', d: '12-Nov-2026', text: '📤 لما تشير القراءات أو قصة اليوم أو حاجة من نوتتك، بتطلع صورة شيك بإطار دهبي، وفي آخرها اسم البرنامج بالقبطي Ϣⲙϣⲉ بالدهبي مع الأيقونة، ومن غير أي لينك. الصورة بتظهرلك الأول، ودوس "📤 مشاركة" تحتها وابعتها على واتساب.' },
   { id: 'n39', d: '11-Nov-2026', admin: true, text: '📦 في الإعدادات قسم جديد "المساحة المستخدمة": عدّاد بيوريك البرنامج مستخدم كام من مساحة Firebase المجانية (1 جيجا) وفاضل كام، ومين واخد المساحة (البيانات، الصور، الشات، سجل التعديلات). البرنامج بيحسبها لوحده مرة في اليوم، ولما توصل 70% بيجيلك تنبيه في 🔔 (وتاني عند 80% و90%). ولو فيه بقايا حفظ قديمة متسابة تقدر تمسحها بزرار.' },
