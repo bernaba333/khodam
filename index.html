@@ -1551,6 +1551,10 @@ nav.tabs button[data-tab="afeqad"], #bottomNav [data-go="afeqad"], #bottomNav [d
 html[data-theme="dark"] .afq-ti .res{color:#86c4a2;}
 .afq-ti.miss .res{color:var(--muted);}
 .afq-ti .d{font-size:.7rem;color:var(--muted);}
+.afq-by{display:inline-flex;align-items:center;gap:5px;vertical-align:middle;}
+.afq-by .afq-by-ava{box-shadow:0 0 0 1.5px rgba(201,162,39,.7);}
+.afq-by img.afq-by-ava{background:#fff;}
+.afq-by span.afq-by-ava{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;flex:none;}
 .afq-del{position:absolute;inset-inline-end:0;top:4px;border:none;background:none;color:var(--faint);cursor:pointer;font-size:.85rem;}
 /* stats */
 .afq-sub{font-weight:800;font-size:.86rem;margin:14px 0 6px;}
@@ -1576,10 +1580,42 @@ html[data-theme="dark"] .afq-mini b.r{color:#f08a84;} html[data-theme="dark"] .a
 .afq-res-sum span{font-size:.76rem;background:var(--cream);border:1px solid var(--line);border-radius:999px;padding:3px 10px;}
 .afq-lead{display:flex;align-items:center;gap:8px;font-size:.8rem;padding:3px 0;}
 .afq-lead .n{width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.afq-lead .n.afq-by{width:132px;display:flex;}
+.afq-lead .n.afq-by .t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .afq-lead .bar{flex:1;height:9px;border-radius:9px;background:var(--cream-dark);overflow:hidden;}
 .afq-lead .bar i{display:block;height:100%;border-radius:9px;background:var(--gold);}
 .afq-dash-al{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--text-2);margin-bottom:12px;}
 #dashboardAfeqad .afq-open{width:100%;}
+/* dashboard: quick look tiles, smart lines, "محتاجين منك" card */
+.qs-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}
+.qs-tile{all:unset;box-sizing:border-box;cursor:pointer;min-width:0;background:var(--cream);border:1px solid var(--line);border-radius:14px;padding:12px 10px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px;transition:transform .15s, box-shadow .15s;}
+.qs-tile:hover{transform:translateY(-2px);box-shadow:var(--shadow);}
+.qs-tile:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+.qs-tile .t{font-size:.76rem;color:var(--ink-soft);font-weight:700;}
+.qs-tile .n{font-family:'Amiri',serif;font-size:1.75rem;font-weight:700;color:var(--wine);line-height:1.25;}
+html[data-theme="dark"] .qs-tile .n{color:var(--gold);}
+.qs-tile .s{font-size:.7rem;color:var(--muted);line-height:1.4;}
+.qs-tile .up,.qs-tile .down{unicode-bidi:isolate;display:inline-block;}
+.qs-tile .up{color:#2e7d4f;font-weight:800;} .qs-tile .down{color:#b23b3b;font-weight:800;}
+html[data-theme="dark"] .qs-tile .up{color:#86c4a2;} html[data-theme="dark"] .qs-tile .down{color:#e48a8a;}
+.qs-groups{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 8px;margin-top:2px;font-size:.68rem;color:var(--muted);}
+.qs-groups i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-inline-end:3px;vertical-align:middle;}
+.qs-insights{display:flex;flex-direction:column;gap:6px;margin-top:12px;}
+.qs-insights:empty{display:none;}
+.qs-insights div{font-size:.8rem;color:var(--ink-soft);background:var(--card);border:1px dashed rgba(201,162,39,.55);border-radius:10px;padding:7px 10px;line-height:1.55;}
+.dt-sec + .dt-sec{margin-top:16px;padding-top:14px;border-top:1px dashed var(--line);}
+.dt-h{font-weight:800;font-size:.92rem;color:var(--ink);margin-bottom:8px;}
+.dash-mode{margin-bottom:12px;}
+.dash-info{margin-top:10px;font-size:.76rem;color:var(--muted);line-height:1.6;}
+.dash-info summary{cursor:pointer;font-weight:700;color:var(--ink-soft);}
+.dc-one{display:grid;grid-template-columns:96px 1fr;gap:12px;align-items:center;margin-bottom:12px;}
+.dc-one .abr{max-width:96px;}
+.dc-one .txt{font-size:.82rem;color:var(--ink-soft);line-height:1.8;}
+.dc-one .txt b{color:var(--ink);}
+@media (max-width:760px){
+  .qs-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+  .qs-tile .n{font-size:1.5rem;}
+}
 /* bottom sheets: record a visit / pick a WhatsApp message */
 .afq-ov{position:fixed;inset:0;z-index:6000;background:rgba(10,15,30,.5);display:flex;align-items:flex-end;justify-content:center;animation:afqFade .15s;}
 @keyframes afqFade{from{opacity:0}to{opacity:1}}
@@ -1809,47 +1845,45 @@ html[data-theme="dark"] .rp-periods button.on{background:var(--gold);color:#1a23
   </div>
 
   <div class="card" id="dashboardStatsCard">
-    <h2>نظرة عامة</h2>
-    <div class="dash-stats-grid" id="dashboardStats"></div>
-    <p class="dc-hint" id="dashboardStatsNote"></p>
+    <h2>✨ نظرة سريعة</h2>
+    <div class="qs-grid" id="dashboardStats"></div>
+    <div class="qs-insights" id="dashboardInsights"></div>
+  </div>
+
+  <div class="card" id="dashTodoCard">
+    <h2>✋ محتاجين منك</h2>
+    <div class="dt-sec" id="dtAfq"><div class="dt-h">🏠 الافتقاد</div><div id="dashboardAfeqad"></div></div>
+    <div class="dt-sec" id="dtBday"><div class="dt-h">🎂 أعياد الميلاد الجاية</div><div id="dashboardBirthdays"></div></div>
+  </div>
+
+  <div class="card" id="dashAttendCard">
+    <h2>📊 الحضور</h2>
+    <div class="pm-seg ab-seg dash-mode" id="dashAttMode">
+      <button type="button" data-v="pct" class="on">النسبة ٪</button>
+      <button type="button" data-v="count">عدد الحاضرين</button>
+    </div>
+    <div id="dashAttPct">
+      <div class="ab-controls">
+        <div class="pm-seg ab-seg" id="abView">
+          <button type="button" data-v="session" class="on">اجتماع باجتماع</button>
+          <button type="button" data-v="month">شهر بشهر</button>
+          <button type="button" data-v="total">لغاية دلوقتي</button>
+        </div>
+        <div class="pm-seg ab-seg" id="abDay">
+          <button type="button" data-v="" class="on">الكل</button>
+          <button type="button" data-v="friday">الجمعة</button>
+          <button type="button" data-v="sunday">الأحد</button>
+        </div>
+      </div>
+      <div style="max-width:100%;" id="dashboardChart"></div>
+      <details class="dash-info"><summary>ⓘ النسبة بتتحسب إزاي؟</summary>اللي بيتضاف جديد مش بيتحسب غايب في الاجتماعات اللي قبل ما يتضاف، واللي اتنقل أو هاجر بيفضل محسوب في الاجتماعات اللي قبل نقله، فالنسب القديمة مش بتتغير.</details>
+    </div>
+    <div id="dashAttCount" style="display:none;"><div id="dashboardRecentSessions"></div></div>
   </div>
 
   <div class="card" id="dataCompleteCard">
     <h2>📋 اكتمال بيانات الأفراد</h2>
     <div id="dataComplete"></div>
-  </div>
-
-  <div class="card">
-    <h2>نسبة الحضور</h2>
-    <div class="ab-controls">
-      <div class="pm-seg ab-seg" id="abView">
-        <button type="button" data-v="session" class="on">اجتماع باجتماع</button>
-        <button type="button" data-v="month">شهر بشهر</button>
-        <button type="button" data-v="total">لغاية دلوقتي</button>
-      </div>
-      <div class="pm-seg ab-seg" id="abDay">
-        <button type="button" data-v="" class="on">الكل</button>
-        <button type="button" data-v="friday">الجمعة</button>
-        <button type="button" data-v="sunday">الأحد</button>
-      </div>
-    </div>
-    <div style="max-width:100%;" id="dashboardChart"></div>
-    <p class="dc-hint">اللي بيتضاف جديد مش بيتحسب غايب في الاجتماعات اللي قبل ما يتضاف، واللي اتنقل أو هاجر بيفضل محسوب في الاجتماعات اللي قبل نقله، فالنسب القديمة مش بتتغير.</p>
-  </div>
-
-  <div class="card">
-    <h2>📅 الاجتماعات المسجّلة</h2>
-    <div id="dashboardRecentSessions"></div>
-  </div>
-
-  <div class="card">
-    <h2>🎂 أعياد الميلاد</h2>
-    <div id="dashboardBirthdays"></div>
-  </div>
-
-  <div class="card">
-    <h2>🏠 الافتقاد</h2>
-    <div id="dashboardAfeqad"></div>
   </div>
 </section>
 
@@ -3711,7 +3745,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '14-Nov-2026 A';
+const APP_VERSION = '14-Nov-2026 C';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -4265,10 +4299,22 @@ function afqLastLine(r){
   }
   let t = `${afqTypeIcon(L.type)} آخر سؤال ${escHtml(prettyDate(L.date,false))}`;
   if(L.result) t += ' — ' + escHtml(afqResultText(L.result).replace(/^\S+\s/,''));
-  if(L.by) t += ` (${escHtml(L.by)})`;
+  if(L.by) t += ` <span class="afq-by">${afqByAvatar(L.by, 18)}${escHtml(L.by)}</span>`;
   parts.push(t);
   if(L.remind) parts.push(L.remind <= todayStr() ? '<b class="afq-due">⏰ جه ميعاد السؤال تاني</b>' : `⏰ يتسأل تاني ${escHtml(prettyDate(L.remind,false))}`);
   return parts.join(' · ') + (L.note ? `<div class="afq-note-line">📝 ${escHtml(L.note)}</div>` : '');
+}
+/* photo of the servant who did the visit: their account photo (users list, already loaded for the chat),
+   else the photo of the person with the same name; nothing new is downloaded */
+const afqByPhotoMemo = new Map();
+function afqByAvatar(name, size){
+  const n = String(name||'').trim();
+  if(!n || n === '—') return '';
+  const norm = x=>String(x||'').trim().replace(/\s+/g,' ').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي');
+  const u = (typeof USERS !== 'undefined' ? USERS : []).find(x=>x.name === n);
+  let photo = u && u.photo ? u.photo : '';
+  if(!photo){ const k = norm(n); const s = (DATA.servants||[]).find(x=>norm(x.name) === k && x.photo); if(s) photo = s.photo; }
+  return avatarHtml({ name: n, photo, groups:[SERVANTS_GID] }, size).replace(/^<(img|span) class="/, '<$1 class="afq-by-ava ');
 }
 function afqRowHtml(r, multi){
   const s = r.s, f = r.f;
@@ -4356,7 +4402,7 @@ function afqLogHtml(m){
     if(v.date !== lastDay){ lastDay = v.date; const d = afqDaysAgo(v.date); html += `<div class="afq-tl-day">${d === 0 ? 'النهارده' : (d === 1 ? 'امبارح' : escHtml(prettyDate(v.date,false)))}</div>`; }
     const canDel = v.at && can('editAfeqad') && (isAdmin() || v.by === me);
     html += `<div class="afq-ti ${afqCounts(v) ? '' : 'miss'}">
-      <div><b>${escHtml(v.by || '—')}</b> ${afqTypeIcon(v.type)} ${escHtml(v.type || 'افتقاد')} — <b>${escHtml(s.name)}</b>${v.result ? ` · <span class="res">${escHtml(afqResultText(v.result))}</span>` : ''}</div>
+      <div><span class="afq-by">${afqByAvatar(v.by, 24)}<b>${escHtml(v.by || '—')}</b></span> ${afqTypeIcon(v.type)} ${escHtml(v.type || 'افتقاد')} — <b>${escHtml(s.name)}</b>${v.result ? ` · <span class="res">${escHtml(afqResultText(v.result))}</span>` : ''}</div>
       ${v.note ? `<div class="afq-note-line">📝 ${escHtml(v.note)}</div>` : ''}
       ${v.remind ? `<div class="d">⏰ يتسأل تاني ${escHtml(prettyDate(v.remind,false))}</div>` : ''}
       ${canDel ? `<button type="button" class="afq-del" data-afq-del="${s.id}" data-at="${escHtml(v.at)}" title="امسح التسجيل ده">✕</button>` : ''}
@@ -4406,7 +4452,7 @@ function afqStatsHtml(m){
     </div>
     ${Object.keys(byType).length ? `<div class="afq-types">${Object.entries(byType).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<span>${k} <b>${n}</b></span>`).join('')}</div>` : ''}
     ${Object.keys(byRes).length ? `<div class="afq-sub">النتايج الشهر ده</div><div class="afq-res-sum">${AFQ_RESULTS.filter(r=>byRes[r.k]).map(r=>`<span>${r.t} <b>${byRes[r.k]}</b></span>`).join('')}</div>` : ''}
-    ${who.length ? `<div class="afq-sub">🙌 مين افتقد الشهر ده</div>${who.map(([n,c])=>`<div class="afq-lead"><span class="n">${escHtml(n)}</span><div class="bar"><i style="width:${Math.round(c/wmax*100)}%;"></i></div><b>${c}</b></div>`).join('')}` : ''}`;
+    ${who.length ? `<div class="afq-sub">🙌 مين افتقد الشهر ده</div>${who.map(([n,c])=>`<div class="afq-lead"><span class="n afq-by">${afqByAvatar(n, 26)}<span class="t">${escHtml(n)}</span></span><div class="bar"><i style="width:${Math.round(c/wmax*100)}%;"></i></div><b>${c}</b></div>`).join('')}` : ''}`;
 }
 function renderAfeqadList(){
   const box = document.getElementById('afqBody'); if(!box) return;
@@ -5492,38 +5538,13 @@ function renderDashboard(){
   const visibleGroups = GROUPS.filter(g=>visible.includes(g.id));
   const visibleServants = activeServants().filter(s=>s.groups.some(g=>visible.includes(g)));
 
-  // ---- stat cards ----
-  // A meeting recorded on the same date in more than one section counts as ONE meeting.
-  const allDatesSet = new Set();
-  visibleGroups.forEach(g=>{ (DATA.sessions[g.id]||[]).forEach(sess=>allDatesSet.add(sess.date)); });
-  const totalSessions = allDatesSet.size;
-  // same number as "مع بعض · لغاية دلوقتي" in the attendance card: everyone's attendances / everyone expected
-  const overallPct = (()=>{ let p = 0, e = 0; attendByDate(visibleGroups).forEach(r=>{ p += r.serv.p + r.mak.p; e += r.serv.e + r.mak.e; }); return e ? Math.round(p/e*100) : 0; })();
-  const neverVisitedCount = visibleServants.filter(s=>!s.lastVisitDate).length;
+  renderDashQuick(visibleGroups, visibleServants);
 
-  const statsEl = document.getElementById('dashboardStats');
-  const cards = [
-    { num: visibleServants.length, label: 'إجمالي الأفراد', ic:'👥', cls:'ds-total' },
-    ...visibleGroups.map(g=>({ num: activeServants().filter(s=>s.groups.includes(g.id)).length, label: g.name, cls:'ds-group g-'+g.id })),
-    { num: totalSessions, label: 'اجتماعات متسجّلة', ic:'📅', cls:'ds-misc' },
-    { num: overallPct + '%', label: 'نسبة الحضور', ic:'📈', cls:'ds-misc' },
-    { num: neverVisitedCount, label: 'لسه ما اتافتقدوش', ic:'🏠', cls:'ds-misc' }
-  ];
-  // phone layout: total on its own row, the meetings share one row, the three figures share one row
-  statsEl.style.setProperty('--gspan', String(Math.max(3, Math.floor(12 / Math.max(1, visibleGroups.length)))));
-  const multi = visibleServants.filter(s=>s.groups.filter(g=>visible.includes(g)).length > 1).length;
-  const noteEl = document.getElementById('dashboardStatsNote');
-  if(noteEl) noteEl.textContent = multi ? `ملحوظة: ${multi} فرد مسجّلين في أكتر من اجتماع، فبيتحسبوا في كل اجتماع منهم، لكن مرة واحدة بس في "إجمالي الأفراد". علشان كده مجموع الاجتماعات أكبر من الإجمالي.` : '';
-  statsEl.innerHTML = cards.map(c=>`
-    <div class="dash-stat ${c.cls||''}">
-      ${c.ic ? `<span class="ic" aria-hidden="true">${c.ic}</span>` : ''}
-      <div class="num">${c.num}</div>
-      <div class="label">${c.label}</div>
-    </div>
-  `).join('');
-
-  // ---- attendance %: servants, served and both together, per meeting / per month / so far ----
-  renderAttendBreakdown(visibleGroups);
+  // ---- attendance: one card, % or head-count ----
+  document.querySelectorAll('#dashAttMode button').forEach(b=>b.classList.toggle('on', b.dataset.v === dashAttMode));
+  document.getElementById('dashAttPct').style.display = dashAttMode === 'pct' ? '' : 'none';
+  document.getElementById('dashAttCount').style.display = dashAttMode === 'count' ? '' : 'none';
+  if(dashAttMode === 'pct') renderAttendBreakdown(visibleGroups);
 
   // ---- recent sessions across visible groups (same date across sections = one meeting) ----
   const sessionsByDate = {};
@@ -5577,12 +5598,71 @@ function renderDashboard(){
   // ---- next meetings from the service program and the 10-minute segment ----
   if(typeof PROGRAM_SCREENS !== 'undefined') Object.values(PROGRAM_SCREENS).forEach(s=>s.dashNext());
 
-  // ---- upcoming birthdays (next 30 days) ----
+  // ---- "محتاجين منك": visitation summary + upcoming birthdays ----
   renderDashboardBirthdays();
-
-  // ---- visitation: a summary only, the rest is in the الافتقاد screen ----
   renderDashAfeqad();
+  const afqOn = can('tabAfeqad');
+  document.getElementById('dtAfq').style.display = afqOn ? '' : 'none';
+  document.getElementById('dashTodoCard').style.display = '';
 }
+
+/* quick look: 4 tiles that each open the card/screen behind them, plus a couple of plain-language
+   observations worked out from the attendance already on the device (nothing extra is read) */
+let dashAttMode = 'pct';
+function dashPooled(rows){ let p = 0, e = 0; rows.forEach(r=>{ p += r.serv.p + r.mak.p; e += r.serv.e + r.mak.e; }); return e ? Math.round(p/e*100) : null; }
+function renderDashQuick(visibleGroups, visibleServants){
+  const el = document.getElementById('dashboardStats'), ins = document.getElementById('dashboardInsights');
+  if(!el) return;
+  const rows = attendByDate(visibleGroups);              // newest first
+  const multi = visibleServants.filter(s=>s.groups.filter(g=>visibleGroups.some(x=>x.id===g)).length > 1).length;
+  const trend = (a, b)=> a === null || b === null ? '' : (a - b > 0 ? `<span class="up" dir="ltr">▲ ${a-b}%</span>` : (a - b < 0 ? `<span class="down" dir="ltr">▼ ${b-a}%</span>` : '<span>زي اللي قبله</span>'));
+  const tiles = [];
+  tiles.push(`<button type="button" class="qs-tile" data-qs="people" title="${multi ? multi + ' فرد في أكتر من اجتماع، بيتحسبوا مرة واحدة هنا' : ''}">
+    <span class="t">👥 الأفراد</span><span class="n">${visibleServants.length}</span>
+    <span class="qs-groups">${visibleGroups.map(g=>`<span><i style="background:var(--g-${g.id});"></i>${escHtml(g.name.replace(/^مخدومين\s+/,''))} ${activeServants().filter(s=>s.groups.includes(g.id)).length}</span>`).join('')}</span></button>`);
+  if(rows.length){
+    const last = dashPooled([rows[0]]), prev = rows[1] ? dashPooled([rows[1]]) : null;
+    tiles.push(`<button type="button" class="qs-tile" data-qs="last"><span class="t">📈 آخر اجتماع</span><span class="n">${last}%</span>
+      <span class="s">${escHtml(prettyDate(rows[0].date, false))}${prev !== null ? ' · ' + trend(last, prev) : ''}</span></button>`);
+    const ym = todayStr().slice(0,7);
+    const d0 = new Date(ym + '-01T00:00:00'); d0.setMonth(d0.getMonth() - 1);
+    const pm = d0.getFullYear() + '-' + String(d0.getMonth()+1).padStart(2,'0');
+    let cur = rows.filter(r=>r.date.startsWith(ym)), curKey = ym, prevKey = pm;
+    if(!cur.length){ curKey = pm; cur = rows.filter(r=>r.date.startsWith(pm)); const d1 = new Date(pm + '-01T00:00:00'); d1.setMonth(d1.getMonth()-1); prevKey = d1.getFullYear() + '-' + String(d1.getMonth()+1).padStart(2,'0'); }
+    const curP = dashPooled(cur), prevRows = rows.filter(r=>r.date.startsWith(prevKey)), prevP = prevRows.length ? dashPooled(prevRows) : null;
+    if(cur.length) tiles.push(`<button type="button" class="qs-tile" data-qs="month"><span class="t">📅 ${curKey === ym ? 'الشهر ده' : 'الشهر اللي فات'}</span><span class="n">${curP}%</span>
+      <span class="s">${cur.length} اجتماع${prevP !== null ? ' · ' + trend(curP, prevP) : ''}</span></button>`);
+    // plain-language observations
+    const lines = [];
+    if(cur.length && prevP !== null && curP !== null && Math.abs(curP - prevP) >= 3){
+      lines.push(curP > prevP ? `👏 الحضور ${curKey === ym ? 'الشهر ده' : 'الشهر اللي فات'} أحسن من اللي قبله بـ${curP - prevP}%` : `🔻 الحضور ${curKey === ym ? 'الشهر ده' : 'الشهر اللي فات'} أقل من اللي قبله بـ${prevP - curP}%، يمكن محتاج افتقاد أكتر`);
+    }
+    const recent = rows.slice(0, 16);
+    const fr = dashPooled(recent.filter(r=>sessDay(r.date)==='friday')), su = dashPooled(recent.filter(r=>sessDay(r.date)==='sunday'));
+    if(fr !== null && su !== null && Math.abs(fr - su) >= 5) lines.push(`📆 في آخر الاجتماعات حضور ${fr > su ? 'الجمعة' : 'الأحد'} أعلى (${Math.max(fr,su)}% مقابل ${Math.min(fr,su)}%)`);
+    const best = rows.slice(0, 12).reduce((a,r)=>{ const v = dashPooled([r]); return v !== null && (!a || v > a.v) ? { r, v } : a; }, null);
+    if(best && best.r !== rows[0] && lines.length < 2) lines.push(`⭐ أعلى نسبة في آخر ${Math.min(12, rows.length)} اجتماع كانت ${best.v}% يوم ${escHtml(prettyDate(best.r.date, false))}`);
+    ins.innerHTML = lines.slice(0, 2).map(t=>`<div>${t}</div>`).join('');
+  } else ins.innerHTML = '';
+  if(can('tabServants') && visibleServants.length){
+    const F = DATA_FIELDS.length, filled = visibleServants.reduce((t,s)=>t + DATA_FIELDS.filter(f=>fieldFilled(s,f)).length, 0);
+    const pc = Math.round(filled / (visibleServants.length * F) * 100);
+    const full = visibleServants.filter(s=>DATA_FIELDS.every(f=>fieldFilled(s,f))).length;
+    tiles.push(`<button type="button" class="qs-tile" data-qs="data"><span class="t">📋 البيانات</span><span class="n">${pc}%</span><span class="s">${full} من ${visibleServants.length} بياناتهم كاملة</span></button>`);
+  }
+  el.innerHTML = tiles.join('');
+  el.style.gridTemplateColumns = window.innerWidth > 760 ? `repeat(${tiles.length},minmax(0,1fr))` : '';
+}
+document.addEventListener('click', e=>{
+  const m = e.target.closest && e.target.closest('#dashAttMode button');
+  if(m){ dashAttMode = m.dataset.v; renderDashboard(); return; }
+  const t = e.target.closest && e.target.closest('.qs-tile'); if(!t) return;
+  const go = id=>{ const c = document.getElementById(id); if(c) c.scrollIntoView({ behavior:'smooth', block:'start' }); };
+  const k = t.dataset.qs;
+  if(k === 'people'){ const b = document.querySelector('nav.tabs button[data-tab="servants"]'); if(b){ b.click(); window.scrollTo({ top:0 }); } return; }
+  if(k === 'last' || k === 'month'){ dashAttMode = 'pct'; abView = k === 'month' ? 'month' : 'session'; abDay = ''; abShowAll = false; abSel = null; abAnimate = true; renderDashboard(); go('dashAttendCard'); return; }
+  if(k === 'data') go('dataCompleteCard');
+});
 
 // Which personal-data fields are filled for each person (spouse/children are left out: not everyone has them).
 const DATA_FIELDS = [
@@ -5627,19 +5707,6 @@ function renderDataCompleteness(allPeople){
   const complete = rows.filter(r=>!r.missing.length).length;
   const completePct = Math.round(complete / n * 100);
   const fieldStat = f=>{ const done = people.filter(s=>fieldFilled(s, f)).length; return { f, done, pct: Math.round(done / n * 100) }; };
-  const groupsHtml = DATA_GROUPS.map(g=>{
-    const stats = g.keys.map(k=>fieldStat(DATA_FIELDS.find(f=>f.key===k)));
-    const gp = Math.round(stats.reduce((t,x)=>t+x.pct,0) / stats.length);
-    return `<div class="dc-group">
-      <h3><span>${g.title}</span><span class="gp" style="color:${colorForPercent(gp)};">${gp}%</span></h3>
-      ${stats.map(x=>`<div class="dc-field">
-        <span>${x.f.label}</span>
-        <div class="dc-bar"><i style="width:${x.pct}%;background:${colorForPercent(x.pct)};"></i></div>
-        <span class="pc" style="color:${colorForPercent(x.pct)};">${x.pct}%</span>
-        ${x.done<n ? `<button type="button" class="dc-need" data-field="${x.f.key}">ناقص ${n-x.done}</button>` : '<span class="dc-need ok">✓ كامل</span>'}
-      </div>`).join('')}
-    </div>`;
-  }).join('');
   const incomplete = rows.filter(r=>r.missing.length && (!dataCompleteField || r.missing.some(f=>f.key===dataCompleteField)))
     .sort((a,b)=>a.pct-b.pct || a.s.name.localeCompare(b.s.name,'ar'));
   const opts = ['<option value="">كل البيانات الناقصة</option>'].concat(DATA_FIELDS.map(f=>`<option value="${f.key}"${f.key===dataCompleteField?' selected':''}>ناقص: ${f.label}</option>`)).join('');
@@ -5651,17 +5718,11 @@ function renderDataCompleteness(allPeople){
       <span class="hb-m">${p.miss ? 'ناقص ' + p.miss : '✓'}</span></button>`).join('')}</div>`;
   el.innerHTML = `
     ${groupPicker}
-    <div class="ab-tiles">
-      <div class="ab-tile ab-both"><div class="t">نسبة اكتمال البيانات</div>${abRing(overall, colorForPercent(overall))}<div class="s">${filledCells} خانة من ${n*F}</div></div>
-      <div class="ab-tile"><div class="t">بياناتهم كاملة</div>${abRing(completePct, '#2e7d4f')}<div class="s">${complete} من ${n}</div></div>
-      <div class="ab-tile"><div class="t">لسه ناقصهم حاجة</div>${abRing(100-completePct, '#b23b3b')}<div class="s">${n-complete} من ${n}</div></div>
-    </div>
+    <div class="dc-one"><div class="abr">${abRing(overall, colorForPercent(overall))}</div>
+      <div class="txt">البيانات مكتوبة <b>${overall}%</b> (${filledCells} خانة من ${n*F})<br>✅ <b>${complete}</b> بياناتهم كاملة · ⚠️ <b>${n-complete}</b> لسه ناقصهم حاجة</div></div>
     <div class="sc-sub">كل خانة مكتوبة عند كام في المية <small style="font-weight:500;color:var(--muted);">· دوس على أي خانة تشوف مين ناقصه</small></div>
     ${fchart}
-    ${scMore('dcMore', '📋 اعرض التفاصيل والأسماء', '📋 اخفي التفاصيل', `<div class="dc-groups">${groupsHtml}</div>
-    ${(n-complete) ? '<p class="dc-hint">دوس على "ناقص" جنب أي خانة علشان تشوف أسماء اللي ناقصهم.</p>' : ''}
-    ${(n-complete) ? `<details class="follow-all" id="dcDetails"${dataCompleteField||dataCompleteOpen?' open':''}>
-      <summary>مين لسه بياناته ناقصة (${n-complete})</summary>
+    ${(n-complete) ? scMore('dcMore', `📋 مين لسه بياناته ناقصة (${n-complete})`, '📋 اخفي الأسماء', `<div id="dcDetails">
       <select id="dcFieldFilter" style="margin:6px 0 8px;">${opts}</select>
       ${incomplete.length ? incomplete.map(r=>`<div class="dash-list-row">
         <div style="flex:1;min-width:0;">${escHtml(r.s.name)}<div class="dc-miss">${r.missing.map(f=>`<span>${f.label}</span>`).join('')}</div></div>
@@ -5670,8 +5731,8 @@ function renderDataCompleteness(allPeople){
           ${can('editServant') ? `<button type="button" class="ghost dc-edit" data-id="${r.s.id}">✏️ كمّل</button>` : ''}
         </div>
       </div>`).join('') : '<div class="empty-note">مفيش حد ناقصه البيان ده 🎉</div>'}
-    </details>` : '<div class="empty-note">كل البيانات كاملة 🎉</div>'}`, dataCompleteMore || !!dataCompleteField)}`;
-  el.querySelector('#dcMore').addEventListener('toggle', e=>{ dataCompleteMore = e.target.open; });
+    </div>`, dataCompleteMore || !!dataCompleteField) : '<div class="empty-note">كل البيانات كاملة 🎉</div>'}`;
+  const dcm = el.querySelector('#dcMore'); if(dcm) dcm.addEventListener('toggle', e=>{ dataCompleteMore = e.target.open; });
   const sel = el.querySelector('#dcFieldFilter');
   if(sel) sel.addEventListener('change', ()=>{ dataCompleteField = sel.value; renderDataCompleteness(allPeople); });
   wireDcGroup(el, allPeople);
@@ -8939,8 +9000,8 @@ function renderDashboardBirthdays(){
     el.innerHTML = '<div class="empty-note">مفيش أعياد ميلاد في الـ٣٠ يوم الجايين (أو تاريخ الميلاد مش متسجّل)</div>';
   } else {
     const expanded = el.dataset.expanded === '1';
-    el.innerHTML = list.slice(0, expanded ? 30 : 5).map(birthdayRowHtml).join('')
-      + (list.length > 5 ? `<button class="ghost show-all-toggle" id="bdayToggle">${expanded ? 'عرض أقل' : `عرض الكل (${list.length})`}</button>` : '');
+    el.innerHTML = list.slice(0, expanded ? 30 : 3).map(birthdayRowHtml).join('')
+      + (list.length > 3 ? `<button class="ghost show-all-toggle" id="bdayToggle">${expanded ? 'عرض أقل' : `عرض الكل (${list.length})`}</button>` : '');
     const t = document.getElementById('bdayToggle');
     if(t) t.addEventListener('click', ()=>{ el.dataset.expanded = expanded ? '0' : '1'; renderDashboardBirthdays(); });
   }
@@ -11466,6 +11527,8 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
+  { id: 'n44', d: '14-Nov-2026', text: '✨ الرئيسية اتنضّفت واتظبطت: فوق "نظرة سريعة" فيها ٤ مربعات بس (الأفراد، نسبة آخر اجتماع، نسبة الشهر ده، اكتمال البيانات) وكل مربع بيوريك طالع ولا نازل عن اللي قبله، وتحتهم سطر بيقولك ملاحظة مفيدة (زي إن الحضور الشهر ده أحسن ولا أقل). الافتقاد وأعياد الميلاد بقوا في كارت واحد "محتاجين منك"، ونسبة الحضور وعدد الحاضرين بقوا كارت واحد "الحضور" تبدّل بينهم بدوسة. اكتمال البيانات اتشال منه التكرار، ودوس على أي مربع فوق يوديك على تفاصيله.' },
+  { id: 'n43', d: '14-Nov-2026', text: '🏠 في الافتقاد بقت صورة الخادم جنب اسمه: في سجل الافتقاد (مين سأل على مين)، وفي "مين افتقد الشهر ده"، وفي سطر "آخر سؤال" تحت كل اسم. الصورة بتيجي من صورة حساب الخادم، ولو ما عندوش بتظهر أول حروف اسمه. ومش بتحمّل أي حاجة زيادة من النت.' },
   { id: 'n42', d: '14-Nov-2026', text: '💬 على الكمبيوتر بقيت تختار رسايل واتساب تتفتح فين: قبل كل رسالة (افتقاد، تهنئة عيد ميلاد، تفكير المتكلم…) بيطلعلك اختيار "برنامج واتساب المتسطّب" ولا "واتساب ويب". ولو مش عاوز يسألك كل مرة علّم على "افتكر اختياري". وتقدر تغيّر ده في أي وقت من ⚙️ الإعدادات › "💬 واتساب على الكمبيوتر ده" أو من زرار 💻 في رسالة الافتقاد. الموبايل زي ما هو.' },
   { id: 'n41', d: '12-Nov-2026', text: '💬 على الكمبيوتر: رسايل واتساب من البرنامج (افتقاد، تهنئة عيد ميلاد، تفكير المتكلم…) ما بقتش بتفتح نافذة جديدة كل مرة. أول مرة البرنامج بيسألك بتستخدم برنامج واتساب على الكمبيوتر ولا واتساب ويب؛ لو اخترت البرنامج الرسالة بتتفتح جوه واتساب اللي فاتحه على المحادثة على طول. وتقدر تغيّر الاختيار من زرار "💻 غيّر" في شاشة رسالة الافتقاد. الموبايل زي ما هو.' },
   { id: 'n40', d: '12-Nov-2026', text: '📤 لما تشير القراءات أو قصة اليوم أو حاجة من نوتتك، بتطلع صورة شيك بإطار دهبي، وفي آخرها اسم البرنامج بالقبطي Ϣⲙϣⲉ بالدهبي مع الأيقونة، ومن غير أي لينك. الصورة بتظهرلك الأول، ودوس "📤 مشاركة" تحتها وابعتها على واتساب.' },
