@@ -432,7 +432,7 @@ table.hist th{color:var(--ink-soft);font-weight:700;}
 html[data-theme="dark"] .follow-stat.red .num{color:#f08a84;} html[data-theme="dark"] .follow-stat.amber .num{color:#e8c25a;} html[data-theme="dark"] .follow-stat.green .num{color:#86c4a2;}
 .follow-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line);}
 .follow-row:last-child{border-bottom:none;}
-.follow-row .who{min-width:0;}
+.follow-row .who{min-width:0;flex:1;}
 .follow-row .nm{font-weight:700;color:var(--ink);}
 .follow-row .why{font-size:.78rem;color:var(--text-2);margin-top:2px;}
 .follow-row .why b{color:var(--wine);}
@@ -3745,7 +3745,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '14-Nov-2026 C';
+const APP_VERSION = '14-Nov-2026 E';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -5718,8 +5718,11 @@ function renderDataCompleteness(allPeople){
       <span class="hb-m">${p.miss ? 'ناقص ' + p.miss : '✓'}</span></button>`).join('')}</div>`;
   el.innerHTML = `
     ${groupPicker}
-    <div class="dc-one"><div class="abr">${abRing(overall, colorForPercent(overall))}</div>
-      <div class="txt">البيانات مكتوبة <b>${overall}%</b> (${filledCells} خانة من ${n*F})<br>✅ <b>${complete}</b> بياناتهم كاملة · ⚠️ <b>${n-complete}</b> لسه ناقصهم حاجة</div></div>
+    <div class="ab-tiles">
+      <div class="ab-tile ab-both"><div class="t">نسبة اكتمال البيانات</div>${abRing(overall, colorForPercent(overall))}<div class="s">${filledCells} خانة من ${n*F}</div></div>
+      <div class="ab-tile"><div class="t">بياناتهم كاملة</div>${abRing(completePct, '#2e7d4f')}<div class="s">${complete} من ${n}</div></div>
+      <div class="ab-tile"><div class="t">لسه ناقصهم حاجة</div>${abRing(100-completePct, '#b23b3b')}<div class="s">${n-complete} من ${n}</div></div>
+    </div>
     <div class="sc-sub">كل خانة مكتوبة عند كام في المية <small style="font-weight:500;color:var(--muted);">· دوس على أي خانة تشوف مين ناقصه</small></div>
     ${fchart}
     ${(n-complete) ? scMore('dcMore', `📋 مين لسه بياناته ناقصة (${n-complete})`, '📋 اخفي الأسماء', `<div id="dcDetails">
@@ -5929,6 +5932,7 @@ function renderFollowUp(people, visible, ui){
     const wa = showPhones ? followWaLink(s) : '';
     const tel = showPhones && s.phone ? String(s.phone).replace(/[^\d+]/g,'') : '';
     return `<div class="follow-row">
+      ${avatarHtml(s, 40)}
       <div class="who">
         <div class="nm">${escHtml(s.name)}${groupsCount>1 ? ` <span class="chip g-${f.gid}">${escHtml(groupName(f.gid))}</span>` : ''}</div>
         <div class="why">${why}</div>
@@ -9129,6 +9133,7 @@ function renderKFVisits(body, people){
       const last = v[0];
       const tel = s.phone ? String(s.phone).replace(/[^\d+]/g,'') : '';
       return `<div class="follow-row">
+        ${avatarHtml(s, 40)}
         <div class="who">
           <div class="nm">${escHtml(s.name)}${s.id===kfJustSaved ? ' <span class="kf-ok" style="font-size:.78rem;">✓ اتسجل الافتقاد</span>' : ''}</div>
           <div class="why">${last ? '🏠 آخر افتقاد: ' + kfVisitLine(last) : '<b>⚠️ لسه ما اتافتقدش</b>'}${s.area ? ' · '+escHtml(s.area) : ''}</div>
@@ -11527,7 +11532,8 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
-  { id: 'n44', d: '14-Nov-2026', text: '✨ الرئيسية اتنضّفت واتظبطت: فوق "نظرة سريعة" فيها ٤ مربعات بس (الأفراد، نسبة آخر اجتماع، نسبة الشهر ده، اكتمال البيانات) وكل مربع بيوريك طالع ولا نازل عن اللي قبله، وتحتهم سطر بيقولك ملاحظة مفيدة (زي إن الحضور الشهر ده أحسن ولا أقل). الافتقاد وأعياد الميلاد بقوا في كارت واحد "محتاجين منك"، ونسبة الحضور وعدد الحاضرين بقوا كارت واحد "الحضور" تبدّل بينهم بدوسة. اكتمال البيانات اتشال منه التكرار، ودوس على أي مربع فوق يوديك على تفاصيله.' },
+  { id: 'n45', d: '14-Nov-2026', admin: true, text: '🖼️ في متابعة الخدام بقت صورة كل خادم جنب اسمه، في "محتاجين سؤال" وفي قايمة الافتقاد. اللي مالوش صورة بيظهر أول حروف اسمه.' },
+  { id: 'n44', d: '14-Nov-2026', text: '✨ الرئيسية اتنضّفت واتظبطت: فوق "نظرة سريعة" فيها ٤ مربعات بس (الأفراد، نسبة آخر اجتماع، نسبة الشهر ده، اكتمال البيانات) وكل مربع بيوريك طالع ولا نازل عن اللي قبله، وتحتهم سطر بيقولك ملاحظة مفيدة (زي إن الحضور الشهر ده أحسن ولا أقل). الافتقاد وأعياد الميلاد بقوا في كارت واحد "محتاجين منك"، ونسبة الحضور وعدد الحاضرين بقوا كارت واحد "الحضور" تبدّل بينهم بدوسة. اكتمال البيانات فضل بالـ٣ دواير واتشال منه تكرار الخانات، ودوس على أي مربع فوق يوديك على تفاصيله.' },
   { id: 'n43', d: '14-Nov-2026', text: '🏠 في الافتقاد بقت صورة الخادم جنب اسمه: في سجل الافتقاد (مين سأل على مين)، وفي "مين افتقد الشهر ده"، وفي سطر "آخر سؤال" تحت كل اسم. الصورة بتيجي من صورة حساب الخادم، ولو ما عندوش بتظهر أول حروف اسمه. ومش بتحمّل أي حاجة زيادة من النت.' },
   { id: 'n42', d: '14-Nov-2026', text: '💬 على الكمبيوتر بقيت تختار رسايل واتساب تتفتح فين: قبل كل رسالة (افتقاد، تهنئة عيد ميلاد، تفكير المتكلم…) بيطلعلك اختيار "برنامج واتساب المتسطّب" ولا "واتساب ويب". ولو مش عاوز يسألك كل مرة علّم على "افتكر اختياري". وتقدر تغيّر ده في أي وقت من ⚙️ الإعدادات › "💬 واتساب على الكمبيوتر ده" أو من زرار 💻 في رسالة الافتقاد. الموبايل زي ما هو.' },
   { id: 'n41', d: '12-Nov-2026', text: '💬 على الكمبيوتر: رسايل واتساب من البرنامج (افتقاد، تهنئة عيد ميلاد، تفكير المتكلم…) ما بقتش بتفتح نافذة جديدة كل مرة. أول مرة البرنامج بيسألك بتستخدم برنامج واتساب على الكمبيوتر ولا واتساب ويب؛ لو اخترت البرنامج الرسالة بتتفتح جوه واتساب اللي فاتحه على المحادثة على طول. وتقدر تغيّر الاختيار من زرار "💻 غيّر" في شاشة رسالة الافتقاد. الموبايل زي ما هو.' },
