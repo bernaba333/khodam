@@ -1242,8 +1242,10 @@ html[data-theme="dark"] .ab-seg button.on{background:var(--gold);color:#1B2A4A;}
 nav.tabs button{display:inline-flex;align-items:center;justify-content:center;gap:7px;}
 input, select, textarea{background:var(--input);color:var(--ink);}
 @media (min-width:761px){
-  /* everything from the verse down to the tab bar stays pinned; the page scrolls under it */
-  .sticky-top-bar{padding-bottom:14px;}
+  /* only the verse bar and the tab bar under it stay pinned; the title, greeting and clock scroll away with the page */
+  .sticky-top-bar{display:contents;}
+  .verse-ticker{position:sticky;top:8px;z-index:300;box-shadow:0 -12px 0 6px var(--cream), var(--shadow);}
+  nav.tabs{position:sticky;top:calc(8px + var(--verse-h,64px) + 6px);z-index:299;box-shadow:0 -8px 0 4px var(--cream), var(--shadow);}
   nav.tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-bottom:0;}
   html{scroll-padding-top:calc(var(--sticky-h,0px) + 12px);}
   .welcome-banner{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;}
@@ -1251,9 +1253,7 @@ input, select, textarea{background:var(--input);color:var(--ink);}
 }
 /* short screens (small laptops): pinning the whole block would eat the page, so only the tab bar stays */
 @media (min-width:761px) and (max-height:720px){
-  .sticky-top-bar{display:contents;}
-  nav.tabs{position:sticky;top:8px;z-index:300;background:var(--card);}
-  html{scroll-padding-top:120px;}
+  nav.tabs{background:var(--card);}
   nav.tabs button{min-width:0;flex:1 1 auto;white-space:nowrap;padding:9px 8px;font-size:.84rem;gap:5px;}
   nav.tabs .tab-ic{width:17px;height:17px;}
   .verse-ticker{padding:10px 18px !important;}
@@ -3745,7 +3745,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '14-Nov-2026 E';
+const APP_VERSION = '16-Nov-2026 A';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -7398,7 +7398,18 @@ function copticDateStr(d){
 (function trackStickyHeight(){
   const bar = document.querySelector('.sticky-top-bar');
   if(!bar || !window.ResizeObserver) return;
-  new ResizeObserver(()=>document.documentElement.style.setProperty('--sticky-h', bar.offsetHeight + 'px')).observe(bar);
+  // desktop pins only the verse + tab bar: keep their heights so the tab bar sits right under the verse and jumps land below both
+  const verse = document.getElementById('verseTicker'), tabs = document.querySelector('nav.tabs');
+  const upd = ()=>{
+    const root = document.documentElement.style;
+    if(window.innerWidth > 760 && verse && tabs){
+      root.setProperty('--verse-h', verse.offsetHeight + 'px');
+      root.setProperty('--sticky-h', (8 + verse.offsetHeight + 6 + tabs.offsetHeight) + 'px');
+    } else root.setProperty('--sticky-h', bar.offsetHeight + 'px');
+  };
+  const ro = new ResizeObserver(upd);
+  [bar, verse, tabs].forEach(el=>{ if(el) ro.observe(el); });
+  window.addEventListener('resize', upd);
 })();
 
 let liveClockInterval = null;
@@ -11532,6 +11543,7 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
+  { id: 'n46', d: '16-Nov-2026', text: '📌 على الكمبيوتر: وانت بتنزل في الصفحة، الآية وشريط الأقسام بس هما اللي بيفضلوا ثابتين فوق. العنوان وكارت الترحيب والساعة بيطلعوا لفوق مع الصفحة، فبقى عندك مساحة أكبر بكتير تشوف فيها الشغل.' },
   { id: 'n45', d: '14-Nov-2026', admin: true, text: '🖼️ في متابعة الخدام بقت صورة كل خادم جنب اسمه، في "محتاجين سؤال" وفي قايمة الافتقاد. اللي مالوش صورة بيظهر أول حروف اسمه.' },
   { id: 'n44', d: '14-Nov-2026', text: '✨ الرئيسية اتنضّفت واتظبطت: فوق "نظرة سريعة" فيها ٤ مربعات بس (الأفراد، نسبة آخر اجتماع، نسبة الشهر ده، اكتمال البيانات) وكل مربع بيوريك طالع ولا نازل عن اللي قبله، وتحتهم سطر بيقولك ملاحظة مفيدة (زي إن الحضور الشهر ده أحسن ولا أقل). الافتقاد وأعياد الميلاد بقوا في كارت واحد "محتاجين منك"، ونسبة الحضور وعدد الحاضرين بقوا كارت واحد "الحضور" تبدّل بينهم بدوسة. اكتمال البيانات فضل بالـ٣ دواير واتشال منه تكرار الخانات، ودوس على أي مربع فوق يوديك على تفاصيله.' },
   { id: 'n43', d: '14-Nov-2026', text: '🏠 في الافتقاد بقت صورة الخادم جنب اسمه: في سجل الافتقاد (مين سأل على مين)، وفي "مين افتقد الشهر ده"، وفي سطر "آخر سؤال" تحت كل اسم. الصورة بتيجي من صورة حساب الخادم، ولو ما عندوش بتظهر أول حروف اسمه. ومش بتحمّل أي حاجة زيادة من النت.' },
