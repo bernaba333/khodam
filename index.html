@@ -1636,6 +1636,43 @@ html[data-theme="dark"] .afq-chips button.on{color:#86c4a2;border-color:#86c4a2;
 .afq-sheet textarea{width:100%;margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-family:inherit;font-size:16px;background:var(--input);color:var(--ink);resize:vertical;}
 .afq-date-row{display:flex;align-items:center;gap:10px;margin-top:10px;}
 .afq-date-row input{flex:1;}
+.conf-field select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-family:'Cairo',sans-serif;font-size:16px;}
+.conf-field input{width:100%;}
+.conf-other{margin-top:8px;padding:10px;border:1px dashed var(--gold);border-radius:12px;background:var(--hi);display:flex;flex-direction:column;gap:8px;}
+.conf-other[hidden]{display:none;}
+.conf-row{display:flex;gap:8px;}
+.conf-row .conf-rank{flex:0 0 96px;width:96px;}
+.conf-row .conf-name{flex:1;min-width:0;}
+.conf-hint{font-size:.76rem;color:var(--muted);}
+.afq-sheet.ct-sheet{max-width:1040px;}
+.ct-note{background:var(--notice-bg);color:var(--notice-ink);border:1px dashed var(--gold);border-radius:12px;padding:8px 11px;font-size:.8rem;margin:6px 0 10px;}
+.ct-sum{display:flex;gap:8px;margin-bottom:6px;}
+.ct-sum div{flex:1;background:var(--cream);border:2px solid var(--line);border-radius:14px;text-align:center;padding:5px 4px;}
+.ct-sum b{display:block;font-family:'Amiri',serif;font-size:1.45rem;color:var(--wine);line-height:1.25;}
+.ct-sum span{font-size:.72rem;color:var(--muted);font-weight:600;}
+.ct-sheet h4{font-size:.92rem;margin:14px 2px 7px;color:var(--wine);}
+.ct-hint{font-size:.74rem;color:var(--muted);margin:-4px 2px 6px;}
+.ct-grp{border:1px solid var(--line);border-radius:14px;margin-bottom:9px;background:var(--card);overflow:hidden;}
+.ct-t{display:flex;align-items:center;gap:8px;padding:8px 11px;background:var(--cream);border-bottom:1px solid var(--line-soft);}
+.ct-t b{flex:1;font-size:.92rem;}
+.ct-pill{background:var(--gold-soft);color:var(--chip-ink);border-radius:999px;padding:1px 10px;font-size:.72rem;font-weight:700;white-space:nowrap;}
+.ct-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:6px 11px;border-bottom:1px dashed var(--line-soft);font-size:.85rem;}
+.ct-row:last-child{border-bottom:none;}
+.ct-row.warn{background:var(--hi);}
+.ct-l{flex:1;display:flex;align-items:center;gap:8px;min-width:0;cursor:pointer;margin:0;}
+.ct-l input{width:19px;height:19px;flex:none;accent-color:var(--sage);margin:0;}
+.ct-v s{color:#a0522d;text-decoration-color:rgba(160,82,45,.5);}
+.ct-v i{font-style:normal;font-size:.7rem;color:var(--notice-ink);margin-inline-start:6px;}
+.ct-n{color:var(--muted);font-size:.76rem;white-space:nowrap;}
+.ct-who,.ct-all{border:none;background:none;color:var(--ink-soft);text-decoration:underline;font-family:inherit;font-size:.74rem;cursor:pointer;padding:2px;}
+.ct-names{flex-basis:100%;font-size:.76rem;color:var(--text-2);background:var(--cream);border-radius:8px;padding:5px 8px;}
+.ct-names[hidden]{display:none;}
+.ct-same{font-size:.76rem;color:var(--sage);padding:5px 11px;}
+.ct-same:empty{display:none;}
+.ct-sel{width:auto;max-width:150px;padding:4px 6px;font-size:.76rem;border-radius:9px;border:1px solid var(--line);font-family:'Cairo',sans-serif;}
+.ct-btns{position:sticky;bottom:-18px;background:var(--card);padding:10px 0 4px;margin-bottom:-4px;}
+.ct-go:disabled{opacity:.5;}
+@media(min-width:760px){ .ct-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;} .ct-cols h4:first-child{margin-top:4px;} }
 .afq-btns{display:flex;gap:8px;margin-top:14px;}
 .afq-btns button{flex:1;}
 .afq-btns .afq-save{flex:2;}
@@ -2037,7 +2074,7 @@ html[data-theme="dark"] .rp-periods button.on{background:var(--gold);color:#1a23
       <label>تاريخ الميلاد</label>
       <div style="margin:6px 0 12px;" id="newServantBirthBox"></div>
       <label>أب الاعتراف</label>
-      <div style="margin:6px 0 12px;"><input type="text" id="newServantConfession" placeholder="اسم أب الاعتراف"></div>
+      <div style="margin:6px 0 12px;" id="newServantConfBox"></div>
       <label>كنيسته</label>
       <div style="margin:6px 0 12px;">
         <input type="text" id="newServantChurch" list="churchOptionsList" placeholder="اختار من القائمة أو اكتب كنيسة جديدة">
@@ -3745,7 +3782,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '16-Nov-2026 A';
+const APP_VERSION = '17-Nov-2026 A';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -3832,7 +3869,7 @@ async function flushAudit(){
   else if(pendingAudit.length) flushAudit();
 }
 const FIELD_LABELS = { name:'الاسم', phone:'التليفون', birthDate:'تاريخ الميلاد', area:'المنطقة', address:'العنوان', mapLoc:'مكان البيت على الخريطة', groups:'الاجتماعات',
-  church:'الكنيسة', confessionFather:'أب الاعتراف', occupation:'الوظيفة', workplace:'مكان العمل', spouseName:'اسم الزوج/الزوجة', children:'الأبناء',
+  church:'الكنيسة', confessionFather:'أب الاعتراف', confessionChurch:'كنيسة أب الاعتراف', occupation:'الوظيفة', workplace:'مكان العمل', spouseName:'اسم الزوج/الزوجة', children:'الأبناء',
   status:'الحالة', statusDate:'تاريخ النقل', statusNote:'ملاحظة النقل', lastVisitDate:'تاريخ آخر افتقاد', lastVisitType:'نوع الافتقاد', visits:'سجل الافتقاد', bdGreet:'تهنئة عيد الميلاد', servDays:'مطلوب يحضر اجتماع الخدام' };
 const AUDIT_IGNORE = new Set(['id','photo','photoVer','personCode','code','lastEditedBy','lastEditedAt','statusBy','addedBy','addedAt']);
 function auditVal(k, v){
@@ -3986,6 +4023,8 @@ function refreshAreaChurchDatalists(){
   const churches = Array.from(new Set(DATA.servants.map(s=>s.church).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'ar'));
   document.getElementById('areaOptionsList').innerHTML = areas.map(a=>`<option value="${escHtml(a)}">`).join('');
   document.getElementById('churchOptionsList').innerHTML = churches.map(c=>`<option value="${escHtml(c)}">`).join('');
+  const cb = document.getElementById('newServantConfBox'), cs = cb && cb.querySelector('.conf-sel');
+  if(cb && (!cs || (!cs.value && cb.querySelector('.conf-other').hidden))) cb.innerHTML = confFieldHtml('', '');
   const visitTypeEl = document.getElementById('visitTypeOptionsList');
   if(visitTypeEl){
     const defaults = ['زيارة منزلية','مكالمة تليفونية','زيارة في الكنيسة','زيارة في المستشفى'];
@@ -4704,7 +4743,270 @@ function syncServDaysBox(grid, box){
 document.getElementById('newServantGroups').addEventListener('change', ()=>
   syncServDaysBox(document.getElementById('newServantGroups'), document.getElementById('newServantDaysBox')));
 
+/* ---------- CONFESSION FATHERS: one spelling for the church's priests (17-Nov-2026 A) ----------
+   The 8 priests of Mar Girgis, Manshiet El-Bakry are picked from a list, so they are always written
+   the same way. Another priest needs a three-part name + his church (saved in s.confessionChurch),
+   and then he shows in the list for the next person. openConfTidy() (admin, in the أب الاعتراف
+   report) merges the old spellings after a preview. */
+const CONF_CHURCH = 'كنيسة مارجرجس منشية البكري';
+const CONF_FATHERS = ['القمص بولا وهيب','القمص جرجس حبيب','القمص فيلوباتير جورجي','القس كيرلس سامي','القس مويسيس ايوب','القس مينا فوكيه','القس داود مجدي','القمص رويس جرجس'];
+const CONF_RANKS = ['القمص','القس','الأنبا'];
+const CONF_TITLES = new Set(['نيافه','نيافة','الانبا','انبا','القمص','قمص','القس','قس','ابونا','ابينا','ابونا','الاب','اب','father','fr','المتنيح','الراهب','راهب','الكاهن','كاهن','الشماس','شماس']);
+// same clean-up as speakerKey (that one lives in a later script block)
+function confKey(n){
+  return String(n||'').replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069\u061C\uFEFF]/g,' ')
+    .replace(/[\u064B-\u0652\u0640\u0670]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ة/g,'ه').replace(/[ىیئ]/g,'ي').replace(/ک/g,'ك').replace(/ؤ/g,'و')
+    .replace(/[\/\\.\-–—،,:؛;()\[\]"'«»_]/g,' ').replace(/\s+/g,' ').trim();
+}
+function confWords(n){
+  const w = confKey(n).toLowerCase().split(' ').filter(Boolean);
+  while(w.length && CONF_TITLES.has(w[0])) w.shift();
+  return w;
+}
+function confLev(a, b){
+  if(a === b) return 0;
+  let prev = Array.from({length:b.length+1}, (_, j)=>j);
+  for(let i=1; i<=a.length; i++){
+    const cur = [i];
+    for(let j=1; j<=b.length; j++) cur[j] = Math.min(prev[j]+1, cur[j-1]+1, prev[j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[b.length];
+}
+let CONF_KEYS_ = null;
+function confKeys(){
+  return CONF_KEYS_ || (CONF_KEYS_ = CONF_FATHERS.map(name=>{ const w = confWords(name); return { name, a:w[0], ab:w[0] + w[1] }; }));
+}
+// which of the 8 a written name means: how = same (already right) | full (same first + father name)
+// | near (one letter off: checked) | near2 (two letters off) | first (only the first name): unchecked
+function confMatch(v){
+  const raw = String(v||'').trim();
+  if(!raw) return null;
+  if(CONF_FATHERS.includes(raw)) return { name: raw, how:'same' };
+  const w = confWords(raw); if(!w.length) return null;
+  const j = w.join('');
+  const keys = confKeys();
+  for(const c of keys) if(j.startsWith(c.ab)) return { name:c.name, how:'full' };
+  let best = null;
+  if(w.length >= 2) for(const c of keys){
+    let d = 99;
+    for(const L of [c.ab.length-1, c.ab.length, c.ab.length+1]) d = Math.min(d, confLev(j.slice(0, L), c.ab));
+    const firstOk = confLev(w[0], c.a) <= 1 || j.startsWith(c.a);
+    if(firstOk && d <= 2 && (!best || d < best.d)) best = { name:c.name, d };
+  }
+  if(best) return { name: best.name, how: best.d <= 1 ? 'near' : 'near2' };
+  if(w.length === 1){
+    const c = keys.find(c=>w[0] === c.a) || keys.find(c=>c.a.length >= 4 && confLev(w[0], c.a) <= 1);
+    if(c) return { name:c.name, how:'first' };
+  }
+  return null;
+}
+// the church: same | full (Mar Girgis + Manshiet El-Bakry) | first (only one of them): unchecked
+function confChurchMatch(v){
+  const raw = String(v||'').trim();
+  if(!raw) return null;
+  if(raw === CONF_CHURCH) return { how:'same' };
+  const j = confKey(raw).split(' ').filter(x=>!/^(ال)?كنيسه$/.test(x)).join('');
+  const g = /جرجس|جورجيوس/.test(j), m = /منشي|بكري/.test(j);
+  if(g && m) return { how:'full' };
+  if(g || m) return { how:'first' };
+  return null;
+}
+// other priests already added through the form (with their church), for the list
+function confKnownOthers(){
+  const seen = new Map();
+  DATA.servants.forEach(s=>{
+    const n = String(s.confessionFather||'').trim(), ch = String(s.confessionChurch||'').trim();
+    if(!n || !ch || CONF_FATHERS.includes(n)) return;
+    const k = confWords(n).join(' ');
+    if(!seen.has(k)) seen.set(k, { name:n, church:ch });
+  });
+  return Array.from(seen.values()).sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+}
+function confLabel(s){
+  const n = String(s.confessionFather||'').trim();
+  return n && s.confessionChurch ? n + ' — ' + s.confessionChurch : n;
+}
+function confFieldHtml(name, church){
+  name = String(name||'').trim(); church = String(church||'').trim();
+  const known = confKnownOthers();
+  let pick = name;
+  if(name && !CONF_FATHERS.includes(name) && !known.some(k=>k.name === name)){
+    const m = confMatch(name);
+    pick = (m && (m.how === 'full' || m.how === 'near')) ? m.name : '__keep';   // old spelling of one of the 8 → shown already fixed
+  }
+  const opt = (v, label, extra)=>`<option value="${escHtml(v)}"${pick === v ? ' selected' : ''}${extra||''}>${escHtml(label)}</option>`;
+  return `<div class="conf-field" data-legacy="${escHtml(name)}" data-legacy-church="${escHtml(church)}">
+    <select class="conf-sel">
+      <option value="">— مش متحدد —</option>
+      <optgroup label="⛪ كهنة ${escHtml(CONF_CHURCH)}">${CONF_FATHERS.map(n=>opt(n, n)).join('')}</optgroup>
+      ${known.length ? `<optgroup label="آباء اعتراف تانيين">${known.map(k=>opt(k.name, k.name + ' — ' + k.church, ` data-church="${escHtml(k.church)}"`)).join('')}</optgroup>` : ''}
+      ${pick === '__keep' ? `<option value="__keep" selected>✏️ زي ما هو مكتوب: ${escHtml(name)}${church ? ' — ' + escHtml(church) : ''}</option>` : ''}
+      <option value="__other">➕ أب اعتراف تاني…</option>
+    </select>
+    <div class="conf-other" hidden>
+      <div class="conf-row">
+        <select class="conf-rank">${CONF_RANKS.map(r=>`<option>${r}</option>`).join('')}</select>
+        <input type="text" class="conf-name" placeholder="الاسم ثلاثي، مثلاً: يوسف أسعد ميخائيل">
+      </div>
+      <input type="text" class="conf-church" list="churchOptionsList" placeholder="كنيسته (لازم تتكتب)">
+      <div class="conf-hint">اكتب اسم أب الاعتراف <b>ثلاثي</b> واسم كنيسته، وهيظهر في القايمة للي بعدك.</div>
+    </div>
+  </div>`;
+}
+document.addEventListener('change', e=>{
+  if(!e.target.matches || !e.target.matches('.conf-sel')) return;
+  const box = e.target.closest('.conf-field');
+  const other = box.querySelector('.conf-other');
+  other.hidden = e.target.value !== '__other';
+  if(!other.hidden) setTimeout(()=>box.querySelector('.conf-name').focus(), 30);
+});
+// → { name, church, error }
+function readConfField(box){
+  if(!box) return { name:'', church:'' };
+  const sel = box.querySelector('.conf-sel'), v = sel.value;
+  if(!v) return { name:'', church:'' };
+  if(v === '__keep') return { name: box.dataset.legacy || '', church: box.dataset.legacyChurch || '' };
+  if(v !== '__other'){
+    const o = sel.selectedOptions[0];
+    return { name: v, church: CONF_FATHERS.includes(v) ? '' : ((o && o.dataset.church) || '') };
+  }
+  const rawName = box.querySelector('.conf-name').value.trim();
+  const church = box.querySelector('.conf-church').value.trim();
+  const m = confMatch(rawName);
+  if(m && (m.how === 'same' || m.how === 'full')) return { name: m.name, church:'' };   // one of the 8 after all
+  const words = rawName.split(/\s+/).filter(Boolean);
+  while(words.length && CONF_TITLES.has(confKey(words[0]).toLowerCase())) words.shift();
+  if(words.length < 3){ box.querySelector('.conf-name').focus(); return { error:'اكتب اسم أب الاعتراف ثلاثي (٣ أسماء)، مثلاً: يوسف أسعد ميخائيل.' }; }
+  if(!church){ box.querySelector('.conf-church').focus(); return { error:'اكتب كنيسة أب الاعتراف.' }; }
+  const key = confWords(words.join(' ')).join(' ');
+  const same = confKnownOthers().find(k=>confWords(k.name).join(' ') === key);
+  if(same) return { name: same.name, church: same.church };
+  return { name: box.querySelector('.conf-rank').value + ' ' + words.join(' '), church };
+}
+function confApply(s, r){
+  s.confessionFather = r.name || '';
+  if(r.name && r.church) s.confessionChurch = r.church; else delete s.confessionChurch;
+}
+
+/* ---------- admin tidy-up with preview ---------- */
+let confTidyState = null;
+function confTidyPlan(){
+  const people = DATA.servants;
+  const fathers = {}; CONF_FATHERS.forEach(n=>fathers[n] = { same:0, vars:new Map() });
+  const rest = new Map(), church = new Map(); let churchSame = 0;
+  people.forEach(s=>{
+    const f = String(s.confessionFather||'').trim();
+    if(f){
+      const m = confMatch(f);
+      if(m && m.how === 'same') fathers[m.name].same++;
+      else if(m){
+        const g = fathers[m.name].vars;
+        if(!g.has(f)) g.set(f, { v:f, how:m.how, ids:[] });
+        g.get(f).ids.push(s.id);
+      } else {
+        if(!rest.has(f)) rest.set(f, { v:f, ids:[] });
+        rest.get(f).ids.push(s.id);
+      }
+    }
+    const c = String(s.church||'').trim();
+    const cm = confChurchMatch(c);
+    if(cm && cm.how === 'same') churchSame++;
+    else if(cm){
+      if(!church.has(c)) church.set(c, { v:c, how:cm.how, ids:[] });
+      church.get(c).ids.push(s.id);
+    }
+  });
+  // church empty, father one of the 8 (now or after this tidy-up)
+  const fill = people.filter(s=>!String(s.church||'').trim() && confMatch(s.confessionFather))
+    .map(s=>({ id:s.id, name:s.name, father: confMatch(s.confessionFather).name }));
+  const byCount = (a,b)=>b.ids.length - a.ids.length;
+  return {
+    fathers: CONF_FATHERS.map(n=>({ name:n, same: fathers[n].same, vars: Array.from(fathers[n].vars.values()).sort(byCount) })),
+    church: Array.from(church.values()).sort(byCount), churchSame,
+    rest: Array.from(rest.values()).sort(byCount),
+    fill: fill.sort((a,b)=>a.name.localeCompare(b.name,'ar'))
+  };
+}
+function confWhoHtml(ids){
+  const names = ids.map(id=>{ const s = DATA.servants.find(x=>x.id===id); return s ? s.name : ''; }).filter(Boolean).sort((a,b)=>a.localeCompare(b,'ar'));
+  return `<div class="ct-names" hidden>${names.map(escHtml).join('، ')}</div>`;
+}
+function openConfTidy(){
+  if(!isAdmin()) return;
+  const P = confTidyPlan();
+  confTidyState = P;
+  const hint = { near:'كتابة قريبة', near2:'⚠️ قريبة بس مش متأكد', first:'⚠️ الاسم الأول بس' };
+  const row = (kind, key, it, checked)=>`<div class="ct-row${checked ? '' : ' warn'}">
+      <label class="ct-l"><input type="checkbox" data-kind="${kind}" data-key="${escHtml(key)}" data-n="${it.ids.length}"${checked ? ' checked' : ''}>
+      <span class="ct-v"><s>${escHtml(it.v)}</s>${hint[it.how] ? `<i>${hint[it.how]}</i>` : ''}</span></label>
+      <span class="ct-n">${it.ids.length}</span><button type="button" class="ct-who">مين؟</button>${confWhoHtml(it.ids)}</div>`;
+  const fatherCards = P.fathers.map(f=>{
+    const total = f.same + f.vars.reduce((a,v)=>a+v.ids.length, 0);
+    return `<div class="ct-grp"><div class="ct-t"><b>${escHtml(f.name)}</b><span class="ct-pill">${total} شخص</span></div>
+      ${f.vars.map(v=>row('father', f.name + '\u0001' + v.v, v, v.how === 'full' || v.how === 'near')).join('')}
+      <div class="ct-same">${f.vars.length ? '' : '👌 '}${f.same ? `✔️ ${f.same} مكتوبين صح أصلاً` : (f.vars.length ? '' : 'مفيش حد مكتوب عنده')}</div></div>`;
+  }).join('');
+  const churchCard = `<div class="ct-grp"><div class="ct-t"><b>${escHtml(CONF_CHURCH)}</b><span class="ct-pill">${P.churchSame + P.church.reduce((a,v)=>a+v.ids.length,0)} شخص</span></div>
+      ${P.church.map(v=>row('church', v.v, v, v.how === 'full')).join('')}
+      <div class="ct-same">${P.churchSame ? `✔️ ${P.churchSame} مكتوبين صح أصلاً` : ''}${!P.church.length && !P.churchSame ? 'مفيش حد مكتوب عنده' : ''}</div></div>`;
+  const fillCard = P.fill.length ? `<div class="ct-grp"><div class="ct-t"><b>✍️ الكنيسة فاضية وأب الاعتراف من التمانية</b><span class="ct-pill">${P.fill.length}</span></div>
+      ${P.fill.map(f=>`<div class="ct-row warn"><label class="ct-l"><input type="checkbox" data-kind="fill" data-key="${escHtml(f.id)}" data-n="1">
+        <span class="ct-v">${escHtml(f.name)} <i style="color:var(--muted)">· ${escHtml(f.father)}</i></span></label><span class="ct-n">← تتكتب الكنيسة</span></div>`).join('')}
+      <div class="ct-same"><button type="button" class="ct-all">علّم على الكل</button></div></div>` : '';
+  const restCard = P.rest.length ? `<div class="ct-grp">${P.rest.map(r=>`<div class="ct-row">
+      <span class="ct-v" style="flex:1">${escHtml(r.v)}</span><span class="ct-n">${r.ids.length}</span>
+      <select class="ct-sel" data-key="${escHtml(r.v)}" data-n="${r.ids.length}"><option value="">يفضل زي ما هو</option>${CONF_FATHERS.map(n=>`<option>${escHtml(n)}</option>`).join('')}</select>
+      <button type="button" class="ct-who">مين؟</button>${confWhoHtml(r.ids)}</div>`).join('')}</div>` : '<div class="ct-same">مفيش أسماء تانية 👌</div>';
+  const ov = afqSheetShell(`<h3>🧹 توحيد آباء الاعتراف والكنيسة</h3>
+    <div class="ct-note">👀 دي <b>معاينة بس</b>، مفيش حاجة هتتغير غير لما تدوس «وحّد». اللي عليه خط هو اللي هيتغيّر للاسم اللي فوقه، واللي من غير علامة هيفضل زي ما هو إلا لو علّمت عليه.</div>
+    <div class="ct-sum"><div><b class="ct-sf">0</b><span>أب اعتراف هيتعدّل</span></div><div><b class="ct-sc">0</b><span>كنيسة هتتعدّل</span></div><div><b>${P.rest.reduce((a,r)=>a+r.ids.length,0)}</b><span>أسماء تانية</span></div></div>
+    <div class="ct-cols"><div><h4>⛪ آباء الاعتراف</h4>${fatherCards}</div>
+    <div><h4>🏛️ الكنيسة</h4>${churchCard}${fillCard}
+    <h4>📋 أسماء تانية هتفضل زي ما هي</h4><div class="ct-hint">لو فيها حد من التمانية مكتوب بطريقة مختلفة، اختار هو مين.</div>${restCard}</div></div>
+    <div class="afq-btns ct-btns"><button type="button" class="primary afq-save ct-go">✅ وحّد</button><button type="button" class="ghost afq-cancel">إلغاء</button></div>`);
+  ov.querySelector('.afq-sheet').classList.add('ct-sheet');
+  const upd = ()=>{
+    let f = 0, c = 0;
+    ov.querySelectorAll('input[data-kind]:checked').forEach(x=>{ if(x.dataset.kind === 'father') f += +x.dataset.n; else c += +x.dataset.n; });
+    ov.querySelectorAll('.ct-sel').forEach(x=>{ if(x.value) f += +x.dataset.n; });
+    ov.querySelector('.ct-sf').textContent = f; ov.querySelector('.ct-sc').textContent = c;
+    ov.querySelector('.ct-go').textContent = `✅ وحّد (${f + c} تعديل)`;
+    ov.querySelector('.ct-go').disabled = !(f + c);
+    ov.querySelectorAll('.ct-row').forEach(r=>{ const cb = r.querySelector('input[type=checkbox]'); if(cb) r.classList.toggle('warn', !cb.checked); });
+  };
+  ov.addEventListener('change', upd);
+  ov.querySelectorAll('.ct-who').forEach(b=>b.addEventListener('click', ()=>{ const n = b.parentNode.querySelector('.ct-names'); n.hidden = !n.hidden; }));
+  const all = ov.querySelector('.ct-all');
+  if(all) all.addEventListener('click', ()=>{ ov.querySelectorAll('input[data-kind=fill]').forEach(x=>x.checked = true); upd(); });
+  ov.querySelector('.afq-cancel').addEventListener('click', afqCloseSheet);
+  ov.querySelector('.ct-go').addEventListener('click', async ()=>{
+    const byId = new Map(DATA.servants.map(s=>[s.id, s]));
+    const toFather = new Map();   // written name → canonical
+    ov.querySelectorAll('input[data-kind=father]:checked').forEach(x=>{ const [canon, v] = x.dataset.key.split('\u0001'); toFather.set(v, canon); });
+    ov.querySelectorAll('.ct-sel').forEach(x=>{ if(x.value) toFather.set(x.dataset.key, x.value); });
+    const toChurch = new Set(Array.from(ov.querySelectorAll('input[data-kind=church]:checked')).map(x=>x.dataset.key));
+    const fillIds = new Set(Array.from(ov.querySelectorAll('input[data-kind=fill]:checked')).map(x=>x.dataset.key));
+    let n = 0;
+    DATA.servants.forEach(s=>{
+      const f = String(s.confessionFather||'').trim(), c = String(s.church||'').trim();
+      if(f && toFather.has(f)){ s.confessionFather = toFather.get(f); delete s.confessionChurch; n++; }
+      if(c && toChurch.has(c)){ s.church = CONF_CHURCH; n++; }
+      else if(!c && fillIds.has(s.id)){ s.church = CONF_CHURCH; n++; }
+    });
+    afqCloseSheet();
+    if(!n) return;
+    await saveData();
+    try{ refreshAreaChurchDatalists(); }catch(e){}
+    try{ renderServantList(); }catch(e){}
+    try{ rpGenerateSoon(0); }catch(e){}
+    alert(`✅ اتوحّد ${n} تعديل. اتسجلوا في سجل التعديلات.`);
+  });
+  upd();
+}
+
 document.getElementById('newServantBirthBox').innerHTML = birthFieldHtml('', '');
+document.getElementById('newServantConfBox').innerHTML = confFieldHtml('', '');
 document.getElementById('newServantMapLocBox').innerHTML = mapLocFieldHtml('');
 document.getElementById('newServantMoreToggle').addEventListener('click', ()=>{
   const box = document.getElementById('newServantMore');
@@ -4770,7 +5072,9 @@ document.getElementById('addServantBtn').addEventListener('click', async ()=>{
   const birthRes = readBirthField(document.querySelector('#newServantBirthBox .birth-field'));
   if(birthRes.error){ alert(birthRes.error); return; }
   const birthDate = birthRes.value;
-  const confessionFather = document.getElementById('newServantConfession').value.trim();
+  const confRes = readConfField(document.querySelector('#newServantConfBox .conf-field'));
+  if(confRes.error){ alert(confRes.error); return; }
+  const confessionFather = confRes.name;
   const church = document.getElementById('newServantChurch').value.trim();
   const spouseName = document.getElementById('newServantSpouse').value.trim();
   const occupation = document.getElementById('newServantJob').value.trim();
@@ -4782,6 +5086,7 @@ document.getElementById('addServantBtn').addEventListener('click', async ()=>{
     id: 's_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
     personCode: generateUniquePersonCode(),
     name, phone, area, address, birthDate, confessionFather, church,
+    ...(confRes.name && confRes.church ? { confessionChurch: confRes.church } : {}),
     spouseName, occupation, workplace, children,
     photo: pendingNewServantPhoto,
     ...(locRes.value ? { mapLoc: locRes.value } : {}),
@@ -4794,7 +5099,7 @@ document.getElementById('addServantBtn').addEventListener('click', async ()=>{
   document.getElementById('newServantAddress').value = '';
   document.getElementById('newServantMapLocBox').innerHTML = mapLocFieldHtml('');
   resetBirthField(document.querySelector('#newServantBirthBox .birth-field'));
-  document.getElementById('newServantConfession').value = '';
+  document.getElementById('newServantConfBox').innerHTML = confFieldHtml('', '');
   document.getElementById('newServantChurch').value = '';
   document.getElementById('newServantSpouse').value = '';
   document.getElementById('newServantJob').value = '';
@@ -4867,7 +5172,7 @@ function servantPrintFields(){
     { k:'area', w:8,    label:'المنطقة',            on:false, perm:'addresses', get:s=>s.area||'' },
     { k:'address', w:14, label:'العنوان',            on:false, perm:'addresses', get:s=>s.address||'' },
     { k:'birth', w:7,   label:'تاريخ الميلاد',      on:false, perm:'otherDetails', ltr:true, get:s=>s.birthDate||'' },
-    { k:'conf', w:9,    label:'أب الاعتراف',        on:false, perm:'otherDetails', get:s=>s.confessionFather||'' },
+    { k:'conf', w:9,    label:'أب الاعتراف',        on:false, perm:'otherDetails', get:s=>confLabel(s) },
     { k:'church', w:9,  label:'الكنيسة',            on:false, perm:'otherDetails', get:s=>s.church||'' },
     { k:'job', w:11,     label:'الوظيفة ومكان العمل', on:false, perm:'otherDetails', get:s=>[s.occupation, s.workplace].filter(Boolean).join(' — ') },
     { k:'spouse', w:9,  label:'الزوج / الزوجة',     on:false, perm:'otherDetails', get:(s,vis,ctx)=>s.spouseName || (ctx.spouseOf.get(s.name)||{}).name || '' },
@@ -5184,7 +5489,7 @@ function renderServantList(){
         ${(s.birthDate && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">🎂 ${escHtml(s.birthDate)}</div>` : ''}
         ${(s.area && can('addresses')) ? `<div style="font-size:.78rem;color:var(--muted);">🗺️ ${s.address ? escHtml(s.area) : `<a class="map-link" href="${mapsUrl(s)}" target="_blank" rel="noopener" title="افتح على جوجل ماب">${escHtml(s.area)}</a>`}</div>` : ''}
         ${((s.address || s.mapLoc) && can('addresses')) ? `<div style="font-size:.78rem;color:var(--muted);">📍 <a class="map-link" href="${mapsUrl(s)}" target="_blank" rel="noopener" title="افتح على جوجل ماب">${s.address ? escHtml(s.address) : 'مكان البيت على الخريطة'}</a>${s.mapLoc && s.address ? ' <span title="مكان البيت متحدد بالظبط على الخريطة">📌</span>' : ''}</div>` : ''}
-        ${(s.confessionFather && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">✝️ أب الاعتراف: ${escHtml(s.confessionFather)}</div>` : ''}
+        ${(s.confessionFather && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">✝️ أب الاعتراف: ${escHtml(confLabel(s))}</div>` : ''}
         ${(s.church && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">⛪ ${escHtml(s.church)}</div>` : ''}
         ${(s.occupation && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">💼 ${escHtml(s.occupation)}${s.workplace?' — '+escHtml(s.workplace):''}</div>` : ''}
         ${((s.spouseName||spouse) && can('otherDetails')) ? `<div style="font-size:.78rem;color:var(--muted);">💍 الزوج/الزوجة: ${escHtml(s.spouseName||spouse.name)}</div>` : ''}
@@ -5250,7 +5555,7 @@ function renderServantList(){
           <label style="display:block;margin-bottom:4px;">تاريخ الميلاد</label>
           <div style="margin-bottom:10px;">${birthFieldHtml('edit-birth', s.birthDate)}</div>
           <label style="display:block;margin-bottom:4px;">أب الاعتراف</label>
-          <input type="text" class="edit-confession" value="${escHtml(s.confessionFather)}" style="margin-bottom:10px;">
+          <div class="edit-conf" style="margin-bottom:10px;">${confFieldHtml(s.confessionFather, s.confessionChurch)}</div>
           <label style="display:block;margin-bottom:4px;">كنيسته</label>
           <input type="text" class="edit-church" list="churchOptionsList" value="${escHtml(s.church)}" style="margin-bottom:10px;">
           <label style="display:block;margin-bottom:4px;">الزوج / الزوجة (لو موجود في البيانات)</label>
@@ -5311,6 +5616,8 @@ function renderServantList(){
           if(birthRes.error){ alert(birthRes.error); return; }
           const locRes = readMapLoc(editPanel.querySelector('.edit-maploc'));
           if(locRes.error){ alert(locRes.error); return; }
+          const confRes = readConfField(editPanel.querySelector('.edit-conf .conf-field'));
+          if(confRes.error){ alert(confRes.error); return; }
           if(newName !== s.name && DATA.servants.some(o=>o.id !== s.id && o.name === newName)){
             if(!confirm(`في شخص تاني اسمه "${newName}" بالظبط بالفعل. متأكد إنك عايز تكمل؟`)) return;
           }
@@ -5332,7 +5639,7 @@ function renderServantList(){
           s.address = editPanel.querySelector('.edit-address').value.trim();
           if(locRes.value) s.mapLoc = locRes.value; else delete s.mapLoc;
           s.birthDate = birthRes.value;
-          s.confessionFather = editPanel.querySelector('.edit-confession').value.trim();
+          confApply(s, confRes);
           s.church = editPanel.querySelector('.edit-church').value.trim();
           s.spouseName = editPanel.querySelector('.edit-spouse').value.trim();
           s.occupation = editPanel.querySelector('.edit-job').value.trim();
@@ -8095,6 +8402,7 @@ document.getElementById('downloadBackupExcelBtn').addEventListener('click', asyn
     'العنوان': s.address || '',
     'مكان البيت على الخريطة': s.mapLoc || '',
     'أب الاعتراف': s.confessionFather || '',
+    'كنيسة أب الاعتراف': s.confessionChurch || '',
     'كنيسته': s.church || '',
     'الوظيفة': s.occupation || '',
     'مكان العمل': s.workplace || '',
@@ -8239,6 +8547,7 @@ document.getElementById('importAllDataFile').addEventListener('change', (e)=>{
           children: String(row['الأبناء']||'').split('،').map(c=>c.trim().replace(/\s*\([^)]*\)\s*$/,'')).filter(Boolean).map(name=>({name, schoolLevelBase:0, schoolLevelBaseYear:0})),
           groups
         };
+        if(row['كنيسة أب الاعتراف']) fields.confessionChurch = String(row['كنيسة أب الاعتراف']).trim();
         if('مكان البيت على الخريطة' in row){ const lr = parseMapLoc(row['مكان البيت على الخريطة']); if(lr.value) fields.mapLoc = lr.value; }
         const codeFromFile = String(row['كود']||'').trim();
         let existing = id ? DATA.servants.find(s=>s.id===id) : null;
@@ -8541,14 +8850,16 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
     title = 'أب الاعتراف';
     const columns = ['الاسم','التليفون','المنطقة'];
     const members = activeServants().filter(s=>s.groups.some(g=>selectedGroups.includes(g)) && s.confessionFather);
-    const byFather = {};
+    const byFather = {}, fatherChurch = {};
+    if(isAdmin()) extraHtml = `<div class="no-print" style="margin:4px 0 12px;"><button type="button" class="ghost" onclick="openConfTidy()">🧹 توحيد أسماء آباء الاعتراف والكنيسة</button></div>`;
     members.forEach(s=>{
+      if(s.confessionChurch) fatherChurch[s.confessionFather] = s.confessionChurch;
       byFather[s.confessionFather] = byFather[s.confessionFather] || [];
       byFather[s.confessionFather].push(s);
     });
     Object.keys(byFather).sort((a,b)=>a.localeCompare(b,'ar')).forEach(father=>{
       const rows = sortByName(byFather[father]).map(s=>[s.name, ph(s), canAddr ? (s.area||'') : '—']);
-      sections.push({ heading: `${father} (${rows.length})`, columns, rows });
+      sections.push({ heading: `${father}${fatherChurch[father] ? ' — ' + fatherChurch[father] : ''} (${rows.length})`, columns, rows });
     });
   }
 
@@ -11543,6 +11854,7 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
+  { id: 'n47', d: '17-Nov-2026', text: '⛪ أب الاعتراف بقى بيتختار من قايمة: فيها كهنة كنيسة مارجرجس منشية البكري التمانية مكتوبين بشكل واحد. لو أب الاعتراف حد تاني اختار "➕ أب اعتراف تاني" واكتب اسمه ثلاثي وكنيسته، وهيظهر في القايمة للي بعدك. وفي تقرير "أب الاعتراف" بقى فيه للمدير زرار "🧹 توحيد" بيجمّع الكتابات المختلفة لكل أب اعتراف ولاسم الكنيسة، ويوريك معاينة قبل ما يغيّر أي حاجة.' },
   { id: 'n46', d: '16-Nov-2026', text: '📌 على الكمبيوتر: وانت بتنزل في الصفحة، الآية وشريط الأقسام بس هما اللي بيفضلوا ثابتين فوق. العنوان وكارت الترحيب والساعة بيطلعوا لفوق مع الصفحة، فبقى عندك مساحة أكبر بكتير تشوف فيها الشغل.' },
   { id: 'n45', d: '14-Nov-2026', admin: true, text: '🖼️ في متابعة الخدام بقت صورة كل خادم جنب اسمه، في "محتاجين سؤال" وفي قايمة الافتقاد. اللي مالوش صورة بيظهر أول حروف اسمه.' },
   { id: 'n44', d: '14-Nov-2026', text: '✨ الرئيسية اتنضّفت واتظبطت: فوق "نظرة سريعة" فيها ٤ مربعات بس (الأفراد، نسبة آخر اجتماع، نسبة الشهر ده، اكتمال البيانات) وكل مربع بيوريك طالع ولا نازل عن اللي قبله، وتحتهم سطر بيقولك ملاحظة مفيدة (زي إن الحضور الشهر ده أحسن ولا أقل). الافتقاد وأعياد الميلاد بقوا في كارت واحد "محتاجين منك"، ونسبة الحضور وعدد الحاضرين بقوا كارت واحد "الحضور" تبدّل بينهم بدوسة. اكتمال البيانات فضل بالـ٣ دواير واتشال منه تكرار الخانات، ودوس على أي مربع فوق يوديك على تفاصيله.' },
