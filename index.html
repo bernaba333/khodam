@@ -1719,6 +1719,29 @@ html[data-theme="dark"] .msg-prev{background:#005c4b;color:#e9edef;}
 /* ---- reports screen ---- */
 #customReportCard{border:1px solid rgba(201,162,39,.55);box-shadow:inset 0 0 0 5px var(--card), inset 0 0 0 6px rgba(201,162,39,.22), var(--shadow);}
 #customReportCard > .print-letterhead{display:none;}
+.cf-pick{margin:4px 0 12px;}
+.cf-pick-l{font-size:.82rem;font-weight:700;margin-bottom:6px;}
+.cf-chips{display:flex;flex-wrap:wrap;gap:6px;}
+.cf-chips button{border:1px solid var(--line);border-radius:999px;padding:4px 11px;font-size:.78rem;background:var(--card);color:var(--ink-soft);font-weight:600;font-family:'Cairo',sans-serif;cursor:pointer;}
+.cf-chips button.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+.cf-h{display:flex;align-items:center;gap:8px;margin:14px 0 6px;}
+.cf-h h4{flex:1;margin:0;font-family:'Amiri',serif;color:var(--wine);}
+.cf-h button{flex:none;}
+.cf-table td.cf-num{color:var(--muted);width:30px;text-align:center;}
+.cf-ph{text-align:center;border-bottom:3px double var(--gold);padding-bottom:10px;margin-bottom:12px;}
+.cf-ph .t{font-size:.85rem;color:var(--muted);font-weight:700;}
+.cf-ph .n{font-family:'Amiri',serif;font-size:1.9rem;font-weight:700;color:var(--wine);line-height:1.3;}
+.cf-ph .c{font-size:.9rem;color:var(--ink-soft);}
+.cf-ph .pills{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin-top:6px;}
+.cf-ph .pills span{border:1px solid var(--line);border-radius:999px;padding:0 12px;font-size:.78rem;font-weight:700;}
+.cf-foot{font-size:.72rem;color:var(--muted);margin-top:8px;}
+@media print{
+  #customReportPreview.rp-is-conf .rp-res-head{display:none !important;}
+  .cf-ph{display:block !important;}
+  body.print-one-conf .cf-sec:not(.cf-only){display:none !important;}
+  body.print-one-conf .cf-sec.cf-only{page-break-before:auto !important;}
+  .cf-sec{break-inside:auto;}
+}
 .rp-print-only{display:none;}
 .rp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding-bottom:10px;border-bottom:2px solid var(--gold-soft);}
 .rp-head h2{margin:0 0 2px;border:none !important;padding:0 !important;}
@@ -3782,7 +3805,7 @@ let remoteKnownRev = -1;
 let dataDirty = false;
 let saveRunner = null;
 
-const APP_VERSION = '17-Nov-2026 A';
+const APP_VERSION = '17-Nov-2026 B';
 document.querySelectorAll('.app-version').forEach(el=>{ el.textContent = 'إصدار البرنامج: ' + APP_VERSION; });
 function setSaveStatus(state){
   let el = document.getElementById('saveStatus');
@@ -8848,18 +8871,33 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
     sections.push({ heading: null, columns, rows });
   } else if(type === 'confessionfather'){
     title = 'أب الاعتراف';
-    const columns = ['الاسم','التليفون','المنطقة'];
+    const columns = ['م','الاسم','التليفون','المنطقة','الاجتماع'];
     const members = activeServants().filter(s=>s.groups.some(g=>selectedGroups.includes(g)) && s.confessionFather);
     const byFather = {}, fatherChurch = {};
-    if(isAdmin()) extraHtml = `<div class="no-print" style="margin:4px 0 12px;"><button type="button" class="ghost" onclick="openConfTidy()">🧹 توحيد أسماء آباء الاعتراف والكنيسة</button></div>`;
     members.forEach(s=>{
       if(s.confessionChurch) fatherChurch[s.confessionFather] = s.confessionChurch;
       byFather[s.confessionFather] = byFather[s.confessionFather] || [];
       byFather[s.confessionFather].push(s);
     });
-    Object.keys(byFather).sort((a,b)=>a.localeCompare(b,'ar')).forEach(father=>{
-      const rows = sortByName(byFather[father]).map(s=>[s.name, ph(s), canAddr ? (s.area||'') : '—']);
-      sections.push({ heading: `${father}${fatherChurch[father] ? ' — ' + fatherChurch[father] : ''} (${rows.length})`, columns, rows });
+    // the church's 8 priests first (in their order), then the others A-Z
+    const fathers = Object.keys(byFather).sort((a,b)=>{
+      const ia = CONF_FATHERS.indexOf(a), ib = CONF_FATHERS.indexOf(b);
+      if(ia >= 0 || ib >= 0) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+      return a.localeCompare(b,'ar');
+    });
+    if(rpConfPick && !byFather[rpConfPick]) rpConfPick = '';
+    extraHtml = `<div class="no-print cf-pick"><div class="cf-pick-l">⛪ اختار أب الاعتراف</div><div class="cf-chips">
+        <button type="button" data-confpick=""${rpConfPick ? '' : ' class="on"'}>الكل (${members.length})</button>
+        ${fathers.map(f=>`<button type="button" data-confpick="${escHtml(f)}"${rpConfPick === f ? ' class="on"' : ''}>${escHtml(f)} (${byFather[f].length})</button>`).join('')}
+      </div></div>`
+      + (isAdmin() ? `<div class="no-print" style="margin:4px 0 12px;"><button type="button" class="ghost" onclick="openConfTidy()">🧹 توحيد أسماء آباء الاعتراف والكنيسة</button></div>` : '');
+    const gLine = selectedGroups.map(groupName).join(' · ');
+    fathers.filter(f=>!rpConfPick || f === rpConfPick).forEach(father=>{
+      const church = fatherChurch[father] || (CONF_FATHERS.includes(father) ? CONF_CHURCH : '');
+      const rows = sortByName(byFather[father]).map((s, i)=>[String(i+1), s.name, ph(s), canAddr ? (s.area||'') : '—',
+        s.groups.filter(g=>selectedGroups.includes(g)).map(groupName).join('، ')]);
+      sections.push({ heading: `${father}${fatherChurch[father] ? ' — ' + fatherChurch[father] : ''} (${rows.length})`, columns, rows,
+        conf: { name: father, church, n: rows.length, groups: gLine } });
     });
   }
 
@@ -8883,6 +8921,21 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
   }
   sections.forEach((sec, idx)=>{
     const pageBreak = (type === 'confessionfather' && idx > 0) ? 'page-break-before:always;' : '';
+    if(sec.conf){
+      const c = sec.conf;
+      html += `<div class="cf-sec" data-conf="${escHtml(c.name)}" style="${pageBreak}">
+        <div class="cf-ph rp-print-only"><div class="t">تقرير أب الاعتراف</div><div class="n">${escHtml(c.name)}</div>
+          ${c.church ? `<div class="c">${escHtml(c.church)}</div>` : ''}
+          <div class="pills"><span>${c.n} شخص</span><span>${escHtml(c.groups)}</span></div></div>
+        <div class="cf-h no-print"><h4>${escHtml(sec.heading)}</h4>${rpConfPick ? '' : `<button type="button" class="ghost" data-confprint="${escHtml(c.name)}">🖨️ اطبع ده بس</button>`}</div>
+        <div class="rp-table-wrap"><table class="report-table cf-table">
+          <thead><tr>${sec.columns.map(x=>`<th>${x}</th>`).join('')}</tr></thead>
+          <tbody>${sec.rows.map(r=>`<tr>${r.map((v, i)=>`<td${i === 0 ? ' class="cf-num"' : ''}>${escHtml(v)}</td>`).join('')}</tr>`).join('')}</tbody>
+        </table></div>
+        <div class="cf-foot rp-print-only">اتطبع يوم ${escHtml(prettyDate(todayStr()))}${currentUser ? ' بواسطة ' + escHtml(currentUser.name) : ''}</div>
+      </div>`;
+      return;
+    }
     if(sec.heading) html += `<div style="${pageBreak}"><h4 style="font-family:'Amiri',serif;margin:14px 0 6px;color:var(--wine);">${escHtml(sec.heading)}</h4></div>`;
     if(sec.rows.length === 0){
       html += `<div class="empty-note">لا يوجد نتائج${sec.heading ? ' لـ'+escHtml(sec.heading) : ''}</div>`;
@@ -8903,6 +8956,8 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
     }
   });
   preview.innerHTML = html;
+  preview.classList.toggle('rp-is-conf', type === 'confessionfather');
+  document.getElementById('printCustomReportBtn').textContent = (type === 'confessionfather' && rpConfPick) ? '🖨️ طباعة ' + rpConfPick : '🖨️ طباعة';
   actions.style.display = 'flex';
   if(rpScrollAfter){ rpScrollAfter = false; actions.scrollIntoView({ behavior:'smooth', block:'start' }); }
 
@@ -8916,6 +8971,23 @@ document.getElementById('generateReportBtn').addEventListener('click', async ()=
   }
 });
 
+// أب الاعتراف: pick one priest, or print one priest's page only
+let rpConfPick = '';
+document.getElementById('customReportPreview').addEventListener('click', e=>{
+  const pick = e.target.closest('[data-confpick]');
+  if(pick){ rpConfPick = pick.dataset.confpick; document.getElementById('generateReportBtn').click(); return; }
+  const one = e.target.closest('[data-confprint]');
+  if(one){
+    const sec = Array.from(document.querySelectorAll('#customReportPreview .cf-sec')).find(x=>x.dataset.conf === one.dataset.confprint);
+    if(!sec) return;
+    sec.classList.add('cf-only');
+    document.body.classList.add('print-custom-only', 'print-one-conf');
+    setTimeout(()=>{
+      window.print();
+      setTimeout(()=>{ document.body.classList.remove('print-custom-only', 'print-one-conf'); sec.classList.remove('cf-only'); }, 300);
+    }, 100);
+  }
+});
 document.getElementById('printCustomReportBtn').addEventListener('click', ()=>{
   document.body.classList.add('print-custom-only');
   setTimeout(()=>{
@@ -11854,6 +11926,7 @@ document.getElementById('alertBellBtn').addEventListener('click', openAlerts);
 // items with "يتعرض / يتلغي" and the choices are shared in NEWS_REVIEW_KEY.
 // Add each new item at the top with a new id; d = the day it starts showing; admin:true = admins only (no review).
 const WHATS_NEW = [
+  { id: 'n48', d: '17-Nov-2026', text: '🖨️ تقرير "أب الاعتراف" بقى تقدر تطبعه لكل كاهن لوحده: فوق التقرير اختار الكاهن (أو "الكل")، أو دوس "🖨️ اطبع ده بس" جنب اسمه. الورقة فوقها اسم الكاهن كبير وكنيسته وعدد الناس، والجدول فيه رقم وعمود الاجتماع. ولو اخترت "الكل" كل كاهن بيطلع في ورقة لوحده.' },
   { id: 'n47', d: '17-Nov-2026', text: '⛪ أب الاعتراف بقى بيتختار من قايمة: فيها كهنة كنيسة مارجرجس منشية البكري التمانية مكتوبين بشكل واحد. لو أب الاعتراف حد تاني اختار "➕ أب اعتراف تاني" واكتب اسمه ثلاثي وكنيسته، وهيظهر في القايمة للي بعدك. وفي تقرير "أب الاعتراف" بقى فيه للمدير زرار "🧹 توحيد" بيجمّع الكتابات المختلفة لكل أب اعتراف ولاسم الكنيسة، ويوريك معاينة قبل ما يغيّر أي حاجة.' },
   { id: 'n46', d: '16-Nov-2026', text: '📌 على الكمبيوتر: وانت بتنزل في الصفحة، الآية وشريط الأقسام بس هما اللي بيفضلوا ثابتين فوق. العنوان وكارت الترحيب والساعة بيطلعوا لفوق مع الصفحة، فبقى عندك مساحة أكبر بكتير تشوف فيها الشغل.' },
   { id: 'n45', d: '14-Nov-2026', admin: true, text: '🖼️ في متابعة الخدام بقت صورة كل خادم جنب اسمه، في "محتاجين سؤال" وفي قايمة الافتقاد. اللي مالوش صورة بيظهر أول حروف اسمه.' },
